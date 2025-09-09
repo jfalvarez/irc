@@ -11,7 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.jfaf.irc.IrcApplication // Necesario para el Channel ID
 import com.jfaf.irc.MainActivity
-import com.jfaf.irc.R // Necesario para R.drawable.ic_launcher_foreground
+import com.jfaf.irc.R // Necesario para R.drawable.ic_launcher_foreground y R.string.*
 
 object NotificationHelper {
 
@@ -36,14 +36,14 @@ object NotificationHelper {
 
         val notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java) as NotificationManager
         
-        // No es necesario chequear el permiso aquí si MainActivity ya lo hace antes de llamar.
-        // Sin embargo, por seguridad de la función de utilidad, se puede mantener.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || 
             ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
             notificationManager.notify(PRIVATE_MESSAGE_NOTIFICATION_ID, notificationBuilder.build())
-            Log.i(TAG, "Notificación mostrada/actualizada con ID: $PRIVATE_MESSAGE_NOTIFICATION_ID. Contenido: '$content'")
+            // Usar getString con formato para el mensaje de log
+            Log.i(TAG, context.getString(R.string.log_notification_pm_shown, PRIVATE_MESSAGE_NOTIFICATION_ID, content))
         } else {
-            Log.w(TAG, "No se tiene permiso para mostrar notificaciones.")
+            // Usar getString para el mensaje de log
+            Log.w(TAG, context.getString(R.string.log_no_notification_permission))
         }
     }
 }

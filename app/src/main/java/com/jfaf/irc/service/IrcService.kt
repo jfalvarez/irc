@@ -11,9 +11,10 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.jfaf.irc.MainActivity // Asegúrate que esta es tu Activity principal
+import com.jfaf.irc.AppConstants // Importar las constantes
+import com.jfaf.irc.MainActivity
 import com.jfaf.irc.ManualIrcClient
-import com.jfaf.irc.R // Asegúrate de tener un ic_notification.xml o similar
+import com.jfaf.irc.R
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +35,7 @@ class IrcService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
     private var manualIrcClient: ManualIrcClient? = null
-    private var currentHostForNotification: String = "servidor"
+    private var currentHostForNotification: String = AppConstants.DEFAULT_HOST_PLACEHOLDER
 
     companion object {
         const val ACTION_CONNECT = "com.jfaf.irc.service.ACTION_CONNECT"
@@ -63,37 +64,31 @@ class IrcService : Service() {
         val action = intent?.action
         Log.d(TAG, "onStartCommand received action: $action")
 
-        // Determinar el texto inicial de la notificación y pasar a primer plano
-        // a menos que la acción sea detener el servicio.
         if (action != ACTION_DISCONNECT_AND_STOP_SERVICE) {
             val initialNotificationText = when {
-                IrcServiceApi.connectionState.value -> "Estado: Conectado a $currentHostForNotification"
-                action == ACTION_CONNECT -> "Iniciando conexión IRC..."
-                else -> "Estado: Desconectado"
+                IrcServiceApi.connectionState.value -> getString(R.string.notification_status_connected_to, currentHostForNotification)
+                action == ACTION_CONNECT -> getString(R.string.notification_status_connecting)
+                else -> getString(R.string.notification_status_disconnected)
             }
             startForeground(NOTIFICATION_ID, createNotification(initialNotificationText))
-        } else {
-             // Si es ACTION_DISCONNECT_AND_STOP_SERVICE, la función disconnect() se encargará de stopForeground.
         }
 
         when (action) {
             ACTION_CONNECT -> {
-                val nickname = intent.getStringExtra(EXTRA_NICKNAME) ?: "IrcUser"
-                val serverHost = intent.getStringExtra(EXTRA_SERVER_HOST) ?: "irc.libera.chat"
-                val serverPort = intent.getIntExtra(EXTRA_SERVER_PORT, 6667)
+                val nickname = intent.getStringExtra(EXTRA_NICKNAME) ?: AppConstants.DEFAULT_NICKNAME
+                val serverHost = intent.getStringExtra(EXTRA_SERVER_HOST) ?: AppConstants.DEFAULT_SERVER_HOST
+                val serverPort = intent.getIntExtra(EXTRA_SERVER_PORT, 6667) // Dejar puerto como literal o constante numérica
                 val useSsl = intent.getBooleanExtra(EXTRA_USE_SSL, false)
-                currentHostForNotification = serverHost // Guardar para notificaciones
+                currentHostForNotification = serverHost
                 connect(nickname, serverHost, serverPort, useSsl)
             }
             ACTION_DISCONNECT -> {
                 Log.i(TAG, "Acción DISCONNECT recibida. Desconectando socket, servicio permanece en foreground.")
-                manualIrcClient?.disconnectAndCleanup() // Esto debería actualizar IrcServiceApi.connectionState y la notificación via flow
-                // Forzamos actualización de notificación para asegurar estado "Desconectado" si el flow no lo hizo inmediatamente
-                // y nos aseguramos de que IrcServiceApi también lo sepa.
-                if (IrcServiceApi.connectionState.value) { // Solo si la API aún piensa que está conectado
+                manualIrcClient?.disconnectAndCleanup()
+                if (IrcServiceApi.connectionState.value) {
                     IrcServiceApi.updateConnectionState(false)
                 }
-                updateNotification("Estado: Desconectado") 
+                updateNotification(getString(R.string.notification_status_disconnected))
             }
             ACTION_DISCONNECT_AND_STOP_SERVICE -> {
                 Log.i(TAG, "Acción DISCONNECT_AND_STOP_SERVICE recibida. Desconectando y deteniendo el servicio.")
@@ -120,15 +115,11 @@ class IrcService : Service() {
             }
             else -> {
                  Log.w(TAG, "Acción desconocida o nula: $action")
-                 // Si es una acción desconocida pero el servicio está sticky y queremos mantenerlo vivo
-                 // asegurar que esté en foreground si ya estaba conectado
                  if (IrcServiceApi.connectionState.value) {
-                    startForeground(NOTIFICATION_ID, createNotification("Estado: Conectado a $currentHostForNotification"))
-                 } else if (manualIrcClient != null) { // Si hay cliente pero no está conectado
-                    startForeground(NOTIFICATION_ID, createNotification("Estado: Desconectado"))
+                    startForeground(NOTIFICATION_ID, createNotification(getString(R.string.notification_status_connected_to, currentHostForNotification)))
+                 } else if (manualIrcClient != null) {
+                    startForeground(NOTIFICATION_ID, createNotification(getString(R.string.notification_status_disconnected)))
                  } 
-                 // Si no hay acción y el servicio es reiniciado por START_STICKY, podría no tener un manualIrcClient.
-                 // En ese caso, la notificación de startForeground inicial ("Desconectado") es apropiada.
             }
         }
         return START_STICKY
@@ -138,8 +129,8 @@ class IrcService : Service() {
         if (manualIrcClient != null && manualIrcClient!!.isConnected) {
             Log.w(TAG, "Ya conectado o conectando.")
             currentHostForNotification = manualIrcClient?.host ?: serverHost
-            updateNotification("Estado: Conectado a $currentHostForNotification") 
-            IrcServiceApi.updateConnectionState(true) 
+            updateNotification(getString(R.string.notification_status_connected_to, currentHostForNotification))
+            IrcServiceApi.updateConnectionState(true)
             return
         }
         Log.i(TAG, "Conectando a $serverHost:$serverPort como $nickname (SSL: $useSsl)")
@@ -157,8 +148,8 @@ class IrcService : Service() {
         serviceScope.launch {
             manualIrcClient!!.connectionState.collectLatest { isConnected ->
                 IrcServiceApi.updateConnectionState(isConnected)
-                val statusText = if (isConnected) "Conectado a $currentHostForNotification" else "Desconectado"
-                updateNotification("Estado: $statusText")
+                val statusText = if (isConnected) getString(R.string.status_connected_to_host, currentHostForNotification) else getString(R.string.status_disconnected_short)
+                updateNotification(statusText)
             }
         }
 
@@ -173,12 +164,12 @@ class IrcService : Service() {
     private fun disconnect() {
         Log.i(TAG, "Función disconnect() llamada. Limpiando cliente, quitando foreground y deteniendo servicio.")
         val wasConnected = IrcServiceApi.connectionState.value
-        manualIrcClient?.disconnectAndCleanup() 
+        manualIrcClient?.disconnectAndCleanup()
         if (wasConnected) {
             IrcServiceApi.updateConnectionState(false)
         }
-        stopForeground(STOP_FOREGROUND_REMOVE) 
-        stopSelf() 
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
         Log.i(TAG, "Servicio detenido y limpiado.")
     }
 
@@ -198,7 +189,7 @@ class IrcService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val serviceChannel = NotificationChannel(
                 NOTIFICATION_CHANNEL_ID,
-                "IRC Service Channel",
+                getString(R.string.notification_channel_name_irc_service),
                 NotificationManager.IMPORTANCE_DEFAULT
             )
             val manager = getSystemService(NotificationManager::class.java)
@@ -218,22 +209,17 @@ class IrcService : Service() {
         )
 
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("Cliente IRC")
+            .setContentTitle(getString(R.string.notification_title_irc_client))
             .setContentText(contentText)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) 
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
-            .setOngoing(true) 
+            .setOngoing(true)
             .build()
     }
 
     private fun updateNotification(contentText: String) {
-        // Solo se debe llamar a notify si el servicio está en primer plano.
-        // Si queremos asegurar que el servicio PASE a primer plano con esta notificación,
-        // deberíamos llamar a startForeground() en su lugar.
-        // Como norma general, startForeground se llama para entrar/mantenerse en FG,
-        // y luego notify() se usa para actualizar una notificación existente de FG.
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(NOTIFICATION_ID, createNotification(contentText)) 
+        notificationManager.notify(NOTIFICATION_ID, createNotification(contentText))
     }
 
     override fun onBind(intent: Intent?): IBinder? {

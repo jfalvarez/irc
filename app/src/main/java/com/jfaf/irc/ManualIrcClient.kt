@@ -18,7 +18,7 @@ import java.net.Socket
 import javax.net.ssl.SSLSocketFactory
 
 class ManualIrcClient(
-    val host: String, // <--- CAMBIO AQUÍ: 'private' eliminado
+    val host: String,
     private val port: Int,
     private val useSsl: Boolean,
     private val coroutineScope: CoroutineScope,
@@ -39,7 +39,7 @@ class ManualIrcClient(
     private val _isRegistered = MutableStateFlow(false)
     val isRegistered: StateFlow<Boolean> = _isRegistered.asStateFlow()
 
-    private var currentNickname: String = "ManualBot"
+    private var currentNickname: String = AppConstants.DEFAULT_BOT_NICKNAME // MODIFIED HERE
 
     val isConnected: Boolean
         get() = _connectionState.value && socket?.isConnected == true
@@ -57,7 +57,7 @@ class ManualIrcClient(
         val realname = real
 
         coroutineScope.launch(ioDispatcher) {
-            _isRegistered.value = false // Asegurar que esté reiniciado para una nueva conexión
+            _isRegistered.value = false
             try {
                 Log.d(TAG, "Intentando conectar a $host:$port (SSL: $useSsl), Nick: $currentNickname")
                 socket = if (useSsl) {
@@ -78,7 +78,7 @@ class ManualIrcClient(
 
                     listenForMessages()
                 } else {
-                    throw Exception("Fallo al conectar el socket (después de timeout o error).")
+                    throw Exception(AppConstants.ERROR_MSG_SOCKET_CONNECT_FAILED) // MODIFIED HERE
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error de conexión: ${e.message}", e)
@@ -163,10 +163,7 @@ class ManualIrcClient(
             _isRegistered.value = true
             val confirmedNick = message.params.firstOrNull() ?: currentNickname
             Log.i(TAG, "Cliente registrado con el servidor (RPL_WELCOME recibido). Nick confirmado: $confirmedNick")
-            // Podríamos querer actualizar currentNickname si el servidor lo cambió (ej. por colisión)
-            // this.currentNickname = confirmedNick 
         }
-        // Add other internal handling here if needed
     }
 
     fun sendRaw(message: String) {
@@ -199,15 +196,11 @@ class ManualIrcClient(
             sendRaw("JOIN $channel")
         } else {
             Log.w(TAG, "Aún no registrado con el servidor. Comando JOIN para '$channel' no enviado.")
-            // Aquí se podría encolar el comando para enviarlo más tarde
         }
     }
 
-    // Nueva función para salir de un canal
     fun partFromChannel(channelName: String) {
         if (_isRegistered.value) {
-            // Asumimos que channelName ya incluye el prefijo # si es necesario, o que el servidor lo maneja.
-            // Puedes añadir un mensaje de salida opcional: "PART $channelName :Saliendo"
             sendRaw("PART $channelName")
             Log.i(TAG, "Enviando PART para el canal: $channelName")
         } else {
@@ -219,15 +212,15 @@ class ManualIrcClient(
         sendRaw("PRIVMSG $channel :$message")
     }
 
-    fun quitServer(quitMessage: String = "Leaving") {
+    fun quitServer(quitMessage: String = AppConstants.DEFAULT_QUIT_MESSAGE) { // MODIFIED HERE
         sendRaw("QUIT :$quitMessage")
     }
 
     private fun cleanupConnection() {
-        if (!_connectionState.value && socket == null && !_isRegistered.value) return // Check all states
+        if (!_connectionState.value && socket == null && !_isRegistered.value) return
 
         Log.i(TAG, "Limpiando conexión...")
-        _isRegistered.value = false // Reset registration state
+        _isRegistered.value = false
         _connectionState.value = false
         try { writer?.close() } catch (e: Exception) { Log.e(TAG, "Error cerrando writer", e) }
         try { reader?.close() } catch (e: Exception) { Log.e(TAG, "Error cerrando reader", e) }
@@ -239,10 +232,8 @@ class ManualIrcClient(
 
     fun disconnectAndCleanup() {
         if (_connectionState.value) {
-            // Intenta enviar QUIT solo si hay una conexión activa y escritor disponible.
-            // Esto es más seguro que solo chequear _connectionState.value
             if (writer != null) { 
-                quitServer("Cliente cerrándose")
+                quitServer(AppConstants.QUIT_MSG_CLIENT_SHUTDOWN) // MODIFIED HERE
             }
         }
         cleanupConnection()

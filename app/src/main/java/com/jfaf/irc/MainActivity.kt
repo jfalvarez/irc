@@ -1,34 +1,31 @@
 package com.jfaf.irc
 
-import android.Manifest 
+import android.Manifest
 import android.app.NotificationManager
-import android.content.Context // Todavía necesario para getSystemService
-// import android.app.PendingIntent // Ya no es necesario aquí
-// import android.content.Intent // Ya no es necesario aquí
-import android.content.pm.PackageManager 
-import android.os.Build 
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts 
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-// import androidx.core.app.NotificationCompat // Ya no es necesario aquí
-import androidx.core.content.ContextCompat 
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle 
-import androidx.lifecycle.ProcessLifecycleOwner 
-import com.jfaf.irc.data.model.ParsedIrcMessage 
-import com.jfaf.irc.ui.screens.MainScreen 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
+import com.jfaf.irc.data.model.ParsedIrcMessage
+import com.jfaf.irc.ui.MainScreen // Corrected import to use MainScreen from ui package
 import com.jfaf.irc.ui.theme.IrcTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
-import com.jfaf.irc.util.NotificationHelper // IMPORTAR EL HELPER
+import com.jfaf.irc.util.NotificationHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 
@@ -37,11 +34,9 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG_ACTIVITY = "MainActivity"
-        // PRIVATE_MESSAGE_NOTIFICATION_ID movido a NotificationHelper
     }
 
-    private var isActivityInForeground: Boolean = false 
-    private var newMessagesCount = 0 
+    private var newMessagesCount = 0
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -60,7 +55,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
-            val context = LocalContext.current 
+            val context = LocalContext.current
 
             LaunchedEffect(mainViewModel.rawIrcMessagesEvents) {
                 mainViewModel.rawIrcMessagesEvents.collectLatest { message: ParsedIrcMessage ->
@@ -79,22 +74,23 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(Unit) { 
-                mainViewModel.newPrivateMessageSoundEvent.collectLatest { 
+            LaunchedEffect(Unit) {
+                mainViewModel.newPrivateMessageSoundEvent.collectLatest {
                     val isAppCurrentlyInForegroundByProcess = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
                     Log.d(TAG_ACTIVITY, "Evento de nuevo PM. App en FG (ProcessLifecycle)? $isAppCurrentlyInForegroundByProcess.")
-                    
+
                     if (!isAppCurrentlyInForegroundByProcess) {
                         Log.d(TAG_ACTIVITY, "App en BG. newMessagesCount BEFORE increment: $newMessagesCount")
-                        newMessagesCount++ 
-                        val notificationTitle = "Nuevo Mensaje Privado"
+                        newMessagesCount++
+                        // MODIFIED HERE to use string resources
+                        val notificationTitle = context.getString(R.string.pm_notification_title)
                         val notificationContent = if (newMessagesCount > 1) {
-                            "Tienes $newMessagesCount mensajes nuevos"
+                            context.getString(R.string.pm_notification_content_multiple, newMessagesCount)
                         } else {
-                            "Has recibido un nuevo mensaje."
+                            context.getString(R.string.pm_notification_content_single)
                         }
                         Log.i(TAG_ACTIVITY, "App en segundo plano, mostrando/actualizando notificación: $newMessagesCount mensajes.")
-                        Log.d(TAG_ACTIVITY, "[DIAGNOSTICO] Llamando a NotificationHelper.showPrivateMessageNotification...") // LOG DE DIAGNÓSTICO
+                        Log.d(TAG_ACTIVITY, "[DIAGNOSTICO] Llamando a NotificationHelper.showPrivateMessageNotification...")
                         NotificationHelper.showPrivateMessageNotification(context, notificationTitle, notificationContent)
                     } else {
                         Log.i(TAG_ACTIVITY, "App en primer plano, la notificación del sistema NO se mostrará.")
@@ -115,8 +111,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        isActivityInForeground = true
-        newMessagesCount = 0 
+        newMessagesCount = 0
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(NotificationHelper.PRIVATE_MESSAGE_NOTIFICATION_ID)
         Log.d(TAG_ACTIVITY, "onResume: Actividad en primer plano. Contador de mensajes reseteado a $newMessagesCount. Notificación cancelada.")
@@ -124,7 +119,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        isActivityInForeground = false
+        // isActivityInForeground = false // This variable is not used anymore, can be removed
         Log.d(TAG_ACTIVITY, "onPause: Actividad NO está en primer plano.")
     }
 
@@ -135,14 +130,13 @@ class MainActivity : ComponentActivity() {
             ) {
                 Log.i(TAG_ACTIVITY, "Permiso de notificación ya concedido.")
             } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                // Consider showing a custom UI explaining why the permission is needed
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
-
-    // La función showPrivateMessageNotification ha sido movida a NotificationHelper.kt
 
     private fun logToUi(message: String) {
         Log.i(TAG_ACTIVITY, message)

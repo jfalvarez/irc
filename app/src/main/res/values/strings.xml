@@ -1,3 +1,45 @@
 <resources>
     <string name="app_name">irc</string>
+    <string name="log_notification_pm_shown">Notificación mostrada/actualizada con ID: %1$d. Contenido: \'%2$s\'</string>
+    <string name="log_no_notification_permission">No se tiene permiso para mostrar notificaciones.</string>
+
+    <string name="notification_status_connected_to">Estado: Conectado a %1$s</string>
+    <string name="notification_status_connecting">Iniciando conexión IRC...</string>
+    <string name="notification_status_disconnected">Estado: Desconectado</string>
+    <string name="notification_channel_name_irc_service">IRC Service Channel</string>
+    <string name="notification_title_irc_client">Cliente IRC</string>
+    <string name="status_connected_to_host">Conectado a %1$s</string>
+    <string name="status_disconnected_short">Desconectado</string>
+
+    <string name="status_not_connected">No conectado</string>
+    <string name="prompt_select_channel_or_conversation">Selecciona un canal o conversación para empezar.</string>
+    <string name="connection_setup_title_simplified">CONEXIÓN IRC - VERSIÓN SIMPLIFICADA</string>
+    <string name="label_nickname">Nickname</string>
+    <string name="checkbox_label_connect_securely">Conectar de forma segura (SSL/TLS)</string>
+    <string name="button_connect">Conectar</string>
+
+    <string name="app_title_default">IRC App</string>
+    <string name="cd_open_navigation_menu">Abrir menú lateral</string>
+    <string name="cd_more_options">Más opciones</string><string name="menu_item_join_channel">Unirse a canal</string>
+    <string name="menu_item_private_message_to">Mensaje privado a…</string>
+    <string name="menu_item_disconnect">Desconectar</string>
+    <string name="dialog_title_join_channel">Unirse a Canal</string>
+    <string name="dialog_label_channel_name">Nombre del canal (ej: #canal)</string>
+    <string name="dialog_title_open_private_message">Abrir Mensaje Privado</string>
+    <string name="dialog_label_user_nickname">Nickname del usuario</string>
+    <string name="app_title_disconnected">IRC App - Desconectado</string>
+    <string name="button_accept">Aceptar</string>
+    <string name="button_cancel">Cancelar</string>
+
+    <string name="drawer_title_channels_chats">Canales y Chats</string>
+    <string name="drawer_user_connected_as">Conectado como: %1$s</string>    <string name="cd_channel">Canal</string>
+    <string name="cd_server">Servidor</string>
+    <string name="cd_private_message">Privado</string>
+    <string name="cd_close_target">Cerrar %1$s</string>
+    <string name="label_write_message">Escribe un mensaje...</string>
+    <string name="cd_send_message">Enviar mensaje</string>
+
+    <string name="pm_notification_title">Nuevo Mensaje Privado</string>
+    <string name="pm_notification_content_single">Has recibido un nuevo mensaje.</string>
+    <string name="pm_notification_content_multiple">Tienes %1$d mensajes nuevos</string>
 </resources>

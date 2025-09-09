@@ -6,25 +6,27 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add // Keep for AppDrawerContent
-import androidx.compose.material.icons.filled.Menu // Keep for TopAppBar and AppDrawerContent
-import androidx.compose.material.icons.filled.MoreVert // Keep for TopAppBar
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.jfaf.irc.R
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.UiChatMessage
 import com.jfaf.irc.ui.viewmodels.UiMessageType
 import android.util.Log
-import androidx.compose.material.icons.automirrored.filled.Send // Keep for MessageInput and AppDrawerContent
-import androidx.compose.material.icons.automirrored.filled.ExitToApp // Keep for AppDrawerContent
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,7 +37,7 @@ fun MainScreen(
 ) {
     val connectionState by viewModel.connectionState.collectAsState()
     var nicknameInput by remember { mutableStateOf("") }
-    var useSslInput by remember { mutableStateOf(false) } 
+    var useSslInput by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -52,10 +54,10 @@ fun MainScreen(
                         viewModel.setActiveTarget(it)
                         scope.launch { drawerState.close() }
                     },
-                    onJoinChannelRequest = { 
+                    onJoinChannelRequest = { // This might trigger a dialog from AppDrawerContent if we add a button there
                         scope.launch { drawerState.close() }
                     },
-                    onOpenPrivateMessageRequest = { 
+                    onOpenPrivateMessageRequest = { // Similar to above
                         scope.launch { drawerState.close() }
                     },
                     onCloseTargetAction = {
@@ -70,7 +72,7 @@ fun MainScreen(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("No conectado", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.status_not_connected), style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -90,7 +92,9 @@ fun MainScreen(
                 }
             },
             bottomBar = {
-                if (connectionState && viewModel.activeTarget.collectAsState().value != "Servidor") {
+                val activeTargetValue = viewModel.activeTarget.collectAsState().value
+                // "Servidor" is an internal identifier, messages are not sent to it directly.
+                if (connectionState && activeTargetValue != null && activeTargetValue != stringResource(R.string.cd_server)) {
                     MessageInputSection(
                         onSendMessage = { message -> viewModel.sendMessage(message) },
                         modifier = Modifier.fillMaxWidth()
@@ -102,12 +106,12 @@ fun MainScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(it) 
+                    .padding(it)
             ) {
                 if (!connectionState) {
                     ConnectionSetupSection(
                         modifier = Modifier
-                            .fillMaxSize() 
+                            .fillMaxSize()
                             .padding(16.dp),
                         nickname = nicknameInput,
                         onNicknameChange = { nicknameInput = it },
@@ -138,8 +142,8 @@ fun MainScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text("Selecciona un canal o conversación para empezar.", style = MaterialTheme.typography.bodyLarge)
-                        }                    
+                            Text(stringResource(R.string.prompt_select_channel_or_conversation), style = MaterialTheme.typography.bodyLarge)
+                        }
                     }
                 }
             }
@@ -157,12 +161,12 @@ fun ConnectionSetupSection(
     onConnect: () -> Unit
 ) {
     Column(
-        modifier = modifier, 
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center 
+        verticalArrangement = Arrangement.Center
     ) {
         Text(
-            "CONEXIÓN IRC - VERSIÓN SIMPLIFICADA", // MODIFIED TITLE FOR DIAGNOSIS
+            stringResource(R.string.connection_setup_title_simplified),
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(bottom = 24.dp)
         )
@@ -170,7 +174,7 @@ fun ConnectionSetupSection(
         OutlinedTextField(
             value = nickname,
             onValueChange = onNicknameChange,
-            label = { Text("Nickname") },
+            label = { Text(stringResource(R.string.label_nickname)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardActions = KeyboardActions(onDone = { onConnect() })
@@ -180,16 +184,16 @@ fun ConnectionSetupSection(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .fillMaxWidth() 
+                .fillMaxWidth()
                 .clickable { onUseSslChange(!useSsl) }
-                .padding(vertical = 8.dp) 
+                .padding(vertical = 8.dp)
         ) {
             Checkbox(
                 checked = useSsl,
-                onCheckedChange = null 
+                onCheckedChange = null
             )
             Text(
-                text = "Conectar de forma segura (SSL/TLS)",
+                text = stringResource(R.string.checkbox_label_connect_securely),
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
@@ -199,14 +203,13 @@ fun ConnectionSetupSection(
             onClick = onConnect,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp) 
+                .height(48.dp)
         ) {
-            Text("Conectar")
+            Text(stringResource(R.string.button_connect))
         }
     }
 }
 
-// ... (Rest of MainScreen.kt remains the same as previous correct version)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatTopAppBar(
@@ -221,36 +224,36 @@ fun ChatTopAppBar(
     var showOpenPmDialog by remember { mutableStateOf(false) }
 
     TopAppBar(
-        title = { Text(activeTarget ?: "IRC App") },
+        title = { Text(activeTarget ?: stringResource(R.string.app_title_default)) },
         navigationIcon = {
             IconButton(onClick = onNavigationIconClick) {
-                Icon(Icons.Filled.Menu, contentDescription = "Abrir menú lateral")
+                Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.cd_open_navigation_menu))
             }
         },
         actions = {
             IconButton(onClick = { showMenu = !showMenu }) {
-                Icon(Icons.Filled.MoreVert, contentDescription = "Más opciones")
+                Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_more_options))
             }
             DropdownMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text("Unirse a canal") },
+                    text = { Text(stringResource(R.string.menu_item_join_channel)) },
                     onClick = {
                         showMenu = false
                         showJoinChannelDialog = true
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Mensaje privado a...") },
+                    text = { Text(stringResource(R.string.menu_item_private_message_to)) },
                     onClick = {
                         showMenu = false
                         showOpenPmDialog = true
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Desconectar") },
+                    text = { Text(stringResource(R.string.menu_item_disconnect)) },
                     onClick = {
                         showMenu = false
                         onDisconnectClick()
@@ -262,8 +265,8 @@ fun ChatTopAppBar(
 
     if (showJoinChannelDialog) {
         InputDialog(
-            title = "Unirse a Canal",
-            label = "Nombre del canal (ej: #canal)",
+            title = stringResource(R.string.dialog_title_join_channel),
+            label = stringResource(R.string.dialog_label_channel_name),
             onDismiss = { showJoinChannelDialog = false },
             onConfirm = { channelName ->
                 if (channelName.isNotBlank()) {
@@ -276,8 +279,8 @@ fun ChatTopAppBar(
 
     if (showOpenPmDialog) {
         InputDialog(
-            title = "Abrir Mensaje Privado",
-            label = "Nickname del usuario",
+            title = stringResource(R.string.dialog_title_open_private_message),
+            label = stringResource(R.string.dialog_label_user_nickname),
             onDismiss = { showOpenPmDialog = false },
             onConfirm = { nick ->
                 if (nick.isNotBlank()) {
@@ -293,7 +296,7 @@ fun ChatTopAppBar(
 @Composable
 fun DisconnectedTopAppBar() {
     TopAppBar(
-        title = { Text("IRC App - Desconectado") }
+        title = { Text(stringResource(R.string.app_title_disconnected)) }
     )
 }
 
@@ -319,12 +322,12 @@ fun InputDialog(
         },
         confirmButton = {
             Button(onClick = { onConfirm(textState) }) {
-                Text("Aceptar")
+                Text(stringResource(R.string.button_accept))
             }
         },
         dismissButton = {
             Button(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(stringResource(R.string.button_cancel))
             }
         }
     )
@@ -336,33 +339,34 @@ fun AppDrawerContent(
     activeTarget: String?,
     currentNick: String,
     onTargetSelected: (String) -> Unit,
-    onJoinChannelRequest: () -> Unit, 
-    onOpenPrivateMessageRequest: () -> Unit, 
+    onJoinChannelRequest: () -> Unit,
+    onOpenPrivateMessageRequest: () -> Unit,
     onCloseTargetAction: (String) -> Unit
 ) {
+    val serverString = stringResource(R.string.cd_server) // For comparison and display
+
     ModalDrawerSheet {
-        Text("Canales y Chats", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
-        Text("Conectado como: $currentNick", modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp), style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.drawer_title_channels_chats), modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.drawer_user_connected_as, currentNick), modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp), style = MaterialTheme.typography.bodySmall)
         Divider()
         LazyColumn {
-            items(chatTargets.distinct()) { target -> 
+            items(chatTargets.distinct()) { target ->
+                val isServerTarget = target == serverString
                 NavigationDrawerItem(
                     icon = {
-                        if (target.startsWith("#")) {
-                            Icon(Icons.Filled.Add, contentDescription = "Canal") 
-                        } else if (target == "Servidor") {
-                            Icon(Icons.Filled.Menu, contentDescription = "Servidor") 
-                        } else {
-                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Privado") 
+                        when {
+                            target.startsWith("#") -> Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.cd_channel))
+                            isServerTarget -> Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.cd_server))
+                            else -> Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.cd_private_message))
                         }
                     },
-                    label = { Text(target) },
+                    label = { Text(if (isServerTarget) serverString else target) }, // Display localized "Servidor"
                     selected = target == activeTarget,
                     onClick = { onTargetSelected(target) },
                     badge = {
-                        if (target != "Servidor" && target != activeTarget) { 
+                        if (!isServerTarget && target != activeTarget) {
                             IconButton(onClick = { onCloseTargetAction(target) }) {
-                                Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Cerrar $target")
+                                Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = stringResource(R.string.cd_close_target, target))
                             }
                         }
                     },
@@ -378,9 +382,9 @@ fun AppDrawerContent(
 fun MessagesList(messages: List<UiChatMessage>) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        reverseLayout = true 
+        reverseLayout = true
     ) {
-        items(messages.reversed()) { msg -> 
+        items(messages.reversed()) { msg ->
             MessageRow(msg)
         }
     }
@@ -391,7 +395,7 @@ fun MessageRow(message: UiChatMessage) {
     val textColor = when (message.type) {
         UiMessageType.SYSTEM_MESSAGE, UiMessageType.JOIN_PART_QUIT, UiMessageType.NICK_CHANGE, UiMessageType.MODE_CHANGE -> Color.Gray
         UiMessageType.SERVER_INFO -> Color.DarkGray
-        UiMessageType.NOTICE -> Color(0xFFFFA500) 
+        UiMessageType.NOTICE -> Color(0xFFFFA500)
         else -> MaterialTheme.colorScheme.onSurface
     }
     val fontStyle = if (message.type == UiMessageType.SYSTEM_MESSAGE || message.type == UiMessageType.SERVER_INFO) FontStyle.Italic else FontStyle.Normal
@@ -403,7 +407,7 @@ fun MessageRow(message: UiChatMessage) {
             color = textColor,
             fontStyle = fontStyle,
             fontWeight = if (message.sender == null || message.type == UiMessageType.CHANNEL_MSG_SENT || message.type == UiMessageType.PRIVATE_MSG_SENT) fontWeight else FontWeight.Normal,
-            fontSize = 14.sp 
+            fontSize = 14.sp
         )
     }
 }
@@ -419,22 +423,22 @@ fun MessageInputSection(
     OutlinedTextField(
         value = textState,
         onValueChange = { textState = it },
-        label = { Text("Escribe un mensaje...") },
+        label = { Text(stringResource(R.string.label_write_message)) },
         trailingIcon = {
             IconButton(onClick = {
                 if (textState.isNotBlank()) {
                     onSendMessage(textState)
-                    textState = "" 
+                    textState = ""
                 }
             }) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar mensaje")
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.cd_send_message))
             }
         },
         modifier = modifier
             .padding(8.dp)
             .fillMaxWidth(),
-        singleLine = false, 
-        maxLines = 3 
+        singleLine = false,
+        maxLines = 3
     )
 }
 
@@ -446,9 +450,9 @@ fun ChatContentSection(
     activeTarget: String?,
     onTargetSelected: (String) -> Unit,
     onCloseTarget: (String) -> Unit,
-    currentNick: String, 
-    onJoinChannelRequest: (String) -> Unit, 
-    onOpenPrivateMessageRequest: (String) -> Unit 
+    currentNick: String,
+    onJoinChannelRequest: (String) -> Unit,
+    onOpenPrivateMessageRequest: (String) -> Unit
 ) {
     if (activeTarget != null) {
         MessagesList(messages = uiMessages)
@@ -458,8 +462,7 @@ fun ChatContentSection(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Selecciona un canal o conversación para empezar.", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.prompt_select_channel_or_conversation), style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
-
