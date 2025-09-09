@@ -27,6 +27,7 @@ import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.UiChatMessage
 import com.jfaf.irc.ui.viewmodels.UiMessageType
 import android.util.Log
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,6 +43,9 @@ fun MainScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
+    // Collect unread targets to pass to AppDrawerContent
+    val unreadTargetsState = viewModel.unreadTargets.collectAsState() // MODIFIED HERE
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -49,15 +53,16 @@ fun MainScreen(
                 AppDrawerContent(
                     chatTargets = viewModel.chatTargets.collectAsState().value,
                     activeTarget = viewModel.activeTarget.collectAsState().value,
+                    unreadTargets = unreadTargetsState.value, // MODIFIED HERE
                     currentNick = viewModel.currentNickname,
                     onTargetSelected = {
                         viewModel.setActiveTarget(it)
                         scope.launch { drawerState.close() }
                     },
-                    onJoinChannelRequest = { // This might trigger a dialog from AppDrawerContent if we add a button there
+                    onJoinChannelRequest = { 
                         scope.launch { drawerState.close() }
                     },
-                    onOpenPrivateMessageRequest = { // Similar to above
+                    onOpenPrivateMessageRequest = { 
                         scope.launch { drawerState.close() }
                     },
                     onCloseTargetAction = {
@@ -83,7 +88,7 @@ fun MainScreen(
                     ChatTopAppBar(
                         activeTarget = viewModel.activeTarget.collectAsState().value,
                         onNavigationIconClick = { scope.launch { drawerState.open() } },
-                        onDisconnectClick = { viewModel.disconnect() },
+                        onDisconnectClick = { viewModel.disconnectFromServerAndStopService() }, // MODIFIED to use full disconnect
                         onJoinChannelRequest = { channelName -> viewModel.joinChannel(channelName) },
                         onOpenPrivateMessageRequest = { nick -> viewModel.openPrivateMessage(nick) }
                     )
@@ -93,8 +98,8 @@ fun MainScreen(
             },
             bottomBar = {
                 val activeTargetValue = viewModel.activeTarget.collectAsState().value
-                // "Servidor" is an internal identifier, messages are not sent to it directly.
-                if (connectionState && activeTargetValue != null && activeTargetValue != stringResource(R.string.cd_server)) {
+                val serverString = stringResource(R.string.cd_server) // Use string resource for comparison
+                if (connectionState && activeTargetValue != null && activeTargetValue != serverString) {
                     MessageInputSection(
                         onSendMessage = { message -> viewModel.sendMessage(message) },
                         modifier = Modifier.fillMaxWidth()
@@ -337,13 +342,14 @@ fun InputDialog(
 fun AppDrawerContent(
     chatTargets: List<String>,
     activeTarget: String?,
+    unreadTargets: Set<String>, // MODIFIED HERE: Added unreadTargets parameter
     currentNick: String,
     onTargetSelected: (String) -> Unit,
     onJoinChannelRequest: () -> Unit,
     onOpenPrivateMessageRequest: () -> Unit,
     onCloseTargetAction: (String) -> Unit
 ) {
-    val serverString = stringResource(R.string.cd_server) // For comparison and display
+    val serverString = stringResource(R.string.cd_server)
 
     ModalDrawerSheet {
         Text(stringResource(R.string.drawer_title_channels_chats), modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
@@ -352,6 +358,9 @@ fun AppDrawerContent(
         LazyColumn {
             items(chatTargets.distinct()) { target ->
                 val isServerTarget = target == serverString
+                val isUnread = unreadTargets.contains(target) // MODIFIED HERE: Check if target is unread
+                val fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal // MODIFIED HERE: Determine fontWeight
+
                 NavigationDrawerItem(
                     icon = {
                         when {
@@ -360,7 +369,12 @@ fun AppDrawerContent(
                             else -> Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.cd_private_message))
                         }
                     },
-                    label = { Text(if (isServerTarget) serverString else target) }, // Display localized "Servidor"
+                    label = { 
+                        Text(
+                            text = if (isServerTarget) serverString else target, 
+                            fontWeight = fontWeight // MODIFIED HERE: Apply fontWeight
+                        )
+                    },
                     selected = target == activeTarget,
                     onClick = { onTargetSelected(target) },
                     badge = {

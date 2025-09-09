@@ -58,12 +58,15 @@ class MainViewModel @Inject constructor(
     private val defaultHost = "irc.irc-hispano.org" 
     private val maxUiMessagesPerTarget = 150
 
-    private val _newPrivateMessageSoundEvent = MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
-    val newPrivateMessageSoundEvent: SharedFlow<Unit> = _newPrivateMessageSoundEvent.asSharedFlow()
+    // MODIFIED: Renamed and changed type to carry the targetKey (sender of PM)
+    private val _incomingPrivateMessageEvent = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
+    val incomingPrivateMessageEvent: SharedFlow<String> = _incomingPrivateMessageEvent.asSharedFlow()
 
-    // SharedFlow para mensajes al usuario (e.g., para Toasts)
     private val _userMessageEvents = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
     val userMessageEvents: SharedFlow<String> = _userMessageEvents.asSharedFlow()
+    
+    private val _unreadTargets = MutableStateFlow<Set<String>>(emptySet())
+    val unreadTargets: StateFlow<Set<String>> = _unreadTargets.asStateFlow()
 
     private val emoticonToEmojiMap = mapOf(
         ":)" to "😊", ":-)" to "😊", ":D" to "😀", ":-D" to "😀",
@@ -133,7 +136,7 @@ class MainViewModel @Inject constructor(
                 
                 val messageText = when {
                     lastMessageText.contains("Servicio detenido", ignoreCase = true) -> "Desconectado. El servicio fue detenido."
-                    alreadyHasDisconnectMsg -> null // No añadir mensaje duplicado si ya hay uno de desconexión
+                    alreadyHasDisconnectMsg -> null 
                     else -> "Desconectado. El servicio IRC perdió la conexión o fue detenido."
                 }
 
@@ -146,6 +149,7 @@ class MainViewModel @Inject constructor(
                 _chatTargets.value = ensureServerTargetIsFirst(listOf("Servidor")) 
                 _activeTarget.value = "Servidor"
                 _allMessages.value = mapOf("Servidor" to updatedServerMessages)
+                 _unreadTargets.value = emptySet() 
                 Log.i("MainViewModel", "UI actualizada para reflejar desconexión del servicio. Mensaje añadido: $messageText")
             } else {
                 val serverMessages = _allMessages.value["Servidor"] ?: emptyList()
@@ -185,18 +189,26 @@ class MainViewModel @Inject constructor(
                 val currentIsOwn = sender?.equals(currentNickname, ignoreCase = true) == true 
                 targetKey = if (isToChannel) msgTarget else if (currentIsOwn) msgTarget else sender 
                 
-                if (targetKey != null && targetKey != "Servidor" && !isToChannel && !currentIsOwn ) {
-                    if (!targetKey.equals(_activeTarget.value, ignoreCase = true)) {
-                        _newPrivateMessageSoundEvent.tryEmit(Unit)
-                        Log.d("MainViewModel", "New PM from '$sender' (NOT active: ${_activeTarget.value}). Sound event.")
-                    } else {
-                        Log.d("MainViewModel", "New PM from '$sender' (IS active: ${_activeTarget.value}). Sound SKIPPED.")
+                if (targetKey != null) { 
+                    if (!currentIsOwn) { // Message is from someone else
+                        if (!targetKey.equals(_activeTarget.value, ignoreCase = true)) {
+                            _unreadTargets.value = _unreadTargets.value + targetKey
+                            Log.d("MainViewModel", "Target '$targetKey' marked as unread.")
+                        }
+                        // MODIFIED: Emit event for ALL incoming PMs not from self
+                        if (!isToChannel) {
+                            _incomingPrivateMessageEvent.tryEmit(targetKey)
+                            Log.d("MainViewModel", "Incoming PM from '$sender' for target '$targetKey'. Event emitted.")
+                        }
                     }
-                    if (!_chatTargets.value.any{ it.equals(targetKey, ignoreCase = true)}) {
-                        Log.d("MainViewModel", "PRIVMSG: Adding new PM target '$targetKey' to _chatTargets.")
-                        _chatTargets.value = ensureServerTargetIsFirst((_chatTargets.value + targetKey).distinct())
-                        if(_allMessages.value[targetKey] == null) { 
-                            _allMessages.value = _allMessages.value + (targetKey to emptyList())
+
+                    if (targetKey != "Servidor" && !isToChannel && !currentIsOwn ) {
+                         if (!_chatTargets.value.any{ it.equals(targetKey, ignoreCase = true)}) {
+                            Log.d("MainViewModel", "PRIVMSG: Adding new PM target '$targetKey' to _chatTargets.")
+                            _chatTargets.value = ensureServerTargetIsFirst((_chatTargets.value + targetKey).distinct())
+                            if(_allMessages.value[targetKey] == null) { 
+                                _allMessages.value = _allMessages.value + (targetKey to emptyList())
+                            }
                         }
                     }
                 }
@@ -209,6 +221,10 @@ class MainViewModel @Inject constructor(
                 var content = trailing ?: params.joinToString(" "); content = replaceEmoticonsWithEmoji(content) 
                 targetKey = if (noticeTargetParam?.equals(currentNickname, ignoreCase = true) == true && sender != null) sender else _activeTarget.value ?: "Servidor"
                 uiMsg = UiChatMessage("-$from- $content", UiMessageType.NOTICE, from)
+                if (targetKey != null && sender != null && noticeTargetParam?.equals(currentNickname, ignoreCase = true) == true && !targetKey.equals(_activeTarget.value, ignoreCase = true)) {
+                    _unreadTargets.value = _unreadTargets.value + targetKey
+                    Log.d("MainViewModel", "NOTICE Target '$targetKey' marked as unread.")
+                }
             }
             "JOIN" -> {
                 targetKey = trailing ?: params.firstOrNull() ?: return
@@ -218,6 +234,9 @@ class MainViewModel @Inject constructor(
                         _chatTargets.value = ensureServerTargetIsFirst((_chatTargets.value + targetKey).distinct())
                     }
                     _activeTarget.value = targetKey 
+                    if (_unreadTargets.value.contains(targetKey)) {
+                        _unreadTargets.value = _unreadTargets.value - targetKey
+                    }
                 }
                 uiMsg = UiChatMessage("* ${sender ?: "Alguien"} ha entrado a $targetKey", UiMessageType.JOIN_PART_QUIT, sender)
             }
@@ -228,6 +247,9 @@ class MainViewModel @Inject constructor(
                 if (sender?.equals(currentNickname, ignoreCase = true) == true) {
                     if (_chatTargets.value.any { it.equals(targetKey, ignoreCase = true) }) { 
                         _chatTargets.value = ensureServerTargetIsFirst(_chatTargets.value.filterNot { it.equals(targetKey, ignoreCase = true) })
+                        if (_unreadTargets.value.contains(targetKey)) {
+                            _unreadTargets.value = _unreadTargets.value - targetKey
+                        }
                         if (_activeTarget.value?.equals(targetKey, ignoreCase = true) == true) { _activeTarget.value = _chatTargets.value.firstOrNull() ?: "Servidor" }
                     }
                 }
@@ -238,6 +260,9 @@ class MainViewModel @Inject constructor(
                 val updatedAllMessages = _allMessages.value.toMutableMap(); var activeTargetPotentiallyChanged = false
                 _allMessages.value.keys.forEach { target -> if (target.equals(oldNick, ignoreCase = true)) { updatedAllMessages.remove(target)?.let { messages -> updatedAllMessages[newNick] = (messages + nickChangeMsg).takeLast(maxUiMessagesPerTarget) }; if (_activeTarget.value?.equals(oldNick, ignoreCase = true) == true) activeTargetPotentiallyChanged = true } else { if (_chatTargets.value.any{ it.equals(target,ignoreCase=true)} && (_allMessages.value[target]?.any { it.sender?.equals(oldNick,ignoreCase=true) == true || it.fullText.contains(oldNick, ignoreCase = true) } == true)) { updatedAllMessages[target] = (updatedAllMessages[target]!! + nickChangeMsg).takeLast(maxUiMessagesPerTarget) } } }; _allMessages.value = updatedAllMessages
                 if (_chatTargets.value.any{it.equals(oldNick, ignoreCase = true)}) { _chatTargets.value = ensureServerTargetIsFirst(_chatTargets.value.map { if (it.equals(oldNick, ignoreCase = true)) newNick else it }.distinct()); if (activeTargetPotentiallyChanged) { _activeTarget.value = newNick } }
+                if (_unreadTargets.value.contains(oldNick)) {
+                    _unreadTargets.value = (_unreadTargets.value - oldNick) + newNick
+                }
                 if (oldNick.equals(this.currentNickname, ignoreCase = true)) { this.currentNickname = newNick; Log.d("MainViewModel", "currentNickname actualizado a: $newNick por NICK.") }; return 
             }
             "MODE" -> { targetKey = params.firstOrNull(); if (targetKey.isNullOrBlank() || (!targetKey.startsWith("#") && !targetKey.equals(currentNickname, ignoreCase = true)) ) { targetKey = _activeTarget.value ?: "Servidor" }; val by = sender ?: parsedMessage.prefix ?: "Server"; var modes = params.drop(1).joinToString(" ") + (trailing?.let { " :$it" } ?: ""); modes = replaceEmoticonsWithEmoji(modes); uiMsg = UiChatMessage("* $by establece modo $modes en $targetKey", UiMessageType.MODE_CHANGE, by) }
@@ -256,6 +281,7 @@ class MainViewModel @Inject constructor(
         _chatTargets.value = ensureServerTargetIsFirst(listOf("Servidor"))
         _activeTarget.value = "Servidor"
         _allMessages.value = mapOf("Servidor" to emptyList())
+        _unreadTargets.value = emptySet() 
         addMessageToTarget("Servidor", UiChatMessage("Conectando a $hostToConnect como $nickname...", UiMessageType.SYSTEM_MESSAGE))
         ircRepository.connect(hostToConnect, portToConnect, ssl, nickname)
     }
@@ -275,20 +301,46 @@ class MainViewModel @Inject constructor(
         }
         _activeTarget.value = nick
         if (_allMessages.value[nick] == null) { _allMessages.value = _allMessages.value + (nick to emptyList()) }
+        if (_unreadTargets.value.contains(nick)) {
+            _unreadTargets.value = _unreadTargets.value - nick
+        }
         addMessageToTarget(nick, UiChatMessage("Chat privado con $nick iniciado.", UiMessageType.SYSTEM_MESSAGE))
     }
 
     fun setActiveTarget(targetName: String) {
-        if (_chatTargets.value.any{it.equals(targetName, ignoreCase = true)} || targetName == "Servidor") { _activeTarget.value = targetName } 
+        if (_chatTargets.value.any{it.equals(targetName, ignoreCase = true)} || targetName == "Servidor") { 
+            _activeTarget.value = targetName 
+            if (_unreadTargets.value.contains(targetName)) {
+                _unreadTargets.value = _unreadTargets.value - targetName
+                 Log.d("MainViewModel", "Target '$targetName' marked as read.")
+            }
+        } 
         else { Log.w("MainViewModel", "Intento de activar target no existente: $targetName. Targets: ${_chatTargets.value}"); if (_chatTargets.value.isNotEmpty()) { _activeTarget.value = _chatTargets.value.first() } else { _activeTarget.value = "Servidor" } }
     }
 
     fun closeTarget(targetName: String) { 
         if (targetName == "Servidor") { addMessageToTarget("Servidor", UiChatMessage("La pestaña 'Servidor' no se puede cerrar.", UiMessageType.SYSTEM_MESSAGE)); return }
-        if (targetName.startsWith("#")) { Log.d("MainViewModel", "Solicitando PART para el canal: $targetName vía repositorio"); ircRepository.partChannel(targetName) } 
-        else { 
+        
+        val wasUnread = _unreadTargets.value.contains(targetName) 
+
+        if (targetName.startsWith("#")) { 
+            Log.d("MainViewModel", "Solicitando PART para el canal: $targetName vía repositorio"); 
+            ircRepository.partChannel(targetName)
+        } else { 
             _chatTargets.value = ensureServerTargetIsFirst(_chatTargets.value.filterNot { it.equals(targetName, ignoreCase = true) })
-            if (_activeTarget.value?.equals(targetName, ignoreCase = true) == true) { _activeTarget.value = _chatTargets.value.firstOrNull() ?: "Servidor" }
+            if (wasUnread) {
+                _unreadTargets.value = _unreadTargets.value - targetName
+                Log.d("MainViewModel", "PM Target '$targetName' removed from unread due to close.")
+            }
+            if (_activeTarget.value?.equals(targetName, ignoreCase = true) == true) { 
+                _activeTarget.value = _chatTargets.value.firstOrNull() ?: "Servidor" 
+                _activeTarget.value?.let {
+                    if (_unreadTargets.value.contains(it)) {
+                        _unreadTargets.value = _unreadTargets.value - it
+                        Log.d("MainViewModel", "New active target '$it' after close, marked as read.")
+                    }
+                }
+            }
         }
     }
 
@@ -308,10 +360,10 @@ class MainViewModel @Inject constructor(
     }
 
     @Deprecated("Usar disconnectFromServerAndStopService para una desconexión completa.", ReplaceWith("disconnectFromServerAndStopService()"))
-    fun disconnect() { // Esta función ahora podría ser solo para desconexión de socket
+    fun disconnect() { 
         val targetForMessage = _activeTarget.value ?: _chatTargets.value.firstOrNull() ?: "Servidor"
         addMessageToTarget(targetForMessage, UiChatMessage("Solicitando desconexión del socket IRC...", UiMessageType.SYSTEM_MESSAGE))
-        ircRepository.disconnect() // Asumimos que esto solo cierra el socket ahora
+        ircRepository.disconnect() 
     }
 
     fun disconnectFromServerAndStopService() {
@@ -319,7 +371,7 @@ class MainViewModel @Inject constructor(
         val targetForMessage = _activeTarget.value ?: _chatTargets.value.firstOrNull() ?: "Servidor"
         addMessageToTarget(targetForMessage, UiChatMessage("Desconectando y solicitando detener el servicio...", UiMessageType.SYSTEM_MESSAGE))
         
-        viewModelScope.launch { // Emitir evento para Toast
+        viewModelScope.launch { 
             _userMessageEvents.emit("Desconectado del servidor.")
         }
         

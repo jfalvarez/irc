@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.RingtoneManager // IMPORTED RingtoneManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -22,7 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.jfaf.irc.data.model.ParsedIrcMessage
-import com.jfaf.irc.ui.MainScreen // Corrected import to use MainScreen from ui package
+import com.jfaf.irc.ui.MainScreen 
 import com.jfaf.irc.ui.theme.IrcTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.util.NotificationHelper
@@ -56,6 +59,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
             val context = LocalContext.current
+            val currentActiveTarget by mainViewModel.activeTarget.collectAsState()
 
             LaunchedEffect(mainViewModel.rawIrcMessagesEvents) {
                 mainViewModel.rawIrcMessagesEvents.collectLatest { message: ParsedIrcMessage ->
@@ -74,26 +78,37 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(Unit) {
-                mainViewModel.newPrivateMessageSoundEvent.collectLatest {
+            LaunchedEffect(mainViewModel.incomingPrivateMessageEvent) { 
+                mainViewModel.incomingPrivateMessageEvent.collectLatest { pmSourceNick -> 
                     val isAppCurrentlyInForegroundByProcess = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
-                    Log.d(TAG_ACTIVITY, "Evento de nuevo PM. App en FG (ProcessLifecycle)? $isAppCurrentlyInForegroundByProcess.")
+                    
+                    Log.d(TAG_ACTIVITY, "Incoming PM Event from '$pmSourceNick'. App FG: $isAppCurrentlyInForegroundByProcess. Active Target: $currentActiveTarget")
 
                     if (!isAppCurrentlyInForegroundByProcess) {
                         Log.d(TAG_ACTIVITY, "App en BG. newMessagesCount BEFORE increment: $newMessagesCount")
                         newMessagesCount++
-                        // MODIFIED HERE to use string resources
                         val notificationTitle = context.getString(R.string.pm_notification_title)
                         val notificationContent = if (newMessagesCount > 1) {
                             context.getString(R.string.pm_notification_content_multiple, newMessagesCount)
                         } else {
                             context.getString(R.string.pm_notification_content_single)
                         }
-                        Log.i(TAG_ACTIVITY, "App en segundo plano, mostrando/actualizando notificación: $newMessagesCount mensajes.")
-                        Log.d(TAG_ACTIVITY, "[DIAGNOSTICO] Llamando a NotificationHelper.showPrivateMessageNotification...")
+                        Log.i(TAG_ACTIVITY, "App en segundo plano, mostrando/actualizando notificación para '$pmSourceNick': $newMessagesCount mensajes.")
                         NotificationHelper.showPrivateMessageNotification(context, notificationTitle, notificationContent)
                     } else {
-                        Log.i(TAG_ACTIVITY, "App en primer plano, la notificación del sistema NO se mostrará.")
+                        // App in Foreground
+                        if (pmSourceNick.equals(currentActiveTarget, ignoreCase = true)) {
+                            Log.i(TAG_ACTIVITY, "App en primer plano, PM de '$pmSourceNick' que ES el target activo. No hay sonido adicional.")
+                        } else {
+                            Log.i(TAG_ACTIVITY, "App en primer plano, PM de '$pmSourceNick' que NO ES el target activo ('$currentActiveTarget'). Reproduciendo sonido.")
+                            try {
+                                val notificationSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                                val ringtone = RingtoneManager.getRingtone(context, notificationSoundUri)
+                                ringtone.play()
+                            } catch (e: Exception) {
+                                Log.e(TAG_ACTIVITY, "Error al reproducir sonido de notificación", e)
+                            }
+                        }
                     }
                 }
             }
@@ -119,7 +134,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        // isActivityInForeground = false // This variable is not used anymore, can be removed
         Log.d(TAG_ACTIVITY, "onPause: Actividad NO está en primer plano.")
     }
 
@@ -130,7 +144,6 @@ class MainActivity : ComponentActivity() {
             ) {
                 Log.i(TAG_ACTIVITY, "Permiso de notificación ya concedido.")
             } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
-                // Consider showing a custom UI explaining why the permission is needed
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
