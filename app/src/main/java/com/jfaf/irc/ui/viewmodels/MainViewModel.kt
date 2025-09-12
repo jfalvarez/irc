@@ -3,9 +3,10 @@ package com.jfaf.irc.ui.viewmodels
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jfaf.irc.data.model.ParsedIrcMessage // Asumo que esta y otras importaciones necesarias ya están
-import com.jfaf.irc.data.repositories.IrcRepository // Asumo que esta y otras importaciones necesarias ya están
-import dagger.hilt.android.lifecycle.HiltViewModel // Asumo que esta y otras importaciones necesarias ya están
+import com.jfaf.irc.data.model.ParsedIrcMessage
+import com.jfaf.irc.data.prefs.UserPreferencesRepository
+import com.jfaf.irc.data.repositories.IrcRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,13 +46,11 @@ enum class UiMessageType {
 }
 // --- End of Data classes ---
 
-// Definitions for IrcMessageHandler, ChatUiSnapshot, ChatUpdateResult,
-// and FiveTuple have been moved to IrcMessageHandler.kt
-
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val ircRepository: IrcRepository,
-    private val ircMessageHandler: IrcMessageHandler // This is now injected from the new file
+    private val ircMessageHandler: IrcMessageHandler,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
     val connectionState: StateFlow<Boolean> = ircRepository.connectionState
@@ -79,13 +78,65 @@ class MainViewModel @Inject constructor(
 
     private val _allMessages = MutableStateFlow<Map<String, List<UiChatMessage>>>(emptyMap())
 
+    // Preferences Flows
+    private val showJoinPartQuitMessagesPref: StateFlow<Boolean> =
+        userPreferencesRepository.showJoinPartQuitFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    private val showNickChangesPref: StateFlow<Boolean> =
+        userPreferencesRepository.showNickChangesFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    private val showModeChangesPref: StateFlow<Boolean> =
+        userPreferencesRepository.showModeChangesFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
     val uiMessages: StateFlow<List<UiChatMessage>> = combine(
-        _activeTarget, _allMessages
-    ) { active, allMsgs ->
-        Log.d("MainViewModel.uiMessages", "Combine: activeTarget='${active}', allMsgs keys='${allMsgs.keys.joinToString()}'. Msgs for active: ${allMsgs[active]?.size ?: 0}")
-        val messagesToShow = allMsgs[active] ?: emptyList()
-        Log.d("MainViewModel.uiMessages", "Combine emitting: ${messagesToShow.size} messages for target '$active'. First message: ${messagesToShow.firstOrNull()?.fullText}")
-        messagesToShow
+        _activeTarget,
+        _allMessages,
+        showJoinPartQuitMessagesPref,
+        showNickChangesPref,
+        showModeChangesPref
+    ) { active, allMsgs, showJpq, showNick, showMode ->
+        val messagesForTarget = allMsgs[active] ?: emptyList()
+        
+        messagesForTarget.filter { message ->
+            var shouldShow = true // Assume message should be shown by default
+
+            // Filter based on JOIN/PART/QUIT and specific text content
+            if (!showJpq) {
+                if (message.type == UiMessageType.JOIN_PART_QUIT ||
+                    message.fullText.contains("signed off", ignoreCase = true) ||
+                    message.fullText.contains("connection closed", ignoreCase = true)) {
+                    shouldShow = false
+                }
+            }
+
+            // Filter based on Nick Changes, only if not already hidden
+            if (shouldShow && !showNick) {
+                if (message.type == UiMessageType.NICK_CHANGE) {
+                    shouldShow = false
+                }
+            }
+
+            // Filter based on Mode Changes, only if not already hidden
+            if (shouldShow && !showMode) {
+                if (message.type == UiMessageType.MODE_CHANGE) {
+                    shouldShow = false
+                }
+            }
+            
+            shouldShow
+        }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000L),
@@ -111,7 +162,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun processIncomingParsedMessage(parsedMessage: ParsedIrcMessage) {
-        val snapshot = ChatUiSnapshot( // This will now refer to the definition in IrcMessageHandler.kt
+        val snapshot = ChatUiSnapshot(
             currentNickname = this.currentNickname,
             activeTarget = _activeTarget.value,
             allMessages = _allMessages.value,
@@ -119,11 +170,11 @@ class MainViewModel @Inject constructor(
             unreadTargets = _unreadTargets.value
         )
 
-        val result = ircMessageHandler.processMessage(snapshot, parsedMessage) // Uses the injected ircMessageHandler
+        val result = ircMessageHandler.processMessage(snapshot, parsedMessage)
 
         this.currentNickname = result.newCurrentNickname
         _activeTarget.value = result.newActiveTarget
-        _allMessages.value = result.newAllMessages
+        _allMessages.value = result.newAllMessages // _allMessages still stores ALL messages
         _chatTargets.value = result.newChatTargets
         _unreadTargets.value = result.newUnreadTargets
         Log.d("MainViewModel.ProcessResult", "Post-update: activeTarget='${_activeTarget.value}', allMessages keys='${_allMessages.value.keys.joinToString()}', chatTargets='${_chatTargets.value.joinToString()}', unread='${_unreadTargets.value.joinToString()}'")

@@ -30,6 +30,7 @@
     <string name="app_title_disconnected">IRC App - Desconectado</string>
     <string name="button_accept">Aceptar</string>
     <string name="button_cancel">Cancelar</string>
+    <string name="menu_item_settings">Configuración</string>
 
     <string name="drawer_title_channels_chats">Canales y Chats</string>
     <string name="drawer_user_connected_as">Conectado como: %1$s</string>    <string name="cd_channel">Canal</string>
@@ -51,4 +52,11 @@
     <string name="new_message_in_channel_title">Nuevo mensaje en %1$s</string> <!-- %1$s será el nombre del canal -->
     <string name="new_private_message_from_sender_title">Mensaje privado de %1$s</string>
     <string name="notification_channel_description_irc_service">Notificación persistente que indica el estado de conexión del servicio IRC.</string> <!-- %1$s será el nick del remitente -->
+
+    <!-- Settings Screen -->
+    <string name="cd_navigate_up">Volver</string>
+    <string name="settings_section_message_preferences">Preferencias de Mensajes</string>
+    <string name="settings_option_show_join_part_quit">Mostrar mensajes de JOIN/PART/QUIT</string>
+    <string name="settings_option_show_nick_changes">Mostrar cambios de Nick</string>
+    <string name="settings_option_show_mode_changes">Mostrar cambios de Modo</string>
 </resources>

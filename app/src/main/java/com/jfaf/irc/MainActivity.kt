@@ -4,7 +4,7 @@ import android.Manifest
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
-import android.media.RingtoneManager // IMPORTED RingtoneManager
+import android.media.RingtoneManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -13,8 +13,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+// import androidx.compose.foundation.layout.padding // No longer needed here if Scaffold is removed
+// import androidx.compose.material3.Scaffold // No longer needed here if Scaffold is removed
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
@@ -24,9 +24,14 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.service.IrcServiceApi
-import com.jfaf.irc.ui.MainScreen 
+import com.jfaf.irc.ui.screens.MainScreen // Corrected import
+import com.jfaf.irc.ui.screens.SettingsScreen // Import SettingsScreen
 import com.jfaf.irc.ui.theme.IrcTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.util.NotificationHelper
@@ -74,6 +79,7 @@ class MainActivity : ComponentActivity() {
             val context = LocalContext.current
             val currentActiveTarget by mainViewModel.activeTarget.collectAsState()
 
+            // --- LaunchedEffects remain the same ---
             LaunchedEffect(mainViewModel.rawIrcMessagesEvents) {
                 mainViewModel.rawIrcMessagesEvents.collectLatest { message: ParsedIrcMessage ->
                     val logOutput = "Raw Parsed << Command: ${message.command}, " +
@@ -125,13 +131,29 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+            // --- End of LaunchedEffects ---
+
+            val navController = rememberNavController() // NAVEGACIÓN: Added NavController
 
             IrcTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    MainScreen(
-                        viewModel = mainViewModel,
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                // The Scaffold that was here is removed as MainScreen and SettingsScreen have their own.
+                NavHost(
+                    navController = navController,
+                    startDestination = "main", // Initial route
+                    modifier = Modifier.fillMaxSize() 
+                ) {
+                    composable("main") {
+                        MainScreen(
+                            viewModel = mainViewModel,
+                            navController = navController // NAVEGACIÓN: Passing navController
+                            // modifier previously using innerPadding is removed as the outer Scaffold is gone
+                        )
+                    }
+                    composable("settings") {
+                        SettingsScreen(
+                            onNavigateUp = { navController.navigateUp() }
+                        )
+                    }
                 }
             }
         }
@@ -157,6 +179,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 Log.i(TAG_ACTIVITY, "Permiso de notificación ya concedido.")
             } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                // Consider showing a rationale to the user if needed.
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)

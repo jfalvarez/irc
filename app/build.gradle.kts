@@ -70,13 +70,17 @@ dependencies {
 //    implementation(libs.kitteh.irc.client) // O la última versión estable que encuentres
 //    implementation("org.kitteh.irc:client-lib:9.0.0")
 
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
+
     // Kotlinx Coroutines
     implementation(libs.kotlinx.coroutines.core) // Changed to use version catalog
 
-    // Hilt
+    // Hilt & Navigation
     implementation("com.google.dagger:hilt-android:2.57.1")
     kapt("com.google.dagger:hilt-compiler:2.57.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("androidx.navigation:navigation-compose:2.9.4") // Added Navigation Compose
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
