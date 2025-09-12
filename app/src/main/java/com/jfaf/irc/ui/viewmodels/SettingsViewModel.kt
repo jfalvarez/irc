@@ -28,7 +28,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // StateFlow for Show Nick Changes
     val showNickChanges: StateFlow<Boolean> =
         userPreferencesRepository.showNickChangesFlow.stateIn(
             scope = viewModelScope,
@@ -42,7 +41,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // StateFlow for Show Mode Changes
     val showModeChanges: StateFlow<Boolean> =
         userPreferencesRepository.showModeChangesFlow.stateIn(
             scope = viewModelScope,
@@ -53,6 +51,28 @@ class SettingsViewModel @Inject constructor(
     fun setShowModeChanges(show: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.updateShowModeChanges(show)
+        }
+    }
+
+    // StateFlow for Ignored Users
+    val ignoredUsers: StateFlow<Set<String>> =
+        userPreferencesRepository.ignoredUsersFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptySet() // Default to an empty set
+        )
+
+    fun addIgnoredUser(nick: String) {
+        if (nick.isNotBlank()) {
+            viewModelScope.launch {
+                userPreferencesRepository.addIgnoredUser(nick)
+            }
+        }
+    }
+
+    fun removeIgnoredUser(nick: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.removeIgnoredUser(nick)
         }
     }
 }

@@ -59,4 +59,16 @@
     <string name="settings_option_show_join_part_quit">Mostrar mensajes de JOIN/PART/QUIT</string>
     <string name="settings_option_show_nick_changes">Mostrar cambios de Nick</string>
     <string name="settings_option_show_mode_changes">Mostrar cambios de Modo</string>
+
+    <!-- Settings Screen - Ignored Users -->
+    <string name="settings_section_ignored_users">Usuarios Ignorados</string>
+    <string name="settings_ignore_user_dialog_title">Ignorar Usuario</string>
+    <string name="settings_ignore_user_dialog_label">Nick del usuario a ignorar</string>
+    <string name="settings_button_add_ignored">Añadir a Ignorados</string>
+    <string name="settings_button_unignore">Dejar de Ignorar</string>
+    <string name="settings_no_ignored_users">No hay usuarios ignorados.</string>
+    <string name="settings_ignored_user_added">Usuario \'%1$s\' añadido a ignorados.</string>
+    <string name="settings_ignored_user_removed">Usuario \'%1$s\' eliminado de ignorados.</string>
+    <string name="settings_error_nick_empty">El nick no puede estar vacío.</string>
+
 </resources>

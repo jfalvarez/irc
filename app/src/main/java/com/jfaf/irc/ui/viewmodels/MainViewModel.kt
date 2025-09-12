@@ -51,10 +51,26 @@ class MainViewModel @Inject constructor(
     private val ircRepository: IrcRepository,
     private val ircMessageHandler: IrcMessageHandler,
     private val userPreferencesRepository: UserPreferencesRepository
-) : ViewModel() {
+) : ViewModel(), ChatEventListener {
+
+    private var chatEventOrchestrator = ChatEventOrchestrator(
+        ircRepository,
+        userPreferencesRepository,
+        this, // MainViewModel is the ChatEventListener
+        viewModelScope
+    )
+
+    // --- Private data class for holding combined filter parameters ---
+    private data class UiMessagesFilterContext(
+        val activeTarget: String?,
+        val allMessages: Map<String, List<UiChatMessage>>,
+        val showJpq: Boolean,
+        val showNick: Boolean,
+        val showMode: Boolean,
+        val ignoredUsers: Set<String>
+    )
 
     val connectionState: StateFlow<Boolean> = ircRepository.connectionState
-    val rawIrcMessagesEvents: SharedFlow<ParsedIrcMessage> = ircRepository.incomingMessages
 
     var currentNickname = "IrcUser${(100..999).random()}"
         private set
@@ -100,20 +116,49 @@ class MainViewModel @Inject constructor(
             initialValue = true
         )
 
+    private val ignoredUsersPref: StateFlow<Set<String>> =
+        userPreferencesRepository.ignoredUsersFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptySet()
+        )
+
+    @Suppress("UNCHECKED_CAST") // Needed for casting elements from Array<Any?> in combine
     val uiMessages: StateFlow<List<UiChatMessage>> = combine(
-        _activeTarget,
-        _allMessages,
-        showJoinPartQuitMessagesPref,
-        showNickChangesPref,
-        showModeChangesPref
-    ) { active, allMsgs, showJpq, showNick, showMode ->
-        val messagesForTarget = allMsgs[active] ?: emptyList()
-        
+        listOf(
+            _activeTarget,
+            _allMessages,
+            showJoinPartQuitMessagesPref,
+            showNickChangesPref,
+            showModeChangesPref,
+            ignoredUsersPref
+        )
+    ) { values ->
+        // values is Array<Any?>. We need to cast them to their expected types.
+        val filterContext = UiMessagesFilterContext(
+            activeTarget = values[0] as String?,
+            allMessages = values[1] as Map<String, List<UiChatMessage>>,
+            showJpq = values[2] as Boolean,
+            showNick = values[3] as Boolean,
+            showMode = values[4] as Boolean,
+            ignoredUsers = values[5] as Set<String>
+        )
+
+        val messagesForTarget = filterContext.allMessages[filterContext.activeTarget] ?: emptyList()
+        val ignoredUsersLowercase = filterContext.ignoredUsers.map { it.lowercase() }.toSet()
+
         messagesForTarget.filter { message ->
             var shouldShow = true // Assume message should be shown by default
 
-            // Filter based on JOIN/PART/QUIT and specific text content
-            if (!showJpq) {
+            // 1. Filter by ignored users
+            if (message.sender != null &&
+                (message.type == UiMessageType.CHANNEL_MSG_RECEIVED || message.type == UiMessageType.PRIVATE_MSG_RECEIVED) &&
+                message.sender.lowercase() in ignoredUsersLowercase) {
+                shouldShow = false
+            }
+
+            // 2. Filter based on JOIN/PART/QUIT (only if not already hidden)
+            if (shouldShow && !filterContext.showJpq) {
                 if (message.type == UiMessageType.JOIN_PART_QUIT ||
                     message.fullText.contains("signed off", ignoreCase = true) ||
                     message.fullText.contains("connection closed", ignoreCase = true)) {
@@ -121,20 +166,19 @@ class MainViewModel @Inject constructor(
                 }
             }
 
-            // Filter based on Nick Changes, only if not already hidden
-            if (shouldShow && !showNick) {
+            // 3. Filter based on Nick Changes (only if not already hidden)
+            if (shouldShow && !filterContext.showNick) {
                 if (message.type == UiMessageType.NICK_CHANGE) {
                     shouldShow = false
                 }
             }
 
-            // Filter based on Mode Changes, only if not already hidden
-            if (shouldShow && !showMode) {
+            // 4. Filter based on Mode Changes (only if not already hidden)
+            if (shouldShow && !filterContext.showMode) {
                 if (message.type == UiMessageType.MODE_CHANGE) {
                     shouldShow = false
                 }
             }
-            
             shouldShow
         }
     }.stateIn(
@@ -144,12 +188,7 @@ class MainViewModel @Inject constructor(
     )
 
     init {
-        rawIrcMessagesEvents
-            .onEach { parsedMessage ->
-                Log.d("MainViewModel", "Internal Raw In (from Service via Repo): $parsedMessage. Delegating to IrcMessageHandler.")
-                processIncomingParsedMessage(parsedMessage)
-            }
-            .launchIn(viewModelScope)
+        chatEventOrchestrator.startObservingRawMessages()
 
         connectionState.onEach { isConnected ->
             Log.i("MainViewModel", "Estado de conexión (desde Servicio): ${if (isConnected) "CONECTADO" else "DESCONECTADO"}")
@@ -161,7 +200,9 @@ class MainViewModel @Inject constructor(
         }.launchIn(viewModelScope)
     }
 
-    private fun processIncomingParsedMessage(parsedMessage: ParsedIrcMessage) {
+    // --- ChatEventListener Implementation ---
+    override fun processMessageForUi(parsedMessage: ParsedIrcMessage, ignoredUsersLowercase: Set<String>) {
+        // This was formerly processIncomingParsedMessage
         val snapshot = ChatUiSnapshot(
             currentNickname = this.currentNickname,
             activeTarget = _activeTarget.value,
@@ -174,18 +215,26 @@ class MainViewModel @Inject constructor(
 
         this.currentNickname = result.newCurrentNickname
         _activeTarget.value = result.newActiveTarget
-        _allMessages.value = result.newAllMessages // _allMessages still stores ALL messages
+        _allMessages.value = result.newAllMessages
         _chatTargets.value = result.newChatTargets
         _unreadTargets.value = result.newUnreadTargets
-        Log.d("MainViewModel.ProcessResult", "Post-update: activeTarget='${_activeTarget.value}', allMessages keys='${_allMessages.value.keys.joinToString()}', chatTargets='${_chatTargets.value.joinToString()}', unread='${_unreadTargets.value.joinToString()}'")
+        Log.d("MainViewModel.processMessageForUi", "Post-update: activeTarget='${_activeTarget.value}', allMessages keys='${_allMessages.value.keys.joinToString()}', chatTargets='${_chatTargets.value.joinToString()}', unread='${_unreadTargets.value.joinToString()}'")
 
         result.ownNickChangedTo?.let {
             Log.d("MainViewModel", "Own nick change to '${it}' confirmed by IrcMessageHandler.")
         }
 
-        result.privateMessageEventNick?.let {
-            _incomingPrivateMessageEvent.tryEmit(it)
-            Log.d("MainViewModel", "PM Event for '$it' emitted via IrcMessageHandler result.")
+        // The logic for emitting _incomingPrivateMessageEvent is now primarily handled by
+        // the ChatEventOrchestrator calling `emitPrivateMessageEvent` on this listener.
+        // However, if IrcMessageHandler *also* determines a PM event should occur from its own logic
+        // (e.g. after processing a command that isn't a raw PRIVMSG but results in a PM context),
+        // it can still use `result.privateMessageEventNick`.
+        result.privateMessageEventNick?.let { nick ->
+            if (nick.lowercase() !in ignoredUsersLowercase) { // Double-check against ignored list
+                emitPrivateMessageEvent(nick) // Use the interface method
+            } else {
+                Log.d("MainViewModel", "PM Event for '$nick' from IrcMessageHandler suppressed as user is in ignored list: ${ignoredUsersLowercase.joinToString()}")
+            }
         }
 
         if (result.uiMessageToAdd != null && result.targetForUiMessage != null) {
@@ -194,6 +243,22 @@ class MainViewModel @Inject constructor(
             Log.d("MainViewModel", "IrcMessageHandler processed ${parsedMessage.command}. ViewModel state updated from result.")
         }
     }
+
+    override fun emitPrivateMessageEvent(nick: String) {
+        // Check if the nick is in the current ignored users list from preferences
+        // This is a safeguard, as ChatEventOrchestrator should ideally pre-filter.
+        val currentIgnoredUsers = ignoredUsersPref.value.map { it.lowercase() }.toSet()
+        if (nick.lowercase() !in currentIgnoredUsers) {
+            _incomingPrivateMessageEvent.tryEmit(nick)
+            Log.d("MainViewModel", "PM Event for '$nick' emitted via ChatEventListener interface.")
+        } else {
+            Log.d("MainViewModel", "PM Event for '$nick' (from orchestrator) suppressed as user is in current ignored list.")
+        }
+    }
+
+    override fun isConnected(): Boolean = connectionState.value
+    // --- End ChatEventListener Implementation ---
+
 
     private fun addSystemMessageToTarget(target: String, text: String) {
         val systemMessage = UiChatMessage(text, UiMessageType.SYSTEM_MESSAGE)
@@ -213,6 +278,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun handleServiceConnected() {
+        chatEventOrchestrator.resetSessionState() // Inform the orchestrator
         val serverMessages = _allMessages.value[SERVER_TARGET_ID] ?: emptyList()
         val lastMessageText = serverMessages.lastOrNull()?.fullText ?: ""
 
@@ -221,7 +287,7 @@ class MainViewModel @Inject constructor(
             _activeTarget.value = _activeTarget.value ?: SERVER_TARGET_ID
             addSystemMessageToTarget(SERVER_TARGET_ID, "Conectado al servidor.")
         }
-        Log.i("MainViewModel", "Servicio conectado.")
+        Log.i("MainViewModel", "Servicio conectado. Auto-reply list for ignored users has been reset by orchestrator.")
         Log.d("MainViewModel.ServiceConnected", "State: activeTarget='${_activeTarget.value}', allMessages keys='${_allMessages.value.keys.joinToString()}', chatTargets='${_chatTargets.value.joinToString()}'")
     }
 

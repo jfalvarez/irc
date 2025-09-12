@@ -13,25 +13,21 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
-// import androidx.compose.foundation.layout.padding // No longer needed here if Scaffold is removed
-// import androidx.compose.material3.Scaffold // No longer needed here if Scaffold is removed
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.service.IrcServiceApi
-import com.jfaf.irc.ui.screens.MainScreen // Corrected import
-import com.jfaf.irc.ui.screens.SettingsScreen // Import SettingsScreen
+import com.jfaf.irc.ui.screens.MainScreen
+import com.jfaf.irc.ui.screens.SettingsScreen
 import com.jfaf.irc.ui.theme.IrcTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.util.NotificationHelper
@@ -79,17 +75,8 @@ class MainActivity : ComponentActivity() {
             val context = LocalContext.current
             val currentActiveTarget by mainViewModel.activeTarget.collectAsState()
 
-            // --- LaunchedEffects remain the same ---
-            LaunchedEffect(mainViewModel.rawIrcMessagesEvents) {
-                mainViewModel.rawIrcMessagesEvents.collectLatest { message: ParsedIrcMessage ->
-                    val logOutput = "Raw Parsed << Command: ${message.command}, " +
-                                    "Prefix: ${message.prefix ?: "N/A"}, " +
-                                    "Params: ${message.params.joinToString()}, " +
-                                    "Trailing: ${message.trailing ?: "N/A"}" +
-                                    " (Raw: '${message.rawLine}')"
-                    Log.d(TAG_ACTIVITY, logOutput)
-                }
-            }
+            // LaunchedEffect for rawIrcMessagesEvents has been removed as this is now
+            // handled within ChatEventOrchestrator and MainViewModel logic.
 
             LaunchedEffect(mainViewModel.connectionState) {
                 mainViewModel.connectionState.collectLatest { isConnected ->
