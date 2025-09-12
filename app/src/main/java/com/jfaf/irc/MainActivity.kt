@@ -73,13 +73,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
             val context = LocalContext.current
-            val currentActiveTarget by mainViewModel.activeTarget.collectAsState()
+            // Updated to use chatScreenState
+            val currentActiveTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()
 
             // LaunchedEffect for rawIrcMessagesEvents has been removed as this is now
             // handled within ChatEventOrchestrator and MainViewModel logic.
 
-            LaunchedEffect(mainViewModel.connectionState) {
-                mainViewModel.connectionState.collectLatest { isConnected ->
+            // Updated to use chatScreenState
+            LaunchedEffect(mainViewModel.chatScreenState.connectionState) {
+                mainViewModel.chatScreenState.connectionState.collectLatest { isConnected ->
                     logToUi("Estado Conexión VM (MainActivity): ${if (isConnected) "CONECTADO" else "DESCONECTADO"}")
                 }
             }

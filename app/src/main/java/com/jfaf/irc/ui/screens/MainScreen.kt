@@ -38,23 +38,36 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel(),
     navController: NavHostController // NAVEGACIÓN: Nuevo parámetro
 ) {
-    val connectionState by viewModel.connectionState.collectAsState()
+    val connectionState by viewModel.chatScreenState.connectionState.collectAsState()
     var nicknameInput by remember { mutableStateOf("") }
     var useSslInput by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
+    // Nuevo LaunchedEffect para asegurar que el drawer esté cerrado al conectar
+    LaunchedEffect(connectionState) {
+        if (connectionState) {
+            // Si el drawer está abierto cuando se establece la conexión, ciérralo.
+            if (drawerState.currentValue == DrawerValue.Open) {
+                scope.launch {
+                    drawerState.close()
+                    Log.d("MainScreen", "Drawer programmatically closed upon connection.")
+                }
+            }
+        }
+    }
+
     // Collect unread targets to pass to AppDrawerContent
-    val unreadTargetsState = viewModel.unreadTargets.collectAsState()
+    val unreadTargetsState = viewModel.chatScreenState.unreadTargets.collectAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             if (connectionState) {
                 AppDrawerContent(
-                    chatTargets = viewModel.chatTargets.collectAsState().value,
-                    activeTarget = viewModel.activeTarget.collectAsState().value,
+                    chatTargets = viewModel.chatScreenState.chatTargets.collectAsState().value,
+                    activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value,
                     unreadTargets = unreadTargetsState.value,
                     currentNick = viewModel.currentNickname,
                     onTargetSelected = {
@@ -92,7 +105,7 @@ fun MainScreen(
             topBar = {
                 if (connectionState) {
                     ChatTopAppBar(
-                        activeTarget = viewModel.activeTarget.collectAsState().value,
+                        activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value,
                         onNavigationIconClick = { scope.launch { drawerState.open() } },
                         onDisconnectClick = { viewModel.disconnectFromServerAndStopService() }, 
                         onJoinChannelRequest = { channelName -> viewModel.joinChannel(channelName) },
@@ -103,7 +116,7 @@ fun MainScreen(
                 }
             },
             bottomBar = {
-                val activeTargetValue = viewModel.activeTarget.collectAsState().value
+                val activeTargetValue = viewModel.chatScreenState.activeTarget.collectAsState().value
                 val serverString = stringResource(R.string.cd_server) 
                 if (connectionState && activeTargetValue != null && activeTargetValue != serverString) {
                     MessageInputSection(
@@ -142,8 +155,8 @@ fun MainScreen(
                         }
                     )
                 } else {
-                    val activeTarget = viewModel.activeTarget.collectAsState().value
-                    val messages = viewModel.uiMessages.collectAsState().value
+                    val activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value
+                    val messages = viewModel.chatScreenState.uiMessages.collectAsState().value
 
                     if (activeTarget != null) {
                         MessagesList(messages = messages)
