@@ -25,6 +25,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.jfaf.irc.data.model.ParsedIrcMessage
+import com.jfaf.irc.service.IrcServiceApi
 import com.jfaf.irc.ui.MainScreen 
 import com.jfaf.irc.ui.theme.IrcTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
@@ -49,6 +50,18 @@ class MainActivity : ComponentActivity() {
         } else {
             Log.w(TAG_ACTIVITY, "Permiso de notificación DENEGADO")
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        IrcServiceApi.appEnteredForeground()
+        Log.d("MainActivity", "App en primer plano.")
+    }
+
+    override fun onStop() {
+        super.onStop()
+        IrcServiceApi.appEnteredBackground()
+        Log.d("MainActivity", "App en segundo plano.")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -42,4 +42,13 @@
     <string name="pm_notification_title">Nuevo Mensaje Privado</string>
     <string name="pm_notification_content_single">Has recibido un nuevo mensaje.</string>
     <string name="pm_notification_content_multiple">Tienes %1$d mensajes nuevos</string>
+
+    <!-- Para el NUEVO canal de notificación de mensajes -->
+    <string name="notification_channel_name_irc_messages">Mensajes IRC</string>
+    <string name="notification_channel_description_irc_messages">Notificaciones para nuevos mensajes recibidos en canales y privados.</string>
+
+    <!-- Para el contenido de las NUEVAS notificaciones de mensajes -->
+    <string name="new_message_in_channel_title">Nuevo mensaje en %1$s</string> <!-- %1$s será el nombre del canal -->
+    <string name="new_private_message_from_sender_title">Mensaje privado de %1$s</string>
+    <string name="notification_channel_description_irc_service">Notificación persistente que indica el estado de conexión del servicio IRC.</string> <!-- %1$s será el nick del remitente -->
 </resources>

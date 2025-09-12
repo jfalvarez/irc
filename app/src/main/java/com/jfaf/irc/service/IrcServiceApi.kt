@@ -25,12 +25,25 @@ object IrcServiceApi {
     )
     val incomingMessages: SharedFlow<ParsedIrcMessage> = _incomingMessages.asSharedFlow()
 
+    // --- NUEVO para el estado de la UI ---
+    private val _isAppInForeground = MutableStateFlow(true) // Asumimos foreground al inicio
+    val isAppInForeground: StateFlow<Boolean> = _isAppInForeground.asStateFlow()
+
     // --- Internal methods to be called by IrcService only ---
     internal fun updateConnectionState(isConnected: Boolean) {
         _connectionState.value = isConnected
     }
 
     internal suspend fun postMessage(message: ParsedIrcMessage) {
-        _incomingMessages.emit(message)
+        _incomingMessages.tryEmit(message)
+    }
+
+    // --- NUEVAS funciones para la UI ---
+    fun appEnteredForeground() {
+        _isAppInForeground.value = true
+    }
+
+    fun appEnteredBackground() {
+        _isAppInForeground.value = false
     }
 }
