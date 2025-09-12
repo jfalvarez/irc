@@ -12,7 +12,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background // Importación añadida
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme // Importación añadida para MaterialTheme.colorScheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,12 +35,13 @@ import androidx.navigation.compose.rememberNavController
 import com.jfaf.irc.service.IrcServiceApi
 import com.jfaf.irc.ui.screens.MainScreen
 import com.jfaf.irc.ui.screens.SettingsScreen
-import com.jfaf.irc.ui.theme.IrcTheme
+import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.util.NotificationHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 
+@OptIn(ExperimentalAnimationApi::class)
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -73,13 +81,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             val mainViewModel: MainViewModel = hiltViewModel()
             val context = LocalContext.current
-            // Updated to use chatScreenState
             val currentActiveTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()
 
-            // LaunchedEffect for rawIrcMessagesEvents has been removed as this is now
-            // handled within ChatEventOrchestrator and MainViewModel logic.
-
-            // Updated to use chatScreenState
             LaunchedEffect(mainViewModel.chatScreenState.connectionState) {
                 mainViewModel.chatScreenState.connectionState.collectLatest { isConnected ->
                     logToUi("Estado Conexión VM (MainActivity): ${if (isConnected) "CONECTADO" else "DESCONECTADO"}")
@@ -104,7 +107,6 @@ class MainActivity : ComponentActivity() {
                         Log.i(TAG_ACTIVITY, "App en segundo plano, mostrando/actualizando notificación para '$pmSourceNick': $newMessagesCount mensajes.")
                         NotificationHelper.showPrivateMessageNotification(context, notificationTitle, notificationContent)
                     } else {
-                        // App in Foreground
                         if (pmSourceNick.equals(currentActiveTarget, ignoreCase = true)) {
                             Log.i(TAG_ACTIVITY, "App en primer plano, PM de '$pmSourceNick' que ES el target activo. No hay sonido adicional.")
                         } else {
@@ -120,25 +122,40 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-            // --- End of LaunchedEffects ---
 
-            val navController = rememberNavController() // NAVEGACIÓN: Added NavController
+            val navController = rememberNavController()
 
-            IrcTheme {
-                // The Scaffold that was here is removed as MainScreen and SettingsScreen have their own.
+            IRCAppTheme { // Corregido para usar el Composable del Tema
                 NavHost(
                     navController = navController,
-                    startDestination = "main", // Initial route
-                    modifier = Modifier.fillMaxSize() 
+                    startDestination = "main",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background) // Fondo usa el color primario del tema (PurpleStart)
                 ) {
-                    composable("main") {
+                    composable(
+                        route = "main",
+                        exitTransition = {
+                            slideOutHorizontally(targetOffsetX = { -it }) + fadeOut()
+                        },
+                        popEnterTransition = {
+                            slideInHorizontally(initialOffsetX = { -it }) + fadeIn()
+                        }
+                    ) {
                         MainScreen(
                             viewModel = mainViewModel,
-                            navController = navController // NAVEGACIÓN: Passing navController
-                            // modifier previously using innerPadding is removed as the outer Scaffold is gone
+                            navController = navController
                         )
                     }
-                    composable("settings") {
+                    composable(
+                        route = "settings",
+                        enterTransition = {
+                            slideInHorizontally(initialOffsetX = { it }) + fadeIn()
+                        },
+                        popExitTransition = {
+                            slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+                        }
+                    ) {
                         SettingsScreen(
                             onNavigateUp = { navController.navigateUp() }
                         )
@@ -168,7 +185,6 @@ class MainActivity : ComponentActivity() {
             ) {
                 Log.i(TAG_ACTIVITY, "Permiso de notificación ya concedido.")
             } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
-                // Consider showing a rationale to the user if needed.
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)

@@ -59,6 +59,7 @@
     <string name="settings_option_show_join_part_quit">Mostrar mensajes de JOIN/PART/QUIT</string>
     <string name="settings_option_show_nick_changes">Mostrar cambios de Nick</string>
     <string name="settings_option_show_mode_changes">Mostrar cambios de Modo</string>
+    <string name="settings_option_show_ping_messages">Mostrar mensajes PING del servidor</string>
 
     <!-- Settings Screen - Ignored Users -->
     <string name="settings_section_ignored_users">Usuarios Ignorados</string>

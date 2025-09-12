@@ -54,6 +54,20 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    // --- Nueva preferencia para mensajes PING/PONG ---
+    val showPingPongMessages: StateFlow<Boolean> =
+        userPreferencesRepository.showPingPongMessagesFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false // Default value (no mostrar PINGs)
+        )
+
+    fun setShowPingPongMessages(show: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.updateShowPingPongMessages(show)
+        }
+    }
+
     // StateFlow for Ignored Users
     val ignoredUsers: StateFlow<Set<String>> =
         userPreferencesRepository.ignoredUsersFlow.stateIn(

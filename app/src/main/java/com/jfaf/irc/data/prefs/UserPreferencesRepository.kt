@@ -22,11 +22,13 @@ class UserPreferencesRepository @Inject constructor(
         private const val SHOW_JOIN_PART_QUIT_KEY_NAME = "show_join_part_quit"
         private const val SHOW_NICK_CHANGES_KEY_NAME = "show_nick_changes"
         private const val SHOW_MODE_CHANGES_KEY_NAME = "show_mode_changes"
+        private const val SHOW_PING_PONG_KEY_NAME = "show_ping_pong_messages" // Nueva constante
         private const val IGNORED_USERS_NICKS_KEY_NAME = "ignored_users_nicks"
 
         val SHOW_JOIN_PART_QUIT = booleanPreferencesKey(SHOW_JOIN_PART_QUIT_KEY_NAME)
         val SHOW_NICK_CHANGES = booleanPreferencesKey(SHOW_NICK_CHANGES_KEY_NAME)
         val SHOW_MODE_CHANGES = booleanPreferencesKey(SHOW_MODE_CHANGES_KEY_NAME)
+        val SHOW_PING_PONG_MESSAGES = booleanPreferencesKey(SHOW_PING_PONG_KEY_NAME) // Nueva clave
         val IGNORED_USERS_NICKS = stringSetPreferencesKey(IGNORED_USERS_NICKS_KEY_NAME) 
         
         const val TAG = "UserPrefsRepository"
@@ -87,6 +89,26 @@ class UserPreferencesRepository @Inject constructor(
     suspend fun updateShowModeChanges(show: Boolean) {
         dataStore.edit { preferences ->
             preferences[SHOW_MODE_CHANGES] = show
+        }
+    }
+    
+    // --- Nueva preferencia para mensajes PING/PONG ---
+    val showPingPongMessagesFlow: Flow<Boolean> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                Log.e(TAG, "Error reading SHOW_PING_PONG_MESSAGES preferences.", exception)
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[SHOW_PING_PONG_MESSAGES] ?: false // Por defecto a false (no mostrar)
+        }
+
+    suspend fun updateShowPingPongMessages(show: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[SHOW_PING_PONG_MESSAGES] = show
         }
     }
 

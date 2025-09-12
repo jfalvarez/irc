@@ -118,6 +118,13 @@ class MainViewModel @Inject constructor(
             initialValue = true
         )
 
+    private val showPingPongMessagesPref: StateFlow<Boolean> = // Nueva preferencia
+        userPreferencesRepository.showPingPongMessagesFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false // Por defecto no mostrar mensajes PING
+        )
+
     private val ignoredUsersPref: StateFlow<Set<String>> =
         userPreferencesRepository.ignoredUsersFlow.stateIn(
             scope = viewModelScope,
@@ -135,6 +142,7 @@ class MainViewModel @Inject constructor(
             showNickChangesPref,
             showModeChangesPref,
             ignoredUsersPref
+            // No es necesario incluir showPingPongMessagesPref aquí, ya que el filtrado de PING se hace antes.
         )
     ) { values ->
         val filterContext = UiMessagesFilterContext(
@@ -204,6 +212,12 @@ class MainViewModel @Inject constructor(
 
     // --- ChatEventListener Implementation ---
     override fun processMessageForUi(parsedMessage: ParsedIrcMessage, ignoredUsersLowercase: Set<String>) {
+        // Filtrar mensajes PING si la preferencia está desactivada
+        if (parsedMessage.command.equals("PING", ignoreCase = true) && !showPingPongMessagesPref.value) {
+            Log.d("MainViewModel.processMessageForUi", "PING message received and ignored for UI based on preference.")
+            return
+        }
+
         val snapshot = ChatUiSnapshot(
             currentNickname = this.currentNickname,
             activeTarget = _activeTarget.value, // Use internal value

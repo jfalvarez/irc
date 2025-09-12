@@ -1,80 +1,108 @@
 package com.jfaf.irc.ui.theme
 
-import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 
-// Tus definiciones de DarkColorScheme y LightColorScheme existentes
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-    // Puedes añadir más colores aquí si quieres personalizar más el fallback:
-    // background = Color(0xFF1C1B1F),
-    // surface = Color(0xFF1C1B1F),
-    // onPrimary = Color(0xFF381E72),
-    // onSecondary = Color(0xFF332D41),
-    // onTertiary = Color(0xFF492532),
-    // onBackground = Color(0xFFE6E1E5),
-    // onSurface = Color(0xFFE6E1E5),
-)
+// Import specific colors from our Color.kt
+import com.jfaf.irc.ui.theme.PurpleStart
+import com.jfaf.irc.ui.theme.BlueEnd
+import com.jfaf.irc.ui.theme.IRCWhite
+import com.jfaf.irc.ui.theme.IRCWhite08 // For specific TextField container
+import com.jfaf.irc.ui.theme.IRCWhite20 // For surfaceVariant, outlineVariant (dividers)
+import com.jfaf.irc.ui.theme.IRCWhite60 // For outline (borders)
 
+// CompositionLocal for the gradient properties
+val LocalGradientBrush = staticCompositionLocalOf<Brush> {
+    error("No GradientBrush provided")
+}
+val LocalGradientColors = staticCompositionLocalOf<List<Color>> {
+    error("No GradientColors provided")
+}
+
+// Define the Light ColorScheme for the application
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-    // Puedes añadir más colores aquí si quieres personalizar más el fallback:
-    // background = Color(0xFFFFFBFE),
-    // surface = Color(0xFFFFFBFE),
-    // onPrimary = Color.White,
-    // onSecondary = Color.White,
-    // onTertiary = Color.White,
-    // onBackground = Color(0xFF1C1B1F),
-    // onSurface = Color(0xFF1C1B1F),
+    primary = PurpleStart,
+    onPrimary = IRCWhite,       // Text/icons on top of primary color
+    secondary = BlueEnd,
+    onSecondary = IRCWhite,     // Text/icons on top of secondary color
+
+    background = PurpleStart,   // Default background for screens (can be overridden by a gradient)
+    onBackground = IRCWhite,    // Text/icons on top of background color
+
+    surface = PurpleStart.copy(alpha = 0.95f), // General surface color for components like Dialogs, Menus, Drawer sheets
+    onSurface = IRCWhite,                      // Text/icons on top of surface color
+
+    surfaceVariant = IRCWhite20, // Used for elements like TextField containers (non-outlined), Chips
+    onSurfaceVariant = IRCWhite, // Text/icons on top of surfaceVariant elements (e.g., TextField labels)
+
+    outline = IRCWhite60,        // Default border color (e.g., OutlinedTextField's unfocused border)
+    outlineVariant = IRCWhite20, // Subtle borders or dividers
+
+    // Other colors like error, tertiary, etc., will use Material 3 defaults.
+    // error = Color(0xFFB00020), // Default error color
+    // onError = Color.White,
 )
 
 @Composable
-fun IrcTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+fun IRCAppTheme(
+    // darkTheme: Boolean = isSystemInDarkTheme(), // Future: add dark theme support
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val currentColorScheme = LightColorScheme // Can be switched with a darkColorScheme later
 
-    // Bloque para controlar el color de la barra de estado y la apariencia de sus iconos
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            // Establece el color de la barra de estado. Puedes usar colorScheme.surface, colorScheme.primary, etc.
-            window.statusBarColor = colorScheme.surface.toArgb() 
-            // Ajusta la apariencia de los iconos de la barra de estado (claros/oscuros)
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
-        }
-    }
+    val gradientColorsList = listOf(PurpleStart, BlueEnd)
+    val gradientBrushInstance = Brush.verticalGradient(colors = gradientColorsList)
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography, // Asegúrate de que tu archivo Typography.kt está correctamente configurado
-        // shapes = Shapes, // Si tienes un archivo Shapes.kt, descomenta esto
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalGradientBrush provides gradientBrushInstance,
+        LocalGradientColors provides gradientColorsList
+    ) {
+        MaterialTheme(
+            colorScheme = currentColorScheme,
+            typography = Typography, // From Type.kt
+            shapes = Shapes,         // From Shapes.kt
+            content = content
+        )
+    }
+}
+
+// Helper object to easily access our custom theme properties, like the gradient or very specific colors.
+object IRCTheme {
+    val gradientBrush: Brush
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalGradientBrush.current
+
+    val gradientColors: List<Color>
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalGradientColors.current
+
+    // Example of a specific color not directly mapped or needing a unique alpha:
+    val outlinedTextFieldContainer: Color
+        @Composable
+        @ReadOnlyComposable
+        get() = IRCWhite08 // As defined in Color.kt
+
+// If specific alpha values for dialogs/menus are still needed beyond the general 'surface'
+    val dialogContainerOpaque: Color
+      @Composable
+      @ReadOnlyComposable
+      get() = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f)
+
+    val dropdownMenuContainerOpaque: Color
+      @Composable
+      @ReadOnlyComposable
+      get() = MaterialTheme.colorScheme.primary.copy(alpha = 0.98f)
+
+    val drawerContainerOpaque: Color
+      @Composable
+      @ReadOnlyComposable
+      get() = MaterialTheme.colorScheme.primary.copy(alpha = 0.96f)
 }

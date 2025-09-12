@@ -12,23 +12,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -37,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jfaf.irc.R
+import com.jfaf.irc.ui.theme.IRCTheme // Import IRCTheme for custom properties
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,6 +34,7 @@ fun SettingsScreen(
     val showJoinPartQuitMessages by viewModel.showJoinPartQuitMessages.collectAsState()
     val showNickChanges by viewModel.showNickChanges.collectAsState()
     val showModeChanges by viewModel.showModeChanges.collectAsState()
+    val showPingPongMessages by viewModel.showPingPongMessages.collectAsState()
     val ignoredUsers by viewModel.ignoredUsers.collectAsState()
 
     var nickToIgnoreInput by remember { mutableStateOf("") }
@@ -65,21 +52,28 @@ fun SettingsScreen(
                             contentDescription = stringResource(R.string.cd_navigate_up)
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                )
             )
         }
+        // Scaffold containerColor will default to MaterialTheme.colorScheme.background (PurpleStart)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp) // Only horizontal padding for the main column
+                .padding(horizontal = 16.dp) 
         ) {
             LazyColumn(modifier = Modifier.fillMaxWidth()){
                 item {
                     Text(
                         text = stringResource(R.string.settings_section_message_preferences),
-                        style = MaterialTheme.typography.titleMedium, // Changed to titleMedium
-                        modifier = Modifier.padding(vertical = 16.dp) // Adjusted padding
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground, // Text on PurpleStart
+                        modifier = Modifier.padding(vertical = 16.dp)
                     )
                 }
                 item {
@@ -103,16 +97,27 @@ fun SettingsScreen(
                         onCheckedChange = { viewModel.setShowModeChanges(it) }
                     )
                 }
+                item {
+                    SettingRowWithCheckbox(
+                        text = stringResource(R.string.settings_option_show_ping_messages),
+                        checked = showPingPongMessages,
+                        onCheckedChange = { viewModel.setShowPingPongMessages(it) }
+                    )
+                }
 
                 item {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant // IRCWhite20
+                    )
                 }
 
                 item {
                     Text(
                         text = stringResource(R.string.settings_section_ignored_users),
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp) // Adjusted padding
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
                     )
                 }
 
@@ -129,19 +134,33 @@ fun SettingsScreen(
                             onValueChange = { nickToIgnoreInput = it },
                             label = { Text(stringResource(R.string.settings_ignore_user_dialog_label)) },
                             modifier = Modifier.weight(1f),
-                            singleLine = true
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface, // IRCWhite
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface, // IRCWhite
+                                cursorColor = MaterialTheme.colorScheme.primary, // PurpleStart
+                                focusedBorderColor = MaterialTheme.colorScheme.primary, // PurpleStart
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline, // IRCWhite60
+                                focusedLabelColor = MaterialTheme.colorScheme.primary, // PurpleStart
+                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant, // IRCWhite (on surfaceVariant)
+                                focusedContainerColor = IRCTheme.outlinedTextFieldContainer, // IRCWhite08
+                                unfocusedContainerColor = IRCTheme.outlinedTextFieldContainer // IRCWhite08
+                            )
                         )
-                        Button(onClick = {
-                            if (nickToIgnoreInput.isNotBlank()) {
-                                viewModel.addIgnoredUser(nickToIgnoreInput)
-                                // Potentially show snackbar for R.string.settings_ignored_user_added
-                                nickToIgnoreInput = "" // Clear input
-                                keyboardController?.hide() // Hide keyboard
-                                focusManager.clearFocus() // Clear focus
-                            } else {
-                                // Potentially show snackbar for R.string.settings_error_nick_empty
-                            }
-                        }) {
+                        Button(
+                            onClick = {
+                                if (nickToIgnoreInput.isNotBlank()) {
+                                    viewModel.addIgnoredUser(nickToIgnoreInput)
+                                    nickToIgnoreInput = ""
+                                    keyboardController?.hide()
+                                    focusManager.clearFocus()
+                                } 
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f), // Adjusted color
+                                contentColor = MaterialTheme.colorScheme.onSecondary // IRCWhite
+                            )
+                        ) {
                             Text(stringResource(R.string.settings_button_add_ignored))
                         }
                     }
@@ -151,21 +170,21 @@ fun SettingsScreen(
                     item {
                         Text(
                             text = stringResource(R.string.settings_no_ignored_users),
+                            color = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
                     }
                 } else {
-                    items(ignoredUsers.toList().sorted()) { nick -> // Sort for consistent order
+                    items(ignoredUsers.toList().sorted()) { nick ->
                         IgnoredUserRow(
                             nick = nick,
                             onUnignoreClicked = {
                                 viewModel.removeIgnoredUser(nick)
-                                // Potentially show snackbar for R.string.settings_ignored_user_removed
                             }
                         )
                     }
                 }
-                item { Spacer(modifier = Modifier.height(16.dp)) } // Add some space at the bottom
+                item { Spacer(modifier = Modifier.height(16.dp)) }
             }
         }
     }
@@ -176,23 +195,29 @@ private fun SettingRowWithCheckbox(
     text: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier // Added modifier
+    modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 8.dp, horizontal = 16.dp), // Added horizontal padding here if removed from main column
+            .padding(vertical = 8.dp), // Removed horizontal padding, inherited from Column
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = text,
+            color = MaterialTheme.colorScheme.onBackground, // Text on PurpleStart
             modifier = Modifier.weight(1f)
         )
         Checkbox(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(
+                checkedColor = MaterialTheme.colorScheme.secondary, // BlueEnd for checked
+                uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant, // IRCWhite for unchecked border
+                checkmarkColor = MaterialTheme.colorScheme.onSecondary // IRCWhite for checkmark
+            )
         )
     }
 }
@@ -201,17 +226,27 @@ private fun SettingRowWithCheckbox(
 private fun IgnoredUserRow(
     nick: String,
     onUnignoreClicked: () -> Unit,
-    modifier: Modifier = Modifier // Added modifier
+    modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp, horizontal = 16.dp), // Added horizontal padding here if removed from main column
+            .padding(vertical = 4.dp), // Removed horizontal padding
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = nick, modifier = Modifier.weight(1f))
-        Button(onClick = onUnignoreClicked) {
+        Text(
+            text = nick, 
+            color = MaterialTheme.colorScheme.onBackground, // Text on PurpleStart
+            modifier = Modifier.weight(1f)
+        )
+        Button(
+            onClick = onUnignoreClicked,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f), // Lighter BlueEnd
+                contentColor = MaterialTheme.colorScheme.onSecondary // IRCWhite
+            )
+        ) {
             Text(stringResource(R.string.settings_button_unignore))
         }
     }
