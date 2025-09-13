@@ -52,7 +52,10 @@ data class ChatScreenState(
     val chatTargets: StateFlow<List<String>>,
     val unreadTargets: StateFlow<Set<String>>,
     val uiMessages: StateFlow<List<UiChatMessage>>,
-    val connectionState: StateFlow<Boolean>
+    val connectionState: StateFlow<Boolean>,
+    val usersInChannel: StateFlow<Map<String, List<String>>>,
+    val currentChannelUserList: StateFlow<List<String>>,
+    val showUserList: StateFlow<Boolean> 
 )
 
 @HiltViewModel
@@ -96,6 +99,9 @@ class MainViewModel @Inject constructor(
     private val _chatTargets = MutableStateFlow<List<String>>(emptyList())
     private val _activeTarget = MutableStateFlow<String?>(null)
     private val _allMessages = MutableStateFlow<Map<String, List<UiChatMessage>>>(emptyMap())
+    private val _usersInChannel = MutableStateFlow<Map<String, List<String>>>(emptyMap())
+    // --- MODIFICAR VALOR INICIAL AQUÍ ---
+    private val _showUserList = MutableStateFlow(false) // De true a false
 
     // --- Preferences Flows (used internally for uiMessages combine logic) ---
     private val showJoinPartQuitMessagesPref: StateFlow<Boolean> =
@@ -188,13 +194,28 @@ class MainViewModel @Inject constructor(
         initialValue = emptyList()
     )
 
+    // --- StateFlow para la lista de usuarios del canal activo ---
+    private val currentChannelUserListFlow: StateFlow<List<String>> = combine(
+        _activeTarget,
+        _usersInChannel
+    ) { activeTarget, usersMap ->
+        usersMap[activeTarget] ?: emptyList()
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000L),
+        initialValue = emptyList()
+    )
+
     // --- Public Grouped State --- 
     val chatScreenState: ChatScreenState = ChatScreenState(
         activeTarget = _activeTarget.asStateFlow(),
         chatTargets = _chatTargets.asStateFlow(),
         unreadTargets = _unreadTargets.asStateFlow(),
         uiMessages = combinedUiMessagesFlow,
-        connectionState = ircRepository.connectionState // Directly from repository
+        connectionState = ircRepository.connectionState,
+        usersInChannel = _usersInChannel.asStateFlow(),
+        currentChannelUserList = currentChannelUserListFlow,
+        showUserList = _showUserList.asStateFlow()
     )
 
     init {
@@ -221,18 +242,23 @@ class MainViewModel @Inject constructor(
 
         val snapshot = ChatUiSnapshot(
             currentNickname = this.currentNickname,
-            activeTarget = _activeTarget.value, // Use internal value
-            allMessages = _allMessages.value, // Use internal value
-            chatTargets = _chatTargets.value, // Use internal value
-            unreadTargets = _unreadTargets.value // Use internal value
+            activeTarget = _activeTarget.value, 
+            allMessages = _allMessages.value, 
+            chatTargets = _chatTargets.value, 
+            unreadTargets = _unreadTargets.value, 
+            usersInChannel = _usersInChannel.value 
         )
         val result = ircMessageHandler.processMessage(snapshot, parsedMessage)
+        
         this.currentNickname = result.newCurrentNickname
         _activeTarget.value = result.newActiveTarget
         _allMessages.value = result.newAllMessages
         _chatTargets.value = result.newChatTargets
         _unreadTargets.value = result.newUnreadTargets
-        Log.d("MainViewModel.processMessageForUi", "Post-update: activeTarget='${_activeTarget.value}', allMessages keys='${_allMessages.value.keys.joinToString()}', chatTargets='${_chatTargets.value.joinToString()}', unread='${_unreadTargets.value.joinToString()}'")
+        _usersInChannel.value = result.newUsersInChannel
+        
+        Log.d("MainViewModel.processMessageForUi", "Post-update: activeTarget='${_activeTarget.value}', allMessages keys='${_allMessages.value.keys.joinToString()}', chatTargets='${_chatTargets.value.joinToString()}', unread='${_unreadTargets.value.joinToString()}', usersInChannel keys='${_usersInChannel.value.keys.joinToString()}'") 
+        
         result.ownNickChangedTo?.let {
             Log.d("MainViewModel", "Own nick change to '${it}' confirmed by IrcMessageHandler.")
         }
@@ -260,8 +286,13 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    override fun isConnected(): Boolean = ircRepository.connectionState.value // Use direct repository state
+    override fun isConnected(): Boolean = ircRepository.connectionState.value
     // --- End ChatEventListener Implementation ---
+
+    fun toggleUserListVisibility() {
+        _showUserList.value = !_showUserList.value
+        Log.d("MainViewModel", "User list visibility toggled to: ${_showUserList.value}")
+    }
 
     private fun addSystemMessageToTarget(target: String, text: String) {
         val systemMessage = UiChatMessage(text, UiMessageType.SYSTEM_MESSAGE)
@@ -312,7 +343,8 @@ class MainViewModel @Inject constructor(
         _allMessages.value[SERVER_TARGET_ID]?.let { newAllMessages[SERVER_TARGET_ID] = it }
         _allMessages.value = newAllMessages.toMap()
         _unreadTargets.value = emptySet()
-        Log.i("MainViewModel", "UI actualizada para reflejar desconexión del servicio.")
+        _usersInChannel.value = emptyMap() 
+        Log.i("MainViewModel", "UI actualizada para reflejar desconexión del servicio. usersInChannel reseteado.")
     }
 
     fun connect(nickname: String, ssl: Boolean) {
@@ -323,7 +355,8 @@ class MainViewModel @Inject constructor(
         _activeTarget.value = SERVER_TARGET_ID
         _allMessages.value = mapOf(SERVER_TARGET_ID to emptyList())
         _unreadTargets.value = emptySet()
-        Log.d("MainViewModel.Connect", "Post-init: activeTarget='${_activeTarget.value}', allMessages keys='${_allMessages.value.keys.joinToString()}', chatTargets='${_chatTargets.value.joinToString()}'")
+        _usersInChannel.value = emptyMap() 
+        Log.d("MainViewModel.Connect", "Post-init: activeTarget='${_activeTarget.value}', allMessages keys='${_allMessages.value.keys.joinToString()}', chatTargets='${_chatTargets.value.joinToString()}', usersInChannel keys='${_usersInChannel.value.keys.joinToString()}'") 
         addSystemMessageToTarget(SERVER_TARGET_ID, "Conectando a $hostToConnect como $nickname...")
         ircRepository.connect(hostToConnect, portToConnect, ssl, nickname)
     }
@@ -334,7 +367,7 @@ class MainViewModel @Inject constructor(
             addSystemMessageToTarget(currentActiveTarget, "Nombre de canal inválido: $channelName. Debe empezar con #.")
             return
         }
-        if (ircRepository.connectionState.value && channelName.isNotBlank()) { // Use repository directly
+        if (ircRepository.connectionState.value && channelName.isNotBlank()) { 
             addSystemMessageToTarget(currentActiveTarget, "Solicitando unirse a $channelName...")
             ircRepository.joinChannel(channelName)
         } else {
@@ -413,7 +446,7 @@ class MainViewModel @Inject constructor(
     fun sendMessage(messageContent: String) {
         viewModelScope.launch {
             val targetToSend = _activeTarget.value
-            if (ircRepository.connectionState.value && !targetToSend.isNullOrBlank() && messageContent.isNotBlank()) { // Use repository directly
+            if (ircRepository.connectionState.value && !targetToSend.isNullOrBlank() && messageContent.isNotBlank()) { 
                 if (targetToSend == SERVER_TARGET_ID) {
                     addSystemMessageToTarget(SERVER_TARGET_ID, "No puedes enviar mensajes a la pestaña '$SERVER_TARGET_ID'. Abre un canal o PM.")
                     return@launch
@@ -424,7 +457,6 @@ class MainViewModel @Inject constructor(
                     type = if (isChannelMessage) UiMessageType.CHANNEL_MSG_SENT else UiMessageType.PRIVATE_MSG_SENT,
                     sender = currentNickname,
                     isOwnMessage = true
-                    // imageUrl will be null here, as it's for received messages with images
                 )
                 addLocalUiMessageToTarget(targetToSend, localUiMessage)
                 ircRepository.sendMessage(targetToSend, messageContent)

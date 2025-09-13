@@ -41,13 +41,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import coil.compose.AsyncImage // <-- IMPORTACIÓN AÑADIDA
+import coil.compose.AsyncImage 
 import com.jfaf.irc.R
-import com.jfaf.irc.ui.theme.IRCTheme // THEME IMPORTED
+import com.jfaf.irc.ui.theme.IRCTheme 
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.UiChatMessage
 import com.jfaf.irc.ui.viewmodels.UiMessageType
+import com.jfaf.irc.ui.screens.ChannelUserListView 
 import kotlinx.coroutines.launch
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.DividerDefaults
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -129,7 +132,8 @@ fun MainScreen(
                         onNavigationIconClick = { scope.launch { drawerState.open() } },
                         onDisconnectClick = { viewModel.disconnectFromServerAndStopService() }, 
                         onJoinChannelRequest = { channelName -> viewModel.joinChannel(channelName) },
-                        onOpenPrivateMessageRequest = { nick -> viewModel.openPrivateMessage(nick) }
+                        onOpenPrivateMessageRequest = { nick -> viewModel.openPrivateMessage(nick) },
+                        onToggleUserList = { viewModel.toggleUserListVisibility() }
                     )
                 }
             },
@@ -177,26 +181,43 @@ fun MainScreen(
                         }
                     )
                 } else {
-                    Box(modifier = Modifier
+                    val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
+
+                    Row(modifier = Modifier
                         .fillMaxSize()
                         .background(IRCTheme.gradientBrush)
                     ) {
-                        val activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value
-                        val messages = viewModel.chatScreenState.uiMessages.collectAsState().value
+                        // Columna para Mensajes
+                        Box(modifier = Modifier.weight(if (showUserListState) 0.6f else 1f)) { // << PESO MODIFICADO
+                            val activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value
+                            val messages = viewModel.chatScreenState.uiMessages.collectAsState().value
+                            if (activeTarget != null) {
+                                MessagesList(messages = messages)
+                            } else {
+                                Column( 
+                                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        stringResource(R.string.prompt_select_channel_or_conversation),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                }
+                            }
+                        }
 
-                        if (activeTarget != null) {
-                            MessagesList(messages = messages)
-                        } else {
-                            Column( 
-                                modifier = Modifier.fillMaxSize().padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    stringResource(R.string.prompt_select_channel_or_conversation),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
+                        // Línea divisora y Columna para la Lista de Usuarios (condicional)
+                        if (showUserListState) {
+                            VerticalDivider(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .width(DividerDefaults.Thickness),
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                            Box(modifier = Modifier.weight(0.4f)) { // << PESO MODIFICADO
+                                ChannelUserListView(mainViewModel = viewModel)
                             }
                         }
                     }
@@ -328,7 +349,8 @@ fun ChatTopAppBar(
     onNavigationIconClick: () -> Unit,
     onDisconnectClick: () -> Unit,
     onJoinChannelRequest: (String) -> Unit,
-    onOpenPrivateMessageRequest: (String) -> Unit
+    onOpenPrivateMessageRequest: (String) -> Unit,
+    onToggleUserList: () -> Unit 
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showJoinChannelDialog by remember { mutableStateOf(false) }
@@ -342,6 +364,12 @@ fun ChatTopAppBar(
             }
         },
         actions = {
+            IconButton(onClick = onToggleUserList) {
+                Icon(
+                    imageVector = Icons.Filled.Person,
+                    contentDescription = stringResource(R.string.cd_toggle_user_list)
+                )
+            }
             IconButton(onClick = { showMenu = !showMenu }) {
                 Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_more_options))
             }
