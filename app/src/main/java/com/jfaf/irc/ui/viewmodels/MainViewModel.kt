@@ -27,7 +27,8 @@ data class UiChatMessage(
     val fullText: String,
     val type: UiMessageType,
     val sender: String? = null,
-    val isOwnMessage: Boolean = false
+    val isOwnMessage: Boolean = false,
+    val imageUrl: String? = null // Nuevo campo para la URL de la imagen
 )
 
 enum class UiMessageType {
@@ -423,6 +424,7 @@ class MainViewModel @Inject constructor(
                     type = if (isChannelMessage) UiMessageType.CHANNEL_MSG_SENT else UiMessageType.PRIVATE_MSG_SENT,
                     sender = currentNickname,
                     isOwnMessage = true
+                    // imageUrl will be null here, as it's for received messages with images
                 )
                 addLocalUiMessageToTarget(targetToSend, localUiMessage)
                 ircRepository.sendMessage(targetToSend, messageContent)

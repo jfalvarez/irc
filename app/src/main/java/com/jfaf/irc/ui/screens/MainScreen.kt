@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage // <-- IMPORTACIÓN AÑADIDA
 import com.jfaf.irc.R
 import com.jfaf.irc.ui.theme.IRCTheme // THEME IMPORTED
 import com.jfaf.irc.ui.viewmodels.MainViewModel
@@ -604,19 +605,26 @@ fun MessageRow(message: UiChatMessage) {
     }
     val fontWeight = if (message.isOwnMessage) FontWeight.Bold else FontWeight.Normal
 
-    // val processedText = message.fullText // Removed
-    //     .replace("http://", "http:\u005Cu200C/\u005Cu200C/") // Removed
-    //     .replace("https://", "https:\u005Cu200C/\u005Cu200C/") // Removed
-
-    Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth()) {
+    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth()) { // Envuelto en Column
         Text(
-            text = message.fullText, // Changed to message.fullText directly
+            text = message.fullText,
             color = textColor, 
             fontStyle = fontStyle, 
             fontWeight = fontWeight, 
             fontSize = 14.sp
-            // No fontFeatureSettings or other special processing
         )
+        // Mostrar imagen si la URL existe
+        if (!message.imageUrl.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(4.dp)) // Espacio entre texto e imagen
+            AsyncImage(
+                model = message.imageUrl,
+                contentDescription = "Imagen adjunta: ${message.imageUrl}", // Descripción para accesibilidad
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp) // Altura fija para la imagen, ajustar según necesidad
+                    .clickable { /* Podrías añadir acción al clicar la imagen, como abrirla en grande */ }
+            )
+        }
     }
 }
 

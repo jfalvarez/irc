@@ -70,6 +70,9 @@ dependencies {
 //    implementation(libs.kitteh.irc.client) // O la última versión estable que encuentres
 //    implementation("org.kitteh.irc:client-lib:9.0.0")
 
+    // Coil for image loading in Compose
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.7")
 
