@@ -32,22 +32,7 @@ class IrcMessageHandler @Inject constructor() {
     private val SERVER_TARGET_ID = "Servidor"
     private val maxUiMessagesPerTarget = 150
 
-    private val emoticonToEmojiMap = mapOf(
-        ":)" to "😊", ":-)" to "😊", ":D" to "😀", ":-D" to "😀",
-        ";)" to "😉", ":-)" to "😉", ":(" to "😞", ":-(" to "😞",
-        ":P" to "😛", ":-P" to "😛", "xD" to "😆", "XD" to "😆",
-        ":O" to "😮", ":-O" to "😮", "<3" to "❤️", ":*" to "😘",
-        ":-|" to "😐", ":/" to "😕", ":-\\" to "😕", "B)" to "😎", "B-)" to "😎"
-    )
-
-    private fun replaceEmoticonsWithEmoji(text: String): String {
-        var processedText = text
-        val sortedEmoticons = emoticonToEmojiMap.keys.sortedByDescending { it.length }
-        for (emoticon in sortedEmoticons) {
-            processedText = processedText.replace(emoticon, emoticonToEmojiMap[emoticon]!!)
-        }
-        return processedText
-    }
+    // emoticonToEmojiMap y replaceEmoticonsWithEmoji eliminados
 
     private fun ensureServerTargetIsFirst(targets: List<String>): List<String> {
         val otherTargets = targets.asSequence().filterNot { it == SERVER_TARGET_ID }.distinct().toList()
@@ -195,7 +180,7 @@ class IrcMessageHandler @Inject constructor() {
 
         val msgTarget = params.firstOrNull() ?: return FiveTuple(null, null, null, null, null)
         var content = trailing ?: ""
-        content = replaceEmoticonsWithEmoji(content)
+        // content = replaceEmoticonsWithEmoji(content) // Eliminado
         val isToChannel = msgTarget.startsWith("#")
         val currentIsOwn = sender?.equals(currentNickname, ignoreCase = true) == true
         val determinedTargetKey = if (isToChannel) msgTarget else if (currentIsOwn) msgTarget else sender
@@ -253,7 +238,7 @@ class IrcMessageHandler @Inject constructor() {
         val noticeTargetParam = params.firstOrNull()
         val from = sender ?: parsedMessage.prefix ?: "Server"
         var content = trailing ?: params.joinToString(" ")
-        content = replaceEmoticonsWithEmoji(content)
+        // content = replaceEmoticonsWithEmoji(content) // Eliminado
         val determinedTargetKey = if (noticeTargetParam?.equals(currentNickname, ignoreCase = true) == true && sender != null) sender else activeTarget ?: SERVER_TARGET_ID
         val newUiMsg = UiChatMessage("-$from- $content", UiMessageType.NOTICE, from)
 
@@ -314,7 +299,7 @@ class IrcMessageHandler @Inject constructor() {
 
         val reasonPart = if (trailing != channelName) trailing?.substringAfter(channelName)?.trim() else null
         var reasonMsgContent = reasonPart?.let { if (it.startsWith(":")) it.substring(1) else it } ?: ""
-        reasonMsgContent = replaceEmoticonsWithEmoji(reasonMsgContent)
+        // reasonMsgContent = replaceEmoticonsWithEmoji(reasonMsgContent) // Eliminado
         val reasonMsg = if (reasonMsgContent.isNotBlank()) " ($reasonMsgContent)" else ""
         val newUiMsg = UiChatMessage("* ${sender ?: "Alguien"} ha salido de $channelName$reasonMsg", UiMessageType.JOIN_PART_QUIT, sender)
 
@@ -344,7 +329,7 @@ class IrcMessageHandler @Inject constructor() {
         val sender = parsedMessage.senderNickname
         val trailing = parsedMessage.trailing
         var reason = trailing?.let { " ($it)" } ?: ""
-        reason = replaceEmoticonsWithEmoji(reason)
+        // reason = replaceEmoticonsWithEmoji(reason) // Eliminado
         val quitMessage = "* ${sender ?: "Alguien"} ha salido del IRC$reason"
         currentChatTargets.forEach { openTarget ->
             if (openTarget.startsWith("#")) { 
@@ -441,7 +426,7 @@ class IrcMessageHandler @Inject constructor() {
         }
         val by = sender ?: parsedMessage.prefix ?: "Server"
         var modes = params.drop(1).joinToString(" ") + (trailing?.let { " :$it" } ?: "")
-        modes = replaceEmoticonsWithEmoji(modes)
+        // modes = replaceEmoticonsWithEmoji(modes) // Eliminado
         val newUiMsg = UiChatMessage("* $by establece modo $modes en $determinedTargetKey", UiMessageType.MODE_CHANGE, by)
         return Pair(determinedTargetKey, newUiMsg)
     }
@@ -464,7 +449,7 @@ class IrcMessageHandler @Inject constructor() {
                 newNickname = confirmedNick
             }
         }
-        content = replaceEmoticonsWithEmoji(content)
+        // content = replaceEmoticonsWithEmoji(content) // Eliminado
         val uiMsg = UiChatMessage("[INFO] $content", UiMessageType.SERVER_INFO, parsedMessage.prefix ?: "Server")
         return Triple(targetKey, uiMsg, newNickname)
     }
@@ -480,7 +465,7 @@ class IrcMessageHandler @Inject constructor() {
         val targetKey = activeTarget ?: SERVER_TARGET_ID 
         val errorParams = params.joinToString(" ")
         var errorTrailing = trailing ?: ""
-        errorTrailing = replaceEmoticonsWithEmoji(errorTrailing)
+        // errorTrailing = replaceEmoticonsWithEmoji(errorTrailing) // Eliminado
         val errorMessage = "Error $command: $errorParams $errorTrailing"
         val uiMsg = UiChatMessage(errorMessage, UiMessageType.SERVER_INFO, parsedMessage.prefix ?: "Server")
         return Pair(targetKey, uiMsg)
@@ -497,7 +482,7 @@ class IrcMessageHandler @Inject constructor() {
 
         val targetKey = activeTarget ?: SERVER_TARGET_ID
         var fullOriginalText = "${prefix?.let { ":$it " } ?: ""}$command ${params.joinToString(" ")}${trailing?.let { " :$it" } ?: ""}"
-        fullOriginalText = replaceEmoticonsWithEmoji(fullOriginalText)
+        // fullOriginalText = replaceEmoticonsWithEmoji(fullOriginalText) // Eliminado
         val uiMsg = UiChatMessage("[${command.uppercase()}] $fullOriginalText", UiMessageType.OTHER_COMMAND, prefix)
         return Pair(targetKey, uiMsg)
     }

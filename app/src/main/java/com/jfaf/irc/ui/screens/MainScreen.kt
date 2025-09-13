@@ -25,12 +25,14 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color // Kept for Color.Transparent and specific NOTICE color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+// import androidx.compose.ui.text.TextStyle // Retained as it's used by MaterialTheme.typography
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -59,8 +61,6 @@ fun MainScreen(
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
-    // Removed local gradientColors definition
 
     LaunchedEffect(connectionState) {
         if (connectionState) {
@@ -101,7 +101,6 @@ fun MainScreen(
                         scope.launch { drawerState.close() }
                         navController.navigate("settings")
                     }
-                    // gradientColors parameter removed
                 )
             } else {
                 Column(
@@ -114,14 +113,14 @@ fun MainScreen(
                     Text(
                         stringResource(R.string.status_not_connected), 
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface // Assuming this column is on a surface
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
         }
     ) {
         Scaffold(
-            containerColor = Color.Transparent, // Scaffold itself is transparent, content below will have gradient
+            containerColor = Color.Transparent,
             topBar = {
                 if (connectionState) {
                     ChatTopAppBar(
@@ -130,7 +129,6 @@ fun MainScreen(
                         onDisconnectClick = { viewModel.disconnectFromServerAndStopService() }, 
                         onJoinChannelRequest = { channelName -> viewModel.joinChannel(channelName) },
                         onOpenPrivateMessageRequest = { nick -> viewModel.openPrivateMessage(nick) }
-                        // gradientColors parameter removed
                     )
                 }
             },
@@ -141,7 +139,6 @@ fun MainScreen(
                     MessageInputSection(
                         onSendMessage = { message -> viewModel.sendMessage(message) },
                         modifier = Modifier.fillMaxWidth()
-                        // gradientColors parameter removed
                     )
                 }
             },
@@ -170,22 +167,18 @@ fun MainScreen(
                         useSsl = useSslInput,
                         onUseSslChange = { useSslInput = it },
                         onConnect = {
-                            Log.d("MainScreen", "onConnect: Nick: $nicknameInput, SSL: $useSslInput")
                             if (nicknameInput.isNotBlank()) {
-                                Log.d("MainScreen", "Llamando a viewModel.connect...")
                                 viewModel.connect(
                                     nickname = nicknameInput,
                                     ssl = useSslInput
                                 )
-                            } else {
-                                Log.w("MainScreen", "Nickname vacío, no se llama a viewModel.connect.")
                             }
                         }
                     )
                 } else {
                     Box(modifier = Modifier
                         .fillMaxSize()
-                        .background(IRCTheme.gradientBrush) // Use theme gradient brush
+                        .background(IRCTheme.gradientBrush)
                     ) {
                         val activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value
                         val messages = viewModel.chatScreenState.uiMessages.collectAsState().value
@@ -201,7 +194,7 @@ fun MainScreen(
                                 Text(
                                     stringResource(R.string.prompt_select_channel_or_conversation),
                                     style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onPrimary // On gradient background
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
                             }
                         }
@@ -221,12 +214,10 @@ fun ConnectionSetupSection(
     onUseSslChange: (Boolean) -> Unit,
     onConnect: () -> Unit
 ) {
-    // Removed local gradientColors
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(IRCTheme.gradientBrush) // Use theme gradient brush
+            .background(IRCTheme.gradientBrush)
             .padding(horizontal = 32.dp, vertical = 24.dp), 
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceAround 
@@ -263,7 +254,7 @@ fun ConnectionSetupSection(
                         contentDescription = "Nickname Icon"
                     )
                 },
-                shape = MaterialTheme.shapes.large, // Use theme shape
+                shape = MaterialTheme.shapes.large,
                 colors = TextFieldDefaults.colors(
                     focusedTextColor = MaterialTheme.colorScheme.onPrimary,
                     unfocusedTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
@@ -296,8 +287,8 @@ fun ConnectionSetupSection(
                     onCheckedChange = null, 
                     colors = CheckboxDefaults.colors(
                         checkedColor = MaterialTheme.colorScheme.onPrimary,
-                        checkmarkColor = MaterialTheme.colorScheme.primary, // Checkmark on the primary color
-                        uncheckedColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f) // Or onSurfaceVariant
+                        checkmarkColor = MaterialTheme.colorScheme.primary, 
+                        uncheckedColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
                     )
                 )
                 Text(
@@ -313,15 +304,14 @@ fun ConnectionSetupSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
-            shape = MaterialTheme.shapes.large, // Use theme shape
+            shape = MaterialTheme.shapes.large,
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.onPrimary, // White button
-                contentColor = MaterialTheme.colorScheme.primary // Text color is primary gradient color
+                containerColor = MaterialTheme.colorScheme.onPrimary,
+                contentColor = MaterialTheme.colorScheme.primary 
             )
         ) {
             Text(
                 stringResource(R.string.button_connect),
-                // color is set by ButtonDefaults
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )
@@ -338,7 +328,6 @@ fun ChatTopAppBar(
     onDisconnectClick: () -> Unit,
     onJoinChannelRequest: (String) -> Unit,
     onOpenPrivateMessageRequest: (String) -> Unit
-    // gradientColors parameter removed
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showJoinChannelDialog by remember { mutableStateOf(false) }
@@ -358,10 +347,10 @@ fun ChatTopAppBar(
             DropdownMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false },
-                modifier = Modifier.background(IRCTheme.dropdownMenuContainerOpaque) // Use theme helper
+                modifier = Modifier.background(IRCTheme.dropdownMenuContainerOpaque)
             ) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_item_join_channel), color = MaterialTheme.colorScheme.onSurface) }, // onSurface for dropdown menu
+                    text = { Text(stringResource(R.string.menu_item_join_channel), color = MaterialTheme.colorScheme.onSurface) },
                     onClick = {
                         showMenu = false
                         showJoinChannelDialog = true
@@ -398,11 +387,15 @@ fun ChatTopAppBar(
             onDismiss = { showJoinChannelDialog = false },
             onConfirm = { channelName ->
                 if (channelName.isNotBlank()) {
-                    onJoinChannelRequest(channelName)
+                    val finalChannelName = if (channelName.startsWith("#")) {
+                        channelName
+                    } else {
+                        "#$channelName"
+                    }
+                    onJoinChannelRequest(finalChannelName)
                 }
                 showJoinChannelDialog = false
             }
-            // gradientColors parameter removed
         )
     }
 
@@ -417,7 +410,6 @@ fun ChatTopAppBar(
                 }
                 showOpenPmDialog = false
             }
-            // gradientColors parameter removed
         )
     }
 }
@@ -429,12 +421,11 @@ fun InputDialog(
     label: String,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
-    // gradientColors parameter removed
 ) {
     var textState by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, color = MaterialTheme.colorScheme.onSurface) }, // onSurface for Dialog
+        title = { Text(title, color = MaterialTheme.colorScheme.onSurface) },
         text = {
             OutlinedTextField(
                 value = textState,
@@ -448,10 +439,10 @@ fun InputDialog(
                     cursorColor = MaterialTheme.colorScheme.primary,
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    focusedLabelColor = MaterialTheme.colorScheme.onSurface, // Corrected for better contrast
+                    focusedLabelColor = MaterialTheme.colorScheme.onSurface, 
                     unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    focusedContainerColor = IRCTheme.outlinedTextFieldContainer, // Use theme helper
-                    unfocusedContainerColor = IRCTheme.outlinedTextFieldContainer // Use theme helper
+                    focusedContainerColor = IRCTheme.outlinedTextFieldContainer, 
+                    unfocusedContainerColor = IRCTheme.outlinedTextFieldContainer
                 )
             )
         },
@@ -459,8 +450,8 @@ fun InputDialog(
             Button(
                 onClick = { onConfirm(textState) },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.onPrimary, // White button
-                    contentColor = MaterialTheme.colorScheme.primary // Text on button is primary
+                    containerColor = MaterialTheme.colorScheme.onPrimary,
+                    contentColor = MaterialTheme.colorScheme.primary
                 )
             ) {
                 Text(stringResource(R.string.button_accept))
@@ -471,7 +462,7 @@ fun InputDialog(
                 Text(stringResource(R.string.button_cancel), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f))
             }
         },
-        containerColor = IRCTheme.dialogContainerOpaque // Use theme helper
+        containerColor = IRCTheme.dialogContainerOpaque
     )
 }
 
@@ -482,23 +473,22 @@ fun AppDrawerContent(
     unreadTargets: Set<String>,
     currentNick: String,
     onTargetSelected: (String) -> Unit,
-    onJoinChannelRequest: () -> Unit, // These might not be used if dialogs are triggered from TopAppBar directly
-    onOpenPrivateMessageRequest: () -> Unit, // Same as above
+    onJoinChannelRequest: () -> Unit, 
+    onOpenPrivateMessageRequest: () -> Unit, 
     onCloseTargetAction: (String) -> Unit,
     onSettingsClick: () -> Unit
-    // gradientColors parameter removed
 ) {
     val serverString = stringResource(R.string.cd_server)
 
     ModalDrawerSheet(
-        drawerContainerColor = IRCTheme.drawerContainerOpaque // Use theme helper
+        drawerContainerColor = IRCTheme.drawerContainerOpaque
     ) {
         Column(modifier = Modifier.fillMaxHeight()) { 
             Text(
                 stringResource(R.string.drawer_title_channels_chats), 
                 modifier = Modifier.padding(16.dp), 
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface // Text on drawer surface
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 stringResource(R.string.drawer_user_connected_as, currentNick), 
@@ -506,7 +496,11 @@ fun AppDrawerContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
             )
-            Divider(color = MaterialTheme.colorScheme.surfaceVariant) // Use surfaceVariant for dividers
+            HorizontalDivider(
+                Modifier,
+                DividerDefaults.Thickness,
+                color = MaterialTheme.colorScheme.surfaceVariant
+            )
             LazyColumn(modifier = Modifier.weight(1f)) { 
                 items(chatTargets.distinct()) { target ->
                     val isServerTarget = target == serverString
@@ -516,7 +510,7 @@ fun AppDrawerContent(
 
                     NavigationDrawerItem(
                         icon = {
-                            val iconColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                            val iconColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                             when {
                                 target.startsWith("#") -> Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.cd_channel), tint = iconColor)
                                 isServerTarget -> Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.cd_server), tint = iconColor)
@@ -527,7 +521,7 @@ fun AppDrawerContent(
                             Text(
                                 text = if (isServerTarget) serverString else target, 
                                 fontWeight = fontWeight,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                             )
                         },
                         selected = isSelected,
@@ -543,30 +537,30 @@ fun AppDrawerContent(
                             }
                         },
                         colors = NavigationDrawerItemDefaults.colors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), // A slightly transparent primary
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                             unselectedContainerColor = Color.Transparent,
-                            selectedIconColor = MaterialTheme.colorScheme.primary, // Selected icon is primary
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimary, // Corrected for visibility
                             unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                            selectedTextColor = MaterialTheme.colorScheme.primary, // Selected text is primary
+                            selectedTextColor = MaterialTheme.colorScheme.onPrimary, // Corrected for visibility
                             unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                         ),
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
                 }
             }
-            Divider(color = MaterialTheme.colorScheme.surfaceVariant) // Use surfaceVariant for dividers
-            val settingsSelected = false // This state should likely be hoisted or derived if settings can be "active"
+            Divider(color = MaterialTheme.colorScheme.surfaceVariant)
+            val settingsSelected = false 
             NavigationDrawerItem(
-                icon = { Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.menu_item_settings), tint = if (settingsSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)) },
-                label = { Text(stringResource(R.string.menu_item_settings), color = if (settingsSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)) },
+                icon = { Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.menu_item_settings), tint = if (settingsSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)) },
+                label = { Text(stringResource(R.string.menu_item_settings), color = if (settingsSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)) },
                 selected = settingsSelected,
                 onClick = onSettingsClick,
                 colors = NavigationDrawerItemDefaults.colors(
                     selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                     unselectedContainerColor = Color.Transparent,
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary, // Corrected for visibility
                     unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.onPrimary, // Corrected for visibility
                     unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                 ),
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -594,10 +588,10 @@ fun MessageRow(message: UiChatMessage) {
         UiMessageType.SYSTEM_MESSAGE, 
         UiMessageType.JOIN_PART_QUIT, 
         UiMessageType.NICK_CHANGE, 
-        UiMessageType.MODE_CHANGE -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f) // Text on gradient
+        UiMessageType.MODE_CHANGE -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
         UiMessageType.SERVER_INFO -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-        UiMessageType.NOTICE -> Color(0xFFFFF176) // Specific notice color, kept as is
-        else -> MaterialTheme.colorScheme.onPrimary // Regular message text on gradient
+        UiMessageType.NOTICE -> Color(0xFFFFF176) 
+        else -> MaterialTheme.colorScheme.onPrimary
     }
     val fontStyle = when (message.type) {
         UiMessageType.SYSTEM_MESSAGE, 
@@ -610,13 +604,18 @@ fun MessageRow(message: UiChatMessage) {
     }
     val fontWeight = if (message.isOwnMessage) FontWeight.Bold else FontWeight.Normal
 
+    // val processedText = message.fullText // Removed
+    //     .replace("http://", "http:\u005Cu200C/\u005Cu200C/") // Removed
+    //     .replace("https://", "https:\u005Cu200C/\u005Cu200C/") // Removed
+
     Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth()) {
         Text(
-            text = message.fullText, 
+            text = message.fullText, // Changed to message.fullText directly
             color = textColor, 
             fontStyle = fontStyle, 
             fontWeight = fontWeight, 
             fontSize = 14.sp
+            // No fontFeatureSettings or other special processing
         )
     }
 }
@@ -626,11 +625,10 @@ fun MessageRow(message: UiChatMessage) {
 fun MessageInputSection(
     onSendMessage: (String) -> Unit,
     modifier: Modifier = Modifier
-    // gradientColors parameter removed
 ) {
     Surface(
         modifier = modifier, 
-        color = MaterialTheme.colorScheme.primary, // Bottom bar uses primary color
+        color = MaterialTheme.colorScheme.primary,
         shadowElevation = 4.dp 
     ) {
         var textState by remember { mutableStateOf("") }
@@ -650,7 +648,7 @@ fun MessageInputSection(
                     Icon(
                         Icons.AutoMirrored.Filled.Send,
                         contentDescription = stringResource(R.string.cd_send_message),
-                        tint = MaterialTheme.colorScheme.onPrimary // Icon on primary background
+                        tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             },
@@ -668,11 +666,11 @@ fun MessageInputSection(
                     }
                 }
             ),
-            shape = RoundedCornerShape(24.dp), // Kept as specific shape for now
+            shape = RoundedCornerShape(24.dp), 
             colors = TextFieldDefaults.colors(
                 focusedTextColor = MaterialTheme.colorScheme.onPrimary,
                 unfocusedTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
-                focusedContainerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f), // TextField on primary bar
+                focusedContainerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
                 unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
                 disabledContainerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.1f),
                 cursorColor = MaterialTheme.colorScheme.onPrimary,
