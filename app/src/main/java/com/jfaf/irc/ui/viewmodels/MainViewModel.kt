@@ -1,6 +1,7 @@
 package com.jfaf.irc.ui.viewmodels
 
 import android.util.Log
+import androidx.compose.ui.text.AnnotatedString // Importación añadida
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jfaf.irc.data.model.ParsedIrcMessage
@@ -23,7 +24,8 @@ import javax.inject.Inject
 
 // --- Data classes and Enums for UI Messages ---
 data class UiChatMessage(
-    val fullText: String,
+    val fullText: String, // Puede ser el texto original con códigos o una versión limpia
+    val annotatedString: AnnotatedString? = null, // Para el texto con formato mIRC
     val type: UiMessageType,
     val sender: String? = null,
     val isOwnMessage: Boolean = false,
@@ -150,8 +152,10 @@ class MainViewModel @Inject constructor(
             }
             if (shouldShow && !filterContext.showJpq) {
                 if (message.type == UiMessageType.JOIN_PART_QUIT ||
-                    message.fullText.contains("signed off", ignoreCase = true) ||
-                    message.fullText.contains("connection closed", ignoreCase = true)) {
+                    message.fullText.contains("signed off", ignoreCase = true) || // Comprobar fullText si annotatedString es nulo
+                    (message.annotatedString?.text?.contains("signed off", ignoreCase = true) == true) ||
+                    message.fullText.contains("connection closed", ignoreCase = true) ||
+                    (message.annotatedString?.text?.contains("connection closed", ignoreCase = true) == true)) {
                     shouldShow = false
                 }
             }
@@ -258,40 +262,49 @@ class MainViewModel @Inject constructor(
     }
 
     private fun addSystemMessageToTarget(target: String, text: String) {
-        val systemMessage = UiChatMessage(text, UiMessageType.SYSTEM_MESSAGE)
+        // Los mensajes del sistema no suelen tener formato mIRC complejo, así que annotatedString puede ser null o una versión simple.
+        val systemMessage = UiChatMessage(
+            fullText = text, 
+            annotatedString = AnnotatedString(text), // O null si se prefiere que MessageRow lo maneje
+            type = UiMessageType.SYSTEM_MESSAGE
+        )
         val currentMessages = _allMessages.value[target] ?: emptyList()
         _allMessages.value = _allMessages.value + (target to (currentMessages + systemMessage).takeLast(150))
     }
 
     private fun addLocalUiMessageToTarget(target: String, uiMessage: UiChatMessage) {
+        // Para mensajes locales (propios), podríamos también generar un AnnotatedString si queremos que aparezcan con algún estilo por defecto
+        // o simplemente pasar el fullText y dejar annotatedString como null.
+        // Por simplicidad, si el uiMessage ya viene con annotatedString (ej. porque se parseó antes), se usa.
+        // Si no, podríamos crearlo aquí a partir de uiMessage.fullText.
+        val messageToAdd = if (uiMessage.annotatedString == null) {
+            uiMessage.copy(annotatedString = AnnotatedString(uiMessage.fullText)) // Ejemplo básico
+        } else {
+            uiMessage
+        }
         val currentMessagesForTarget = _allMessages.value[target] ?: emptyList()
-        _allMessages.value = _allMessages.value + (target to (currentMessagesForTarget + uiMessage).takeLast(150))
+        _allMessages.value = _allMessages.value + (target to (currentMessagesForTarget + messageToAdd).takeLast(150))
         Log.d("MainViewModel.LocalEcho", "Locally added to '$target': '${uiMessage.fullText}'")
     }
 
-    // ensureServerTargetIsFirstLocal fue eliminado, su lógica está en ChatStateManager
-
     private fun handleServiceConnected() {
         chatEventOrchestrator.resetSessionState()
-        chatStateManager.resetStateForConnection() // Restablece el estado de chat targets, active target, etc.
+        chatStateManager.resetStateForConnection()
         
         val serverMessages = _allMessages.value[ChatStateManager.SERVER_TARGET_ID] ?: emptyList()
-        val lastMessageText = serverMessages.lastOrNull()?.fullText ?: ""
+        val lastMessageText = serverMessages.lastOrNull()?.let { it.annotatedString?.text ?: it.fullText } ?: ""
 
-        // Asegurarse de que el mensaje de "Conectado" solo se añade una vez o si es necesario
         if (chatStateManager.chatTargets.value.isEmpty() || 
             chatStateManager.activeTarget.value == null || 
             !lastMessageText.contains("Conectado al servidor", ignoreCase = true)) {
-            // ChatStateManager.resetStateForConnection ya establece el target activo y la lista de targets.
             addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "Conectado al servidor.")
         }
         Log.i("MainViewModel", "Servicio conectado. Auto-reply list for ignored users has been reset by orchestrator.")
-        Log.d("MainViewModel.ServiceConnected", "State: activeTarget='${chatStateManager.activeTarget.value}', allMessages keys='${_allMessages.value.keys.joinToString()}', chatTargets='${chatStateManager.chatTargets.value.joinToString()}'")
     }
 
     private fun handleServiceDisconnected() {
         val serverMessages = _allMessages.value[ChatStateManager.SERVER_TARGET_ID] ?: emptyList()
-        val lastMessageText = serverMessages.lastOrNull()?.fullText ?: ""
+        val lastMessageText = serverMessages.lastOrNull()?.let { it.annotatedString?.text ?: it.fullText } ?: ""
         val disconnectMessages = listOf("Desconectado", "Conexión perdida", "El servicio IRC ya no está activo", "Servicio detenido")
         val alreadyHasDisconnectMsg = disconnectMessages.any { lastMessageText.contains(it, ignoreCase = true) }
         val messageText = when {
@@ -303,24 +316,22 @@ class MainViewModel @Inject constructor(
             addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, messageText)
         }
         
-        chatStateManager.resetStateForDisconnection() // Resetea targets, active target, users, etc.
+        chatStateManager.resetStateForDisconnection()
 
         val newAllMessages = mutableMapOf<String, List<UiChatMessage>>()
         _allMessages.value[ChatStateManager.SERVER_TARGET_ID]?.let { newAllMessages[ChatStateManager.SERVER_TARGET_ID] = it }
-        _allMessages.value = newAllMessages.toMap() // Mantiene solo los mensajes del servidor
+        _allMessages.value = newAllMessages.toMap()
         
-        Log.i("MainViewModel", "UI actualizada para reflejar desconexión del servicio. usersInChannel reseteado.")
+        Log.i("MainViewModel", "UI actualizada para reflejar desconexión del servicio.")
     }
 
     fun connect(nickname: String, ssl: Boolean) {
         this.currentNickname = nickname
         val hostToConnect = defaultHost; val portToConnect = if (ssl) 6697 else 6667
-        Log.d("MainViewModel", "connect: Nick: $nickname, Host: $hostToConnect, Port: $portToConnect, SSL: $ssl")
         
         chatStateManager.resetStateForConnection()
-        _allMessages.value = mapOf(ChatStateManager.SERVER_TARGET_ID to emptyList()) // Resetea todos los mensajes
+        _allMessages.value = mapOf(ChatStateManager.SERVER_TARGET_ID to emptyList())
         
-        Log.d("MainViewModel.Connect", "Post-init: activeTarget='${chatStateManager.activeTarget.value}', allMessages keys='${_allMessages.value.keys.joinToString()}', chatTargets='${chatStateManager.chatTargets.value.joinToString()}', usersInChannel keys='${chatStateManager.usersInChannel.value.keys.joinToString()}'") 
         addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "Conectando a $hostToConnect como $nickname...")
         ircRepository.connect(hostToConnect, portToConnect, ssl, nickname)
     }
@@ -333,16 +344,13 @@ class MainViewModel @Inject constructor(
         }
         if (ircRepository.connectionState.value && channelName.isNotBlank()) { 
             addSystemMessageToTarget(currentActiveTarget, "Solicitando unirse a $channelName...")
-            // ChatStateManager añadirá el target cuando el JOIN sea confirmado por el servidor via IrcMessageHandler
             ircRepository.joinChannel(channelName)
         } else {
-            Log.w("MainViewModel", "joinChannel: No conectado o channelName vacío.")
             addSystemMessageToTarget(currentActiveTarget, "No se puede unir al canal. No conectado.")
         }
     }
 
     fun openPrivateMessage(nick: String) {
-        Log.d("MainViewModel.OpenPM", "Attempting to open PM with: '$nick'. Current: active='${chatStateManager.activeTarget.value}', chatTargets='${chatStateManager.chatTargets.value.joinToString()}'")
         val currentActiveTargetForErrorMsg = chatStateManager.activeTarget.value ?: ChatStateManager.SERVER_TARGET_ID
 
         if (nick.isBlank() || nick.startsWith("#") || nick.equals(currentNickname, ignoreCase = true)) {
@@ -351,16 +359,13 @@ class MainViewModel @Inject constructor(
         }
         
         chatStateManager.openPrivateMessageTarget(nick, this.currentNickname)
-        // Asegurar que haya una lista de mensajes para el nuevo target de PM
         if (_allMessages.value[nick] == null) {
             _allMessages.value = _allMessages.value + (nick to emptyList())
         }
         addSystemMessageToTarget(nick, "Chat privado con $nick iniciado.")
-        Log.d("MainViewModel.OpenPM", "PM Opened. activeTarget='${chatStateManager.activeTarget.value}', allMessages keys='${_allMessages.value.keys.joinToString()}', chatTargets='${chatStateManager.chatTargets.value.joinToString()}'")
     }
 
     fun setActiveTarget(targetName: String) {
-        Log.d("MainViewModel.SetActiveTarget", "Attempting to set target: '$targetName'. Current: active='${chatStateManager.activeTarget.value}', chatTargets='${chatStateManager.chatTargets.value.joinToString()}'")
         chatStateManager.setActiveTarget(targetName, this.currentNickname)
     }
 
@@ -371,20 +376,14 @@ class MainViewModel @Inject constructor(
             return
         }
         
-        // Si es un canal, enviar PART. El estado se actualizará cuando el servidor confirme.
         if (targetName.startsWith("#")) {
-            Log.d("MainViewModel", "Solicitando PART para el canal: $targetName vía repositorio");
             ircRepository.partChannel(targetName)
-            // Marcar como leído si estaba activo y no leído
             if (chatStateManager.unreadTargets.value.contains(targetName) && chatStateManager.activeTarget.value == targetName) {
-                 chatStateManager.setActiveTarget(targetName, this.currentNickname) // Esto lo marcará como leído
+                 chatStateManager.setActiveTarget(targetName, this.currentNickname)
             }
-        } else { // Si es un PM, el cierre es solo local y actualiza el estado inmediatamente.
-            val newActiveTarget = chatStateManager.closeTarget(targetName, chatStateManager.activeTarget.value, this.currentNickname)
-            // Eliminar mensajes del target cerrado (para PMs)
+        } else {
+            chatStateManager.closeTarget(targetName, chatStateManager.activeTarget.value, this.currentNickname)
             _allMessages.value = _allMessages.value - targetName
-            // No es necesario actualizar _activeTarget aquí explícitamente si ChatStateManager ya lo hizo,
-            // pero si newActiveTarget es diferente, la UI se recompone por el cambio en el StateFlow.
         }
     }
 
@@ -397,8 +396,11 @@ class MainViewModel @Inject constructor(
                     return@launch
                 }
                 val isChannelMessage = targetToSend.startsWith("#")
+                // Para mensajes enviados, el annotatedString puede ser el mismo que fullText o null.
+                // MircColorParser se usaría principalmente para mensajes *recibidos*.
                 val localUiMessage = UiChatMessage(
                     fullText = "<${currentNickname}> $messageContent",
+                    annotatedString = AnnotatedString("<${currentNickname}> $messageContent"), // Opcional: parsear si quieres aplicar estilos a tus propios mensajes también
                     type = if (isChannelMessage) UiMessageType.CHANNEL_MSG_SENT else UiMessageType.PRIVATE_MSG_SENT,
                     sender = currentNickname,
                     isOwnMessage = true
@@ -406,7 +408,6 @@ class MainViewModel @Inject constructor(
                 addLocalUiMessageToTarget(targetToSend, localUiMessage)
                 ircRepository.sendMessage(targetToSend, messageContent)
             } else {
-                Log.w("MainViewModel", "No se puede enviar mensaje. Estado: ${ircRepository.connectionState.value}, Target: $targetToSend, Msg: $messageContent")
                 val targetForError = chatStateManager.activeTarget.value ?: chatStateManager.chatTargets.value.firstOrNull() ?: ChatStateManager.SERVER_TARGET_ID
                 addSystemMessageToTarget(targetForError, "No se puede enviar el mensaje. Verifica la conexión y el target.")
             }
@@ -421,13 +422,11 @@ class MainViewModel @Inject constructor(
     }
 
     fun disconnectFromServerAndStopService() {
-        Log.i("MainViewModel", "disconnectFromServerAndStopService llamado.")
         val targetForMessage = chatStateManager.activeTarget.value ?: chatStateManager.chatTargets.value.firstOrNull() ?: ChatStateManager.SERVER_TARGET_ID
         addSystemMessageToTarget(targetForMessage, "Desconectando y solicitando detener el servicio...")
         viewModelScope.launch {
             _userMessageEvents.emit("Desconectado del servidor.")
         }
         ircRepository.disconnectAndStopService()
-        // El estado de la UI (targets, etc.) se actualiza a través de la observación de connectionState -> handleServiceDisconnected
     }
 }

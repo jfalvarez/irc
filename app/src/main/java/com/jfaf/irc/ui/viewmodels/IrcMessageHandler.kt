@@ -1,6 +1,8 @@
 package com.jfaf.irc.ui.viewmodels
 
 import android.util.Log
+import androidx.compose.ui.text.* // Importación global para androidx.compose.ui.text
+import androidx.compose.ui.text.font.FontWeight
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import javax.inject.Inject
 
@@ -74,7 +76,7 @@ class IrcMessageHandler @Inject constructor() {
         message: UiChatMessage,
         currentMessages: MutableMap<String, List<UiChatMessage>>
     ) {
-        Log.d("IrcMessageHandler.AddMsg", "Target: '$target', Msg: '${message.fullText}', Img: ${message.imageUrl}, List size before: ${currentMessages[target]?.size ?: 0}")
+        Log.d("IrcMessageHandler.AddMsg", "Target: '$target', Msg: '${message.fullText}', Annotated: '${message.annotatedString}', Img: ${message.imageUrl}, List size before: ${currentMessages[target]?.size ?: 0}")
         val currentMessagesForTarget = currentMessages[target] ?: emptyList()
         val updatedMessagesForTarget = (currentMessagesForTarget + message).takeLast(maxUiMessagesPerTarget)
         currentMessages[target] = updatedMessagesForTarget
@@ -92,7 +94,7 @@ class IrcMessageHandler @Inject constructor() {
         val allMessages = snapshot.allMessages.toMutableMap()
         var chatTargets = snapshot.chatTargets.toMutableList()
         var unreadTargets = snapshot.unreadTargets.toMutableSet()
-        var usersInChannel = snapshot.usersInChannel.toMutableMap() // Ya es mutable
+        var usersInChannel = snapshot.usersInChannel.toMutableMap()
 
         var uiMessageToAdd: UiChatMessage? = null
         var targetForUiMessage: String? = null
@@ -188,8 +190,6 @@ class IrcMessageHandler @Inject constructor() {
             addMessageToTargetInternal(targetForUiMessage, uiMessageToAdd, allMessages)
         }
         
-        Log.d("IrcMessageHandler.Result", "Returning: activeTarget='${activeTarget}', nick='${currentNickname}', allMessages keys='${allMessages.keys.joinToString()}', chatTargets='${chatTargets.joinToString()}', unread='${unreadTargets.joinToString()}', usersInChannel keys='${usersInChannel.keys.joinToString()}', uiMsgToAdd='${uiMessageToAdd?.fullText}', targetForUiMsg='${targetForUiMessage}'")
-
         return ChatUpdateResult(
             newCurrentNickname = currentNickname,
             newActiveTarget = activeTarget,
@@ -204,7 +204,6 @@ class IrcMessageHandler @Inject constructor() {
         )
     }
 
-    // PRIVMSG y NOTICE no modifican usersInChannel directamente, por lo que pueden mantener FiveTuple/Triple
     private fun handlePrivmsgInternal(
         parsedMessage: ParsedIrcMessage,
         currentNickname: String,
@@ -235,7 +234,6 @@ class IrcMessageHandler @Inject constructor() {
                     pmEventNick = determinedTargetKey
                 }
             }
-
             if (determinedTargetKey != SERVER_TARGET_ID && !isToChannel && !currentIsOwn) {
                 if (!currentChatTargets.any { it.equals(determinedTargetKey, ignoreCase = true) }) {
                     updatedChatTargets = currentChatTargets + determinedTargetKey
@@ -243,14 +241,25 @@ class IrcMessageHandler @Inject constructor() {
             }
         }
 
-        val messageText = when {
+        val rawMessageTextForFullText = when {
             isToChannel -> "<${sender}> $content"
             currentIsOwn -> "<${currentNickname}> $content" 
             else -> "<${sender}> $content"
         }
-        val imageUrl = extractImageUrl(content)
+        
+        val parsedContent = MircColorParser.parse(content)
+        val senderDisplay = sender ?: currentNickname // Fallback for sender display
+        val finalAnnotatedString = buildAnnotatedString {
+            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                append("<$senderDisplay> ")
+            }
+            append(parsedContent)
+        }
+
+        val imageUrl = extractImageUrl(content) // Extract from raw content
         val newUiMsg = UiChatMessage(
-            fullText = messageText,
+            fullText = rawMessageTextForFullText, 
+            annotatedString = finalAnnotatedString,
             type = when {
                 currentIsOwn && isToChannel -> UiMessageType.CHANNEL_MSG_SENT 
                 currentIsOwn && !isToChannel -> UiMessageType.PRIVATE_MSG_SENT 
@@ -276,12 +285,23 @@ class IrcMessageHandler @Inject constructor() {
 
         val noticeTargetParam = params.firstOrNull()
         val from = sender ?: parsedMessage.prefix ?: "Server"
-        val content = trailing ?: params.joinToString(" ")
+        val content = trailing ?: params.joinToString(" ") 
         
         val determinedTargetKey = if (noticeTargetParam?.equals(currentNickname, ignoreCase = true) == true && sender != null) sender else activeTarget ?: SERVER_TARGET_ID
+        
+        val rawMessageTextForFullText = "-$from- $content"
+        val parsedContent = MircColorParser.parse(content)
+        val finalAnnotatedString = buildAnnotatedString {
+            withStyle(style = SpanStyle(fontWeight = FontWeight.SemiBold)) { 
+                append("-$from- ")
+            }
+            append(parsedContent)
+        }
+
         val imageUrl = extractImageUrl(content)
         val newUiMsg = UiChatMessage(
-            fullText = "-$from- $content", 
+            fullText = rawMessageTextForFullText, 
+            annotatedString = finalAnnotatedString,
             type = UiMessageType.NOTICE, 
             sender = from,
             imageUrl = imageUrl
@@ -299,7 +319,7 @@ class IrcMessageHandler @Inject constructor() {
         currentNickname: String,
         currentChatTargets: List<String>,
         currentUnreadTargets: Set<String>,
-        currentUsersInChannel: Map<String, List<String>> // Nuevo parámetro
+        currentUsersInChannel: Map<String, List<String>>
     ): ChannelEventResult { 
         val userJoining = parsedMessage.senderNickname
         val params = parsedMessage.params
@@ -314,12 +334,10 @@ class IrcMessageHandler @Inject constructor() {
             return ChannelEventResult(null, null, null, null, null, currentUsersInChannel)
         }
 
-        // Actualizar lista de usuarios para el canal
         val currentChannelUsers = mutableUsersMap[channel]?.toMutableList() ?: mutableListOf()
-        if (!currentChannelUsers.any { it.equals(userJoining, ignoreCase = true) }) { // Evitar duplicados (case insensitive check)
+        if (!currentChannelUsers.any { it.equals(userJoining, ignoreCase = true) }) {
             currentChannelUsers.add(userJoining)
             mutableUsersMap[channel] = currentChannelUsers.distinctBy { it.lowercase() }.sortedWith(String.CASE_INSENSITIVE_ORDER)
-            Log.d("IrcMessageHandler.JOIN", "User '$userJoining' added to channel '$channel'. New list: ${mutableUsersMap[channel]?.joinToString()}")
         }
 
         if (userJoining.equals(currentNickname, ignoreCase = true)) {
@@ -331,7 +349,8 @@ class IrcMessageHandler @Inject constructor() {
                 updatedUnreadTargets = currentUnreadTargets - channel
             }
         }
-        val newUiMsg = UiChatMessage("* $userJoining ha entrado a $channel", UiMessageType.JOIN_PART_QUIT, userJoining)
+        val messageText = "* $userJoining ha entrado a $channel"
+        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), UiMessageType.JOIN_PART_QUIT, userJoining)
         return ChannelEventResult(channel, newUiMsg, newActiveTarget, updatedChatTargets, updatedUnreadTargets, mutableUsersMap.toMap())
     }
 
@@ -341,45 +360,37 @@ class IrcMessageHandler @Inject constructor() {
         currentActiveTarget: String?,
         currentChatTargets: List<String>,
         currentUnreadTargets: Set<String>,
-        currentUsersInChannel: Map<String, List<String>> // Nuevo parámetro
+        currentUsersInChannel: Map<String, List<String>>
     ): ChannelEventResult { 
         val userParting = parsedMessage.senderNickname
         val params = parsedMessage.params
         val trailing = parsedMessage.trailing
-
         var channelName = params.firstOrNull()
         if (channelName.isNullOrBlank() && !trailing.isNullOrBlank() && trailing.startsWith("#")) {
             channelName = trailing.split(" ")[0]
         }
         
-        var newActiveTarget: String? = null // CORREGIDO: Debería ser la variable declarada.
+        var newActiveTarget: String? = null
         var updatedChatTargets: List<String>? = null
         var updatedUnreadTargets: Set<String>? = null
         val mutableUsersMap = currentUsersInChannel.toMutableMap()
 
         if (channelName.isNullOrBlank() || userParting == null) {
-            Log.w("IrcMessageHandler", "PART sin nombre de canal o sin sender. Params: $params, Trailing: $trailing, Sender: $userParting")
             return ChannelEventResult(null, null, null, null, null, currentUsersInChannel)
         }
         
-        // Actualizar lista de usuarios para el canal
         val currentChannelUsers = mutableUsersMap[channelName]?.toMutableList()
         if (currentChannelUsers != null) {
-            val removed = currentChannelUsers.removeIf { it.equals(userParting, ignoreCase = false) } // Exact match for removal
-            if (removed) {
+            if (currentChannelUsers.removeIf { it.equals(userParting, ignoreCase = false) }) {
                 mutableUsersMap[channelName] = currentChannelUsers.sortedWith(String.CASE_INSENSITIVE_ORDER)
-                Log.d("IrcMessageHandler.PART", "User '$userParting' removed from channel '$channelName'. New list: ${mutableUsersMap[channelName]?.joinToString()}")
-            } else {
-                 Log.d("IrcMessageHandler.PART", "User '$userParting' not found in '$channelName' for removal.")
             }
-        } else {
-            Log.d("IrcMessageHandler.PART", "Channel '$channelName' not found in users map for PART.")
         }
 
         val reasonPart = if (trailing != channelName) trailing?.substringAfter(channelName)?.trim() else null
         val reasonMsgContent = reasonPart?.let { if (it.startsWith(":")) it.substring(1) else it } ?: ""
         val reasonMsg = if (reasonMsgContent.isNotBlank()) " ($reasonMsgContent)" else ""
-        val newUiMsg = UiChatMessage("* $userParting ha salido de $channelName$reasonMsg", UiMessageType.JOIN_PART_QUIT, userParting)
+        val messageText = "* $userParting ha salido de $channelName$reasonMsg"
+        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), UiMessageType.JOIN_PART_QUIT, userParting)
 
         if (userParting.equals(currentNickname, ignoreCase = true)) {
             if (currentChatTargets.any { it.equals(channelName, ignoreCase = true) }) {
@@ -388,7 +399,7 @@ class IrcMessageHandler @Inject constructor() {
                     updatedUnreadTargets = currentUnreadTargets - channelName
                 }
                 if (currentActiveTarget?.equals(channelName, ignoreCase = true) == true) {
-                    newActiveTarget = updatedChatTargets.firstOrNull() ?: SERVER_TARGET_ID // CORRECCIÓN A newActiveTarget
+                    newActiveTarget = updatedChatTargets.firstOrNull() ?: SERVER_TARGET_ID
                 }
             }
         }
@@ -399,33 +410,28 @@ class IrcMessageHandler @Inject constructor() {
         parsedMessage: ParsedIrcMessage,
         currentChatTargets: List<String>,
         allMessages: MutableMap<String, List<UiChatMessage>>,
-        currentUsersInChannel: Map<String, List<String>> // Nuevo parámetro
-    ): Map<String, List<String>> { // Devuelve el mapa actualizado
+        currentUsersInChannel: Map<String, List<String>>
+    ): Map<String, List<String>> { 
         val userQuitting = parsedMessage.senderNickname
         val trailing = parsedMessage.trailing
         val reason = trailing?.let { " ($it)" } ?: ""
-        val quitMessage = "* ${userQuitting ?: "Alguien"} ha salido del IRC$reason"
+        val quitMessageText = "* ${userQuitting ?: "Alguien"} ha salido del IRC$reason"
+        val quitMessage = UiChatMessage(quitMessageText, annotatedString = AnnotatedString(quitMessageText), UiMessageType.JOIN_PART_QUIT, userQuitting)
         
         val mutableUsersMap = currentUsersInChannel.toMutableMap()
-
         if (userQuitting != null) {
-            val channelsAffected = mutableListOf<String>()
             currentUsersInChannel.keys.forEach { channel ->
                 val channelUsers = mutableUsersMap[channel]?.toMutableList()
                 if (channelUsers != null) {
-                    val removed = channelUsers.removeIf { it.equals(userQuitting, ignoreCase = false) } // Exact match for removal
-                    if (removed) {
+                    if (channelUsers.removeIf { it.equals(userQuitting, ignoreCase = false) }) {
                         mutableUsersMap[channel] = channelUsers.sortedWith(String.CASE_INSENSITIVE_ORDER)
-                        channelsAffected.add(channel)
-                        Log.d("IrcMessageHandler.QUIT", "User '$userQuitting' removed from channel '$channel' due to QUIT.")
                     }
                 }
             }
         }
-        // La lógica de añadir mensaje de QUIT a los canales abiertos se mantiene
         currentChatTargets.forEach { openTarget ->
             if (openTarget.startsWith("#")) { 
-                addMessageToTargetInternal(openTarget, UiChatMessage(quitMessage, UiMessageType.JOIN_PART_QUIT, userQuitting), allMessages)
+                addMessageToTargetInternal(openTarget, quitMessage, allMessages)
             }
         }
         return mutableUsersMap.toMap()
@@ -438,7 +444,7 @@ class IrcMessageHandler @Inject constructor() {
         currentChatTargets: List<String>,
         currentUnreadTargets: Set<String>,
         allMessages: MutableMap<String, List<UiChatMessage>>,
-        currentUsersInChannel: Map<String, List<String>> // Nuevo parámetro
+        currentUsersInChannel: Map<String, List<String>>
     ): NickChangeInternalResult {
         val oldNick = parsedMessage.senderNickname
         val newNick = parsedMessage.trailing ?: parsedMessage.params.firstOrNull()
@@ -455,19 +461,18 @@ class IrcMessageHandler @Inject constructor() {
             return NickChangeInternalResult(currentNickname, currentActiveTarget, currentChatTargets, currentUnreadTargets, false, currentUsersInChannel)
         }
 
-        // Actualizar lista de usuarios en todos los canales
         currentUsersInChannel.keys.forEach { channel ->
             val channelUsers = mutableUsersMap[channel]?.toMutableList()
             if (channelUsers != null && channelUsers.any { it.equals(oldNick, ignoreCase = false) }) {
                 channelUsers.removeIf { it.equals(oldNick, ignoreCase = false) }
                 channelUsers.add(newNick)
                 mutableUsersMap[channel] = channelUsers.distinctBy { it.lowercase() }.sortedWith(String.CASE_INSENSITIVE_ORDER)
-                 Log.d("IrcMessageHandler.NICK", "Nick '$oldNick' changed to '$newNick' in channel '$channel'. New list: ${mutableUsersMap[channel]?.joinToString()}")
             }
         }
 
-        val nickChangeMsg = UiChatMessage("* $oldNick ahora es conocido como $newNick", UiMessageType.NICK_CHANGE, oldNick)
-        // La lógica existente para actualizar mensajes y targets se mantiene
+        val messageText = "* $oldNick ahora es conocido como $newNick"
+        val nickChangeMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), UiMessageType.NICK_CHANGE, oldNick)
+        
         val currentMessageKeys = allMessages.keys.toList()
         for (target in currentMessageKeys) {
             if (target.equals(oldNick, ignoreCase = true)) { 
@@ -481,7 +486,8 @@ class IrcMessageHandler @Inject constructor() {
             } else { 
                 val targetMessages = allMessages[target]
                 val oldNickParticipated = targetMessages?.any {
-                    it.sender?.equals(oldNick, ignoreCase = true) == true || it.fullText.contains(oldNick, ignoreCase = true)
+                    it.sender?.equals(oldNick, ignoreCase = true) == true || 
+                    (it.annotatedString?.text ?: it.fullText).contains(oldNick, ignoreCase = true)
                 } == true
 
                 if (currentChatTargets.any { it.equals(target, ignoreCase = true) } && oldNickParticipated) {
@@ -526,7 +532,8 @@ class IrcMessageHandler @Inject constructor() {
         }
         val by = sender ?: parsedMessage.prefix ?: "Server"
         val modes = params.drop(1).joinToString(" ") + (trailing?.let { " :$it" } ?: "")
-        val newUiMsg = UiChatMessage("* $by establece modo $modes en $determinedTargetKey", UiMessageType.MODE_CHANGE, by)
+        val messageText = "* $by establece modo $modes en $determinedTargetKey"
+        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), UiMessageType.MODE_CHANGE, by)
         return Pair(determinedTargetKey, newUiMsg)
     }
 
@@ -548,7 +555,15 @@ class IrcMessageHandler @Inject constructor() {
                 newNickname = confirmedNick
             }
         }
-        val uiMsg = UiChatMessage("[INFO] $content", UiMessageType.SERVER_INFO, parsedMessage.prefix ?: "Server")
+        val messageText = "[INFO] $content"
+        val annotatedContent = MircColorParser.parse(content)
+        val finalAnnotatedString = buildAnnotatedString {
+            withStyle(style = SpanStyle(fontWeight = FontWeight.Light)) {
+                append("[INFO] ")
+            }
+            append(annotatedContent)
+        }
+        val uiMsg = UiChatMessage(messageText, annotatedString = finalAnnotatedString, UiMessageType.SERVER_INFO, parsedMessage.prefix ?: "Server")
         return Triple(targetKey, uiMsg, newNickname)
     }
 
@@ -563,8 +578,15 @@ class IrcMessageHandler @Inject constructor() {
         val targetKey = activeTarget ?: SERVER_TARGET_ID 
         val errorParams = params.joinToString(" ")
         val errorTrailing = trailing ?: ""
-        val errorMessage = "Error $command: $errorParams $errorTrailing"
-        val uiMsg = UiChatMessage(errorMessage, UiMessageType.SERVER_INFO, parsedMessage.prefix ?: "Server")
+        val errorMessageText = "Error $command: $errorParams $errorTrailing"
+        val annotatedContent = MircColorParser.parse("$errorParams $errorTrailing")
+        val finalAnnotatedString = buildAnnotatedString {
+            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                append("Error $command: ")
+            }
+            append(annotatedContent)
+        }
+        val uiMsg = UiChatMessage(errorMessageText, annotatedString = finalAnnotatedString, UiMessageType.SERVER_INFO, parsedMessage.prefix ?: "Server")
         return Pair(targetKey, uiMsg)
     }
 
@@ -579,7 +601,12 @@ class IrcMessageHandler @Inject constructor() {
 
         val targetKey = activeTarget ?: SERVER_TARGET_ID
         val fullOriginalText = "${prefix?.let { ":$it " } ?: ""}$command ${params.joinToString(" ")}${trailing?.let { " :$it" } ?: ""}"
-        val uiMsg = UiChatMessage("[${command.uppercase()}] $fullOriginalText", UiMessageType.OTHER_COMMAND, prefix)
+        val uiMsg = UiChatMessage(
+            fullText = "[${command.uppercase()}] $fullOriginalText", 
+            annotatedString = AnnotatedString("[${command.uppercase()}] $fullOriginalText"), 
+            type = UiMessageType.OTHER_COMMAND, 
+            sender = prefix
+        )
         return Pair(targetKey, uiMsg)
     }
 
@@ -588,14 +615,12 @@ class IrcMessageHandler @Inject constructor() {
         currentUsersInChannel: Map<String, List<String>>
     ): Triple<String?, UiChatMessage?, Map<String, List<String>>> {
         if (parsedMessage.params.size < 3) {
-            Log.w("IrcMessageHandler", "RPL_NAMREPLY (353) con parámetros insuficientes: ${parsedMessage.rawLine}")
             return Triple(null, null, currentUsersInChannel)
         }
         val channel = parsedMessage.params[2]
         val namesString = parsedMessage.trailing
 
         if (channel.isBlank() || namesString.isNullOrBlank()) {
-            Log.w("IrcMessageHandler", "RPL_NAMREPLY (353) sin canal o nombres: ${parsedMessage.rawLine}")
             return Triple(null, null, currentUsersInChannel)
         }
 
@@ -603,7 +628,6 @@ class IrcMessageHandler @Inject constructor() {
             .map { nickWithPrefix ->
                 var cleanNick = nickWithPrefix
                 if (cleanNick.startsWith("@") || cleanNick.startsWith("+") || cleanNick.startsWith("%") || cleanNick.startsWith("&") || cleanNick.startsWith("~")) {
-                    cleanNick = cleanNick.substring(1)
                 }
                 cleanNick
             }
@@ -617,9 +641,14 @@ class IrcMessageHandler @Inject constructor() {
                 existingNames.add(newName)
             }
         }
-        updatedUsersMap[channel] = existingNames.distinctBy { it.lowercase() }.sortedWith(String.CASE_INSENSITIVE_ORDER)
-        
-        Log.d("IrcMessageHandler", "RPL_NAMREPLY (353) para $channel. Usuarios actualizados: ${updatedUsersMap[channel]?.joinToString()}")
+        updatedUsersMap[channel] = existingNames.distinctBy { it.lowercase() }
+            .sortedWith(compareBy<String> {
+                when {
+                    it.startsWith("@") -> 0 
+                    it.startsWith("+") -> 1 
+                    else -> 2 
+                }
+            }.thenBy { it.lowercase() })
         
         return Triple(null, null, updatedUsersMap.toMap())
     }

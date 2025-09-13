@@ -13,7 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape // Kept for 24.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -29,10 +29,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color // Kept for Color.Transparent and specific NOTICE color
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-// import androidx.compose.ui.text.TextStyle // Retained as it's used by MaterialTheme.typography
+import androidx.compose.ui.text.AnnotatedString // Importación añadida
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -187,8 +187,7 @@ fun MainScreen(
                         .fillMaxSize()
                         .background(IRCTheme.gradientBrush)
                     ) {
-                        // Columna para Mensajes
-                        Box(modifier = Modifier.weight(if (showUserListState) 0.6f else 1f)) { // << PESO MODIFICADO
+                        Box(modifier = Modifier.weight(if (showUserListState) 0.6f else 1f)) {
                             val activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value
                             val messages = viewModel.chatScreenState.uiMessages.collectAsState().value
                             if (activeTarget != null) {
@@ -208,7 +207,6 @@ fun MainScreen(
                             }
                         }
 
-                        // Línea divisora y Columna para la Lista de Usuarios (condicional)
                         if (showUserListState) {
                             VerticalDivider(
                                 modifier = Modifier
@@ -216,7 +214,7 @@ fun MainScreen(
                                     .width(DividerDefaults.Thickness),
                                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                             )
-                            Box(modifier = Modifier.weight(0.4f)) { // << PESO MODIFICADO
+                            Box(modifier = Modifier.weight(0.4f)) {
                                 ChannelUserListView(mainViewModel = viewModel)
                             }
                         }
@@ -568,9 +566,9 @@ fun AppDrawerContent(
                         colors = NavigationDrawerItemDefaults.colors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                             unselectedContainerColor = Color.Transparent,
-                            selectedIconColor = MaterialTheme.colorScheme.onPrimary, // Corrected for visibility
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
                             unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                            selectedTextColor = MaterialTheme.colorScheme.onPrimary, // Corrected for visibility
+                            selectedTextColor = MaterialTheme.colorScheme.onPrimary,
                             unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                         ),
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -587,9 +585,9 @@ fun AppDrawerContent(
                 colors = NavigationDrawerItemDefaults.colors(
                     selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                     unselectedContainerColor = Color.Transparent,
-                    selectedIconColor = MaterialTheme.colorScheme.onPrimary, // Corrected for visibility
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
                     unselectedIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                    selectedTextColor = MaterialTheme.colorScheme.onPrimary, // Corrected for visibility
+                    selectedTextColor = MaterialTheme.colorScheme.onPrimary,
                     unselectedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                 ),
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -613,44 +611,54 @@ fun MessagesList(messages: List<UiChatMessage>) {
 
 @Composable
 fun MessageRow(message: UiChatMessage) {
-    val textColor = when (message.type) {
+    // El color base del texto, puede ser sobrescrito por el AnnotatedString
+    val baseTextColor = when (message.type) {
         UiMessageType.SYSTEM_MESSAGE, 
         UiMessageType.JOIN_PART_QUIT, 
         UiMessageType.NICK_CHANGE, 
         UiMessageType.MODE_CHANGE -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
         UiMessageType.SERVER_INFO -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-        UiMessageType.NOTICE -> Color(0xFFFFF176) 
+        UiMessageType.NOTICE -> MaterialTheme.colorScheme.onPrimary // El color específico del notice (0xFFFFF176) vendrá del AnnotatedString
         else -> MaterialTheme.colorScheme.onPrimary
     }
+
     val fontStyle = when (message.type) {
         UiMessageType.SYSTEM_MESSAGE, 
         UiMessageType.JOIN_PART_QUIT, 
         UiMessageType.NICK_CHANGE, 
         UiMessageType.MODE_CHANGE, 
-        UiMessageType.SERVER_INFO, 
+        UiMessageType.SERVER_INFO,
         UiMessageType.NOTICE -> FontStyle.Italic
         else -> FontStyle.Normal
     }
-    val fontWeight = if (message.isOwnMessage) FontWeight.Bold else FontWeight.Normal
 
-    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth()) { // Envuelto en Column
+    // El fontWeight para mensajes propios se manejará idealmente dentro del AnnotatedString si es necesario,
+    // o se puede aplicar aquí como un estilo general para toda la fila.
+    // Si el MircColorParser ya pone el nick en negrita, este fontWeight global podría ser redundante
+    // o crear doble negrita. Por ahora, lo mantenemos para el caso de que el annotatedString sea simple.
+    val fontWeight = if (message.isOwnMessage && message.annotatedString?.spanStyles?.all { it.item.fontWeight != FontWeight.Bold } == true) {
+        FontWeight.Bold
+    } else {
+        FontWeight.Normal
+    }
+
+    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth()) {
         Text(
-            text = message.fullText,
-            color = textColor, 
+            text = message.annotatedString ?: AnnotatedString(message.fullText), // Usar annotatedString, fallback a fullText
+            color = baseTextColor, // Color base, puede ser sobrescrito por spans en annotatedString
             fontStyle = fontStyle, 
-            fontWeight = fontWeight, 
+            fontWeight = fontWeight, // Aplicar fontWeight general
             fontSize = 14.sp
         )
-        // Mostrar imagen si la URL existe
         if (!message.imageUrl.isNullOrBlank()) {
-            Spacer(modifier = Modifier.height(4.dp)) // Espacio entre texto e imagen
+            Spacer(modifier = Modifier.height(4.dp))
             AsyncImage(
                 model = message.imageUrl,
-                contentDescription = "Imagen adjunta: ${message.imageUrl}", // Descripción para accesibilidad
+                contentDescription = "Imagen adjunta: ${message.imageUrl}",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp) // Altura fija para la imagen, ajustar según necesidad
-                    .clickable { /* Podrías añadir acción al clicar la imagen, como abrirla en grande */ }
+                    .height(200.dp)
+                    .clickable { /* Futura acción */ }
             )
         }
     }

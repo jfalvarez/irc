@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.dagger.hilt.android")
+    alias(libs.plugins.hilt.android) // Updated Hilt plugin
     kotlin("kapt") // Necesario para el procesador de anotaciones de Hilt
 }
 
@@ -59,7 +59,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation("androidx.lifecycle:lifecycle-process:2.6.1") // DEPENDENCIA AÑADIDA AQUÍ
+    implementation(libs.androidx.lifecycle.process) // Updated lifecycle-process
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -71,19 +71,19 @@ dependencies {
 //    implementation("org.kitteh.irc:client-lib:9.0.0")
 
     // Coil for image loading in Compose
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation(libs.coil.compose) // Updated Coil
 
     // DataStore
-    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation(libs.androidx.datastore.preferences) // Updated DataStore
 
     // Kotlinx Coroutines
     implementation(libs.kotlinx.coroutines.core) // Changed to use version catalog
 
     // Hilt & Navigation
-    implementation("com.google.dagger:hilt-android:2.57.1")
-    kapt("com.google.dagger:hilt-compiler:2.57.1")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    implementation("androidx.navigation:navigation-compose:2.9.4") // Added Navigation Compose
+    implementation(libs.hilt.android) // Updated Hilt
+    kapt(libs.hilt.compiler) // Updated Hilt compiler
+    implementation(libs.androidx.hilt.navigation.compose) // Updated Hilt Navigation Compose
+    implementation(libs.androidx.navigation.compose) // Updated Navigation Compose
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
