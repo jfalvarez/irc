@@ -282,11 +282,17 @@ fun ChatTopAppBar(
     var showJoinChannelDialog by remember { mutableStateOf(false) }
     var showOpenPmDialog by remember { mutableStateOf(false) }
 
+    // Determinar si el target activo es un canal
+    val isChannel = activeTarget?.startsWith("#") == true
+
     TopAppBar(
         title = { Text(activeTarget ?: stringResource(R.string.app_title_default)) },
         navigationIcon = { IconButton(onClick = onNavigationIconClick) { Icon(Icons.Filled.Menu, stringResource(R.string.cd_open_navigation_menu)) } },
         actions = {
-            IconButton(onClick = onToggleUserList) { Icon(Icons.Filled.Person, stringResource(R.string.cd_toggle_user_list)) }
+            // Mostrar el botón de lista de usuarios SOLO si es un canal
+            if (isChannel) {
+                IconButton(onClick = onToggleUserList) { Icon(Icons.Filled.Person, stringResource(R.string.cd_toggle_user_list)) }
+            }
             IconButton(onClick = { showMenu = !showMenu }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.cd_more_options)) }
             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, modifier = Modifier.background(IRCTheme.dropdownMenuContainerOpaque)) {
                 DropdownMenuItem(text = { Text(stringResource(R.string.menu_item_join_channel), color = MaterialTheme.colorScheme.onSurface) }, onClick = { showMenu = false; showJoinChannelDialog = true })
