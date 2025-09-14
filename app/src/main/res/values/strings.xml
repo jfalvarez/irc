@@ -74,5 +74,12 @@
     <string name="cd_toggle_user_list">Mostrar/ocultar lista de usuarios</string>
     <string name="cd_full_screen_image">Imagen a pantalla completa</string>
     <string name="error_loading_image">Error al cargar la imagen</string>
+    <!-- ... tus otros strings ... -->
+    <string name="no_users_in_channel">No hay usuarios en este canal o la lista aún no se ha cargado.</string>
+    <string name="cd_user_options">Opciones para %s</string>
+    <string name="action_send_private_message">Mandar privado</string>
+    <string name="action_ignore_user">Ignorar</string>
+    <string name="select_channel_to_see_users">Selecciona un canal para ver la lista de usuarios.
+    </string>
 
 </resources>

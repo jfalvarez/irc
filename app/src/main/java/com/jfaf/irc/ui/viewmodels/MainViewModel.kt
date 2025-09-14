@@ -59,19 +59,6 @@ data class ChatScreenState(
     val showUserList: StateFlow<Boolean>
 )
 
-// Placeholder para ChatUpdateResult - asegúrate de que coincida con tu definición real
-// data class ChatUpdateResult(
-// val newCurrentNickname: String? = null,
-// val newActiveTarget: String? = null,
-// val newAllMessages: Map<String, List<UiChatMessage>>? = null,
-// val newChatTargets: List<String>? = null,
-// val newUnreadTargets: Set<String>? = null,
-// val newUsersInChannel: Map<String, List<String>>? = null,
-// val uiMessageToAdd: UiChatMessage? = null,
-// val targetForUiMessage: String? = null,
-// val privateMessageEventNick: String? = null
-// )
-
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val ircRepository: IrcRepository,
@@ -99,7 +86,6 @@ class MainViewModel @Inject constructor(
     var currentNickname = "IrcUser${(100..999).random()}"
         private set
     private val defaultHost = "irc.irc-hispano.org"
-    // SERVER_TARGET_ID ahora se accede vía ChatStateManager.SERVER_TARGET_ID
 
     private val _incomingPrivateMessageEvent = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
     val incomingPrivateMessageEvent: SharedFlow<String> = _incomingPrivateMessageEvent.asSharedFlow()
@@ -107,10 +93,8 @@ class MainViewModel @Inject constructor(
     private val _userMessageEvents = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
     val userMessageEvents: SharedFlow<String> = _userMessageEvents.asSharedFlow()
 
-    // _allMessages sigue siendo gestionado directamente por MainViewModel por ahora
     private val _allMessages = MutableStateFlow<Map<String, List<UiChatMessage>>>(emptyMap())
 
-    // Preferences Flows (sin cambios)
     private val showJoinPartQuitMessagesPref: StateFlow<Boolean> =
         userPreferencesRepository.showJoinPartQuitFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     private val showNickChangesPref: StateFlow<Boolean> =
@@ -125,7 +109,7 @@ class MainViewModel @Inject constructor(
     @Suppress("UNCHECKED_CAST")
     private val combinedUiMessagesFlow: StateFlow<List<UiChatMessage>> = combine(
         listOf(
-            chatStateManager.activeTarget, // << USA EL FLOW DE CHATSTATEMANAGER
+            chatStateManager.activeTarget, 
             _allMessages,
             showJoinPartQuitMessagesPref,
             showNickChangesPref,
@@ -152,7 +136,7 @@ class MainViewModel @Inject constructor(
             }
             if (shouldShow && !filterContext.showJpq) {
                 if (message.type == UiMessageType.JOIN_PART_QUIT ||
-                    message.fullText.contains("signed off", ignoreCase = true) || // Comprobar fullText si annotatedString es nulo
+                    message.fullText.contains("signed off", ignoreCase = true) || 
                     (message.annotatedString?.text?.contains("signed off", ignoreCase = true) == true) ||
                     message.fullText.contains("connection closed", ignoreCase = true) ||
                     (message.annotatedString?.text?.contains("connection closed", ignoreCase = true) == true)) {
@@ -220,14 +204,13 @@ class MainViewModel @Inject constructor(
         val result = ircMessageHandler.processMessage(snapshot, parsedMessage)
         
         result.newCurrentNickname?.let { this.currentNickname = it }
-        result.newAllMessages?.let { _allMessages.value = it } // MainViewModel sigue gestionando _allMessages
+        result.newAllMessages?.let { _allMessages.value = it } 
 
-        // Delegar actualización de estado de chat a ChatStateManager
         chatStateManager.updateStateFromHandlerResult(result) { this.currentNickname }
         
         Log.d("MainViewModel.processMessageForUi", "Post-update: activeTarget='${chatStateManager.activeTarget.value}', allMessages keys='${_allMessages.value.keys.joinToString()}', chatTargets='${chatStateManager.chatTargets.value.joinToString()}', unread='${chatStateManager.unreadTargets.value.joinToString()}', usersInChannel keys='${chatStateManager.usersInChannel.value.keys.joinToString()}'") 
         
-        result.ownNickChangedTo?.let { // Este log puede ser redundante si updateStateFromHandlerResult ya lo maneja
+        result.ownNickChangedTo?.let { 
             Log.d("MainViewModel", "Own nick change to '${it}' (via result.ownNickChangedTo) confirmed by IrcMessageHandler.")
         }
         result.privateMessageEventNick?.let { nick ->
@@ -262,10 +245,9 @@ class MainViewModel @Inject constructor(
     }
 
     private fun addSystemMessageToTarget(target: String, text: String) {
-        // Los mensajes del sistema no suelen tener formato mIRC complejo, así que annotatedString puede ser null o una versión simple.
         val systemMessage = UiChatMessage(
             fullText = text, 
-            annotatedString = AnnotatedString(text), // O null si se prefiere que MessageRow lo maneje
+            annotatedString = AnnotatedString(text), 
             type = UiMessageType.SYSTEM_MESSAGE
         )
         val currentMessages = _allMessages.value[target] ?: emptyList()
@@ -273,12 +255,8 @@ class MainViewModel @Inject constructor(
     }
 
     private fun addLocalUiMessageToTarget(target: String, uiMessage: UiChatMessage) {
-        // Para mensajes locales (propios), podríamos también generar un AnnotatedString si queremos que aparezcan con algún estilo por defecto
-        // o simplemente pasar el fullText y dejar annotatedString como null.
-        // Por simplicidad, si el uiMessage ya viene con annotatedString (ej. porque se parseó antes), se usa.
-        // Si no, podríamos crearlo aquí a partir de uiMessage.fullText.
         val messageToAdd = if (uiMessage.annotatedString == null) {
-            uiMessage.copy(annotatedString = AnnotatedString(uiMessage.fullText)) // Ejemplo básico
+            uiMessage.copy(annotatedString = AnnotatedString(uiMessage.fullText))
         } else {
             uiMessage
         }
@@ -396,11 +374,9 @@ class MainViewModel @Inject constructor(
                     return@launch
                 }
                 val isChannelMessage = targetToSend.startsWith("#")
-                // Para mensajes enviados, el annotatedString puede ser el mismo que fullText o null.
-                // MircColorParser se usaría principalmente para mensajes *recibidos*.
                 val localUiMessage = UiChatMessage(
                     fullText = "<${currentNickname}> $messageContent",
-                    annotatedString = AnnotatedString("<${currentNickname}> $messageContent"), // Opcional: parsear si quieres aplicar estilos a tus propios mensajes también
+                    annotatedString = AnnotatedString("<${currentNickname}> $messageContent"), 
                     type = if (isChannelMessage) UiMessageType.CHANNEL_MSG_SENT else UiMessageType.PRIVATE_MSG_SENT,
                     sender = currentNickname,
                     isOwnMessage = true
@@ -428,5 +404,15 @@ class MainViewModel @Inject constructor(
             _userMessageEvents.emit("Desconectado del servidor.")
         }
         ircRepository.disconnectAndStopService()
+    }
+
+    fun ignoreUser(userName: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.addIgnoredUser(userName) // Asegúrate de que este método exista en UserPreferencesRepository
+            val targetForMessage = chatStateManager.activeTarget.value ?: ChatStateManager.SERVER_TARGET_ID
+            addSystemMessageToTarget(targetForMessage, "Usuario '$userName' ahora está en la lista de ignorados.")
+            // La UI se actualizará automáticamente gracias a ignoredUsersPref y combinedUiMessagesFlow
+            Log.d("MainViewModel", "Usuario '$userName' añadido a ignorados.")
+        }
     }
 }
