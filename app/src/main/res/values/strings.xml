@@ -72,5 +72,7 @@
     <string name="settings_ignored_user_removed">Usuario \'%1$s\' eliminado de ignorados.</string>
     <string name="settings_error_nick_empty">El nick no puede estar vacío.</string>
     <string name="cd_toggle_user_list">Mostrar/ocultar lista de usuarios</string>
+    <string name="cd_full_screen_image">Imagen a pantalla completa</string>
+    <string name="error_loading_image">Error al cargar la imagen</string>
 
 </resources>
