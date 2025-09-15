@@ -34,7 +34,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jfaf.irc.service.IrcServiceApi
 import com.jfaf.irc.ui.screens.MainScreen
-import com.jfaf.irc.ui.screens.SettingsScreen
+import com.jfaf.irc.ui.screens.settings.SettingsScreen
 import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.util.NotificationHelper

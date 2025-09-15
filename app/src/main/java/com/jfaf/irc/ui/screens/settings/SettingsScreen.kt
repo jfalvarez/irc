@@ -1,4 +1,4 @@
-package com.jfaf.irc.ui.screens
+package com.jfaf.irc.ui.screens.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
