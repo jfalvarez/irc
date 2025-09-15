@@ -1,6 +1,7 @@
 package com.jfaf.irc.ui.screens
 
 import android.util.Log
+import android.util.Patterns
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -30,14 +32,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer // Added import
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -54,7 +61,6 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-// Removed scaleIn and scaleOut as AnimatedVisibility for image itself is removed
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -282,14 +288,12 @@ fun ChatTopAppBar(
     var showJoinChannelDialog by remember { mutableStateOf(false) }
     var showOpenPmDialog by remember { mutableStateOf(false) }
 
-    // Determinar si el target activo es un canal
     val isChannel = activeTarget?.startsWith("#") == true
 
     TopAppBar(
         title = { Text(activeTarget ?: stringResource(R.string.app_title_default)) },
         navigationIcon = { IconButton(onClick = onNavigationIconClick) { Icon(Icons.Filled.Menu, stringResource(R.string.cd_open_navigation_menu)) } },
         actions = {
-            // Mostrar el botón de lista de usuarios SOLO si es un canal
             if (isChannel) {
                 IconButton(onClick = onToggleUserList) { Icon(Icons.Filled.Person, stringResource(R.string.cd_toggle_user_list)) }
             }
@@ -402,15 +406,78 @@ fun MessageRow(message: UiChatMessage, onImageClick: (String) -> Unit) {
     }
     val fontWeight = if (message.isOwnMessage && message.annotatedString?.spanStyles?.all { it.item.fontWeight != FontWeight.Bold } == true) FontWeight.Bold else FontWeight.Normal
 
+    val uriHandler = LocalUriHandler.current
+    val clickableText = buildAnnotatedString {
+        val baseString = message.annotatedString ?: AnnotatedString(message.fullText)
+        append(baseString)
+
+        // Override the base color, fontStyle, and fontWeight for the entire text initially
+        // These will be overridden by spans within baseString or by link styles below.
+        addStyle(SpanStyle(color = baseTextColor, fontStyle = fontStyle, fontWeight = fontWeight), 0, length)
+
+        val matcher = Patterns.WEB_URL.matcher(baseString.text)
+        while (matcher.find()) {
+            val url = matcher.group()
+            if (url != null) {
+                val startIndex = matcher.start()
+                val endIndex = matcher.end()
+                addStyle(
+                    style = SpanStyle(
+                        color = Color.White, // Link color CHANGED
+                        textDecoration = TextDecoration.Underline
+                    ),
+                    start = startIndex,
+                    end = endIndex
+                )
+                addStringAnnotation(
+                    tag = "URL",
+                    annotation = url,
+                    start = startIndex,
+                    end = endIndex
+                )
+            }
+        }
+    }
+
     Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth()) {
-        Text(message.annotatedString ?: AnnotatedString(message.fullText), color = baseTextColor, fontStyle = fontStyle, fontWeight = fontWeight, fontSize = 14.sp)
+        ClickableText(
+            text = clickableText,
+            style = TextStyle(fontSize = 14.sp), // Default style, color/fontStyle/fontWeight from clickableText spans
+            onClick = { offset ->
+                clickableText.getStringAnnotations(tag = "URL", start = offset, end = offset)
+                    .firstOrNull()?.let { annotation ->
+                        try {
+                            uriHandler.openUri(annotation.item)
+                        } catch (e: Exception) {
+                            Log.e("MessageRow", "Could not open URL ${annotation.item}", e)
+                        }
+                    }
+            }
+        )
+        
         if (!message.imageUrl.isNullOrBlank()) {
-            Spacer(modifier = Modifier.height(4.dp))
-            AsyncImage(
-                model = message.imageUrl,
-                contentDescription = "Imagen adjunta: ${message.imageUrl}",
-                modifier = Modifier.fillMaxWidth().height(200.dp).clickable { if (!message.imageUrl.isNullOrBlank()) onImageClick(message.imageUrl) }
-            )
+            var showImageAndSpace by remember(message.imageUrl) { mutableStateOf(true) }
+
+            if (showImageAndSpace) {
+                Spacer(modifier = Modifier.height(4.dp))
+                AsyncImage(
+                    model = message.imageUrl,
+                    contentDescription = "Imagen adjunta: ${message.imageUrl}",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp) 
+                        .clickable { 
+                            message.imageUrl?.let { onImageClick(it) } 
+                        },
+                    onState = { state ->
+                        if (state is AsyncImagePainter.State.Error) {
+                            Log.w("MessageRow", "Error al cargar imagen: ${message.imageUrl}, ${state.result.throwable}")
+                            showImageAndSpace = false 
+                        }
+                    },
+                    contentScale = ContentScale.Fit 
+                )
+            }
         }
     }
 }
@@ -443,7 +510,6 @@ fun MessageInputSection(onSendMessage: (String) -> Unit, modifier: Modifier = Mo
 
 @Composable
 fun FullScreenImageViewer(imageUrl: String, onClose: () -> Unit) {
-    // Remove testImageUrl, use imageUrl directly
     Log.d("FullScreenImageViewer", "Displaying image. URL: $imageUrl")
 
     Dialog(
@@ -464,28 +530,27 @@ fun FullScreenImageViewer(imageUrl: String, onClose: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             AsyncImage(
-                model = imageUrl, // Use the actual imageUrl parameter
+                model = imageUrl, 
                 contentDescription = stringResource(R.string.cd_full_screen_image),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth(0.95f)
                     .fillMaxHeight(0.85f)
                     .clip(RoundedCornerShape(8.dp))
-                    .graphicsLayer { // Controlar alfa basado en el estado
+                    .graphicsLayer { 
                         alpha = if (imagePainterState is AsyncImagePainter.State.Success) 1f else 0f
                     }
-                    .clickable( // Consumir clics en el área de la imagen
+                    .clickable( 
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = { /* No hacer nada para evitar cerrar el diálogo al tocar la imagen */ }
                     ),
                 onState = { state ->
-                    Log.d("FullScreenImageViewer", "AsyncImage State changed: $state for URL: $imageUrl") // Log with actual imageUrl
-                    imagePainterState = state // Actualizar el estado
+                    Log.d("FullScreenImageViewer", "AsyncImage State changed: $state for URL: $imageUrl") 
+                    imagePainterState = state 
                 }
             )
 
-            // UI condicional para estados de carga y error
             when (val currentState = imagePainterState) {
                 is AsyncImagePainter.State.Loading -> {
                     Log.d("FullScreenImageViewer", "Showing loading indicator because painterState is Loading.")
@@ -503,7 +568,6 @@ fun FullScreenImageViewer(imageUrl: String, onClose: () -> Unit) {
                 }
                 is AsyncImagePainter.State.Success -> {
                     Log.d("FullScreenImageViewer", "Image successfully loaded. DataSource: ${currentState.result.dataSource}")
-                    // No es necesario hacer nada aquí, AsyncImage ya es visible a través de su alfa
                 }
                 is AsyncImagePainter.State.Empty -> {
                      Log.d("FullScreenImageViewer", "Painter state is Empty. Showing loading indicator as a fallback.")
