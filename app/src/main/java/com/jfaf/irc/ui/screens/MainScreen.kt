@@ -25,7 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text // Still used widely
+import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -40,6 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+// Import androidx.compose.ui.text.input.TextFieldValue if MainScreen were to handle it directly
+// Import androidx.compose.ui.text.TextRange if MainScreen were to handle it directly
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -48,12 +50,12 @@ import com.jfaf.irc.ui.screens.chat.ChannelUserListView
 import com.jfaf.irc.ui.screens.chat.ChatTopAppBar
 import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer
 import com.jfaf.irc.ui.screens.chat.MessagesList
-import com.jfaf.irc.ui.screens.chat.MessageInputSection // Import for the new MessageInputSection
+import com.jfaf.irc.ui.screens.chat.MessageInputSection
 import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import kotlinx.coroutines.launch
-import com.jfaf.irc.ui.screens.chat.AppDrawerContent
+import com.jfaf.irc.ui.screens.chat.AppDrawerContent // Corrected import path
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -77,6 +79,7 @@ fun MainScreen(
     }
 
     val unreadTargetsState = viewModel.chatScreenState.unreadTargets.collectAsState()
+    val nickSuggestionsState by viewModel.chatScreenState.nickSuggestions.collectAsState()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -132,10 +135,28 @@ fun MainScreen(
                 bottomBar = {
                     val activeTargetValue = viewModel.chatScreenState.activeTarget.collectAsState().value
                     val serverString = stringResource(R.string.cd_server)
-                    if (connectionState && activeTargetValue != null && activeTargetValue != serverString) {
+                    if (connectionState && activeTargetValue != null && activeTargetValue != serverString && activeTargetValue.startsWith("#")) { // Autocomplete only for channels
                         MessageInputSection(
+                            modifier = Modifier.fillMaxWidth(),
+                            nickSuggestions = nickSuggestionsState,
                             onSendMessage = { viewModel.sendMessage(it) },
-                            modifier = Modifier.fillMaxWidth()
+                            onTextInputChanged = { text, cursorPos -> 
+                                viewModel.updateNickSuggestions(text, cursorPos) 
+                            },
+                            onSuggestionSelected = { suggestion, currentText, cursorPos ->
+                                viewModel.onNickSuggestionSelected(suggestion, currentText, cursorPos)
+                                // The VM now returns the new String, MessageInputSection handles TextFieldValue update
+                            },
+                            onClearSuggestions = { viewModel.clearNickSuggestions() }
+                        )
+                    } else if (connectionState && activeTargetValue != null && activeTargetValue != serverString) { // For PMs or if logic changes
+                        MessageInputSection(
+                             modifier = Modifier.fillMaxWidth(),
+                            nickSuggestions = emptyList(), // No suggestions for PMs
+                            onSendMessage = { viewModel.sendMessage(it) },
+                            onTextInputChanged = { _, _ -> /* No-op for PMs or non-channels */ },
+                            onSuggestionSelected = { _, _, _ -> "" /* Should not be called */ },
+                            onClearSuggestions = { /* No-op */ }
                         )
                     }
                 },
@@ -218,5 +239,3 @@ fun MainScreen(
         }
     }
 }
-
-// MessageInputSection has been moved to com.jfaf.irc.ui.screens.chat.MessageInputSection.kt

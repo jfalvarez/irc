@@ -16,23 +16,28 @@ import com.jfaf.irc.MainActivity
 import com.jfaf.irc.ManualIrcClient
 import com.jfaf.irc.R
 import com.jfaf.irc.data.model.ParsedIrcMessage
+import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class IrcService : Service() {
 
-    private val TAG = "IrcService"
-    private val FOREGROUND_NOTIFICATION_CHANNEL_ID = "IrcServiceChannel" // MODIFICADO: Renombrado para claridad
-    private val FOREGROUND_NOTIFICATION_ID = 1 // MODIFICADO: Renombrado para claridad
+    @Inject
+    lateinit var userPreferencesRepository: UserPreferencesRepository
 
-    // NUEVO: IDs para notificaciones de mensajes
+    private val TAG = "IrcService"
+    private val FOREGROUND_NOTIFICATION_CHANNEL_ID = "IrcServiceChannel"
+    private val FOREGROUND_NOTIFICATION_ID = 1
+
     private val MESSAGE_NOTIFICATION_CHANNEL_ID = "IrcMessageChannel"
-    private val MESSAGE_NOTIFICATION_ID_BASE = 2 // Usaremos esto como base, podríamos hacerlo más dinámico
+    private val MESSAGE_NOTIFICATION_ID_BASE = 2
 
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
@@ -55,16 +60,13 @@ class IrcService : Service() {
         const val EXTRA_TARGET = "target"
         const val EXTRA_MESSAGE = "message"
         const val EXTRA_CHANNEL_NAME = "channel_name"
-
-        // NUEVO: Para pasar info del mensaje a MainActivity desde la notificación
         const val EXTRA_TARGET_FOR_NOTIFICATION = "target_for_notification"
-
     }
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "IrcService onCreate")
-        createNotificationChannels() // MODIFICADO: Nombre de la función pluralizado
+        createNotificationChannels()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -124,7 +126,7 @@ class IrcService : Service() {
                  Log.w(TAG, "Acción desconocida o nula: $action")
                  if (IrcServiceApi.connectionState.value) {
                     startForeground(FOREGROUND_NOTIFICATION_ID, createForegroundServiceNotification(getString(R.string.notification_status_connected_to, currentHostForNotification)))
-                 } else if (manualIrcClient != null) { // Evitar null si el servicio se reinicia sin cliente
+                 } else if (manualIrcClient != null) {
                     startForeground(FOREGROUND_NOTIFICATION_ID, createForegroundServiceNotification(getString(R.string.notification_status_disconnected)))
                  }
             }
@@ -137,11 +139,11 @@ class IrcService : Service() {
             Log.w(TAG, "Ya conectado o conectando.")
             currentHostForNotification = manualIrcClient?.host ?: serverHost
             updateForegroundServiceNotification(getString(R.string.notification_status_connected_to, currentHostForNotification))
-            IrcServiceApi.updateConnectionState(true) // Asegurar que el estado se refleja
+            IrcServiceApi.updateConnectionState(true)
             return
         }
         Log.i(TAG, "Conectando a $serverHost:$serverPort como $nickname (SSL: $useSsl)")
-        manualIrcClient?.disconnectAndCleanup() // Limpia cliente anterior si existe
+        manualIrcClient?.disconnectAndCleanup()
         currentHostForNotification = serverHost
 
         manualIrcClient = ManualIrcClient(
@@ -165,12 +167,26 @@ class IrcService : Service() {
                 IrcServiceApi.postMessage(parsedMessage)
 
                 if (!IrcServiceApi.isAppInForeground.value) { // App is in background
-                    // Check if it's a private message
-                    // A private message is a PRIVMSG where the target (first param) is our nick (i.e., not a channel)
                     val target = parsedMessage.params.firstOrNull()
+                    // Only consider PRIVMSG for user-to-user notifications
                     if (parsedMessage.command == "PRIVMSG" && target != null && !target.startsWith("#")) {
-                        Log.d(TAG, "App en background. Mensaje PRIVADO detectado. Mostrando notificación para: ${parsedMessage.rawLine}")
-                        showNewMessageNotification(parsedMessage)
+                        val senderNick = parsedMessage.senderNickname // Extracts nick from prefix
+
+                        if (senderNick != null) {
+                            val ignoredUsers = userPreferencesRepository.ignoredUsersFlow.first()
+                            val ignoredUsersLowercase = ignoredUsers.map { it.lowercase() }.toSet()
+
+                            if (senderNick.lowercase() in ignoredUsersLowercase) {
+                                Log.d(TAG, "App en background. Mensaje PRIVADO de usuario ignorado ($senderNick). No se muestra notificación.")
+                            } else {
+                                Log.d(TAG, "App en background. Mensaje PRIVADO de $senderNick no ignorado. Mostrando notificación para: ${parsedMessage.rawLine}")
+                                showNewMessageNotification(parsedMessage)
+                            }
+                        } else {
+                            // Should not happen for valid user PRIVMSGs, but handle defensively
+                            Log.d(TAG, "App en background. Mensaje PRIVADO sin senderNick claro. Mostrando notificación. Raw: ${parsedMessage.rawLine}")
+                            showNewMessageNotification(parsedMessage) // Default to showing if sender is unclear
+                        }
                     } else {
                         Log.d(TAG, "App en background. Mensaje de CANAL o no PRIVMSG. No se muestra notificación emergente para: ${parsedMessage.rawLine}")
                     }
@@ -186,7 +202,7 @@ class IrcService : Service() {
         Log.i(TAG, "Función disconnect() llamada. Limpiando cliente, quitando foreground y deteniendo servicio.")
         val wasConnected = IrcServiceApi.connectionState.value
         manualIrcClient?.disconnectAndCleanup()
-        if (wasConnected) { // Solo actualiza si realmente estaba conectado
+        if (wasConnected) {
             IrcServiceApi.updateConnectionState(false)
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -206,29 +222,22 @@ class IrcService : Service() {
         manualIrcClient?.partFromChannel(channelName)
     }
 
-    // MODIFICADO: Ahora crea ambos canales
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val foregroundServiceChannel = NotificationChannel(
                 FOREGROUND_NOTIFICATION_CHANNEL_ID,
-                getString(R.string.notification_channel_name_irc_service), // Debes tener este string
-                NotificationManager.IMPORTANCE_LOW // Usar LOW para que no sea intrusiva
+                getString(R.string.notification_channel_name_irc_service),
+                NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = getString(R.string.notification_channel_description_irc_service) // Debes tener este string
+                description = getString(R.string.notification_channel_description_irc_service)
             }
 
-            // NUEVO: Canal para mensajes
             val messageChannel = NotificationChannel(
                 MESSAGE_NOTIFICATION_CHANNEL_ID,
-                getString(R.string.notification_channel_name_irc_messages), // Debes tener este string
-                NotificationManager.IMPORTANCE_HIGH // HIGH para heads-up, sonido, vibración
+                getString(R.string.notification_channel_name_irc_messages),
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = getString(R.string.notification_channel_description_irc_messages) // Debes tener este string
-                // Aquí puedes configurar luces, patrón de vibración, etc.
-                // enableLights(true)
-                // lightColor = Color.CYAN
-                // enableVibration(true)
-                // vibrationPattern = longArrayOf(0, 500, 250, 500)
+                description = getString(R.string.notification_channel_description_irc_messages)
             }
 
             val manager = getSystemService(NotificationManager::class.java)
@@ -238,10 +247,9 @@ class IrcService : Service() {
         }
     }
 
-    // MODIFICADO: Renombrado para claridad
     private fun createForegroundServiceNotification(contentText: String): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK // Para comportamiento estándar al abrir desde notificación
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
@@ -253,31 +261,28 @@ class IrcService : Service() {
         )
 
         return NotificationCompat.Builder(this, FOREGROUND_NOTIFICATION_CHANNEL_ID)
-            .setContentTitle(getString(R.string.notification_title_irc_client)) // Debes tener este string
+            .setContentTitle(getString(R.string.notification_title_irc_client))
             .setContentText(contentText)
-            .setSmallIcon(R.drawable.app_icon) // Usa un icono específico para notificaciones (monocromático)
+            .setSmallIcon(R.drawable.app_icon)
             .setContentIntent(pendingIntent)
-            .setOngoing(true) // Notificación persistente del servicio
-            .setSilent(true) // Para que las actualizaciones no suenen si usas IMPORTANCE_LOW o DEFAULT
+            .setOngoing(true)
+            .setSilent(true)
             .build()
     }
 
-    // MODIFICADO: Renombrado para claridad
     private fun updateForegroundServiceNotification(contentText: String) {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(FOREGROUND_NOTIFICATION_ID, createForegroundServiceNotification(contentText))
     }
 
-    // NUEVO: Función para mostrar notificaciones de mensajes
     private fun showNewMessageNotification(parsedMessage: ParsedIrcMessage) {
         val target = parsedMessage.params.firstOrNull() ?: "Unknown"
         val sender = parsedMessage.senderNickname ?: parsedMessage.prefix ?: "Server"
         val messageContent = parsedMessage.trailing ?: ""
 
         val notificationIntent = Intent(this, MainActivity::class.java).apply {
-            // Pasa información para que MainActivity pueda abrir el chat correcto
             putExtra(EXTRA_TARGET_FOR_NOTIFICATION, if (target.startsWith("#")) target else sender)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK // O FLAG_ACTIVITY_SINGLE_TOP si prefieres
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
 
         val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -285,39 +290,33 @@ class IrcService : Service() {
         } else {
             PendingIntent.FLAG_UPDATE_CURRENT
         }
-        // Usar un requestCode diferente para cada PendingIntent si quieres que sean únicos (ej., basado en target)
-        // Por ahora, un requestCode fijo es suficiente si siempre actualiza la misma MainActivity.
         val contentPendingIntent = PendingIntent.getActivity(this, MESSAGE_NOTIFICATION_ID_BASE, notificationIntent, pendingIntentFlags)
 
         val title: String
         val text: String
 
         if (target.startsWith("#")) { // Mensaje de canal
-            title = getString(R.string.new_message_in_channel_title, target) // Ej: "Nuevo mensaje en #canal"
+            // This case should ideally not be reached if we are only calling showNewMessageNotification for private messages
+            // from non-ignored users. However, keeping the logic for safety / future changes.
+            title = getString(R.string.new_message_in_channel_title, target)
             text = "$sender: $messageContent"
-        } else { // Mensaje privado (el target es nuestro nick, el sender es el otro usuario)
-            title = getString(R.string.new_private_message_from_sender_title, sender) // Ej: "Mensaje privado de UsuarioX"
+        } else { // Mensaje privado
+            title = getString(R.string.new_private_message_from_sender_title, sender)
             text = messageContent
         }
 
         val notificationBuilder = NotificationCompat.Builder(this, MESSAGE_NOTIFICATION_CHANNEL_ID)
-            .setSmallIcon(R.drawable.app_icon) // Icono específico para mensajes
+            .setSmallIcon(R.drawable.app_icon)
             .setContentTitle(title)
             .setContentText(text)
-            .setPriority(NotificationCompat.PRIORITY_HIGH) // Para heads-up
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(contentPendingIntent)
-            .setAutoCancel(true) // La notificación desaparece al pulsarla
-            // .setGroup(GROUP_KEY_MESSAGES) // Opcional: para agrupar notificaciones
+            .setAutoCancel(true)
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        
-        // Usar un ID de notificación diferente para cada chat o uno que se actualice.
-        // Por simplicidad, usamos un ID fijo por ahora. Si quieres múltiples notificaciones,
-        // necesitarás un ID único por conversación (ej. target.hashCode()).
         notificationManager.notify(MESSAGE_NOTIFICATION_ID_BASE, notificationBuilder.build())
         Log.d(TAG, "Notificación de mensaje mostrada para target '$target' o sender '$sender'")
     }
-
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
@@ -329,7 +328,7 @@ class IrcService : Service() {
         manualIrcClient?.disconnectAndCleanup()
         serviceJob.cancel()
         if (IrcServiceApi.connectionState.value) {
-            IrcServiceApi.updateConnectionState(false) // Asegurar que el estado se actualiza al destruir
+            IrcServiceApi.updateConnectionState(false)
         }
     }
 }

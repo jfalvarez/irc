@@ -80,7 +80,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core) // Changed to use version catalog
 
     // Hilt & Navigation
-    implementation(libs.hilt.android) // Updated Hilt
+    implementation(libs.hilt.android)
+    implementation(libs.androidx.material3) // Updated Hilt
     kapt(libs.hilt.compiler) // Updated Hilt compiler
     implementation(libs.androidx.hilt.navigation.compose) // Updated Hilt Navigation Compose
     implementation(libs.androidx.navigation.compose) // Updated Navigation Compose

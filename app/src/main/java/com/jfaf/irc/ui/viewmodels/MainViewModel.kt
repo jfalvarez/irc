@@ -1,7 +1,7 @@
 package com.jfaf.irc.ui.viewmodels
 
 import android.util.Log
-import androidx.compose.ui.text.AnnotatedString // Importación añadida
+import androidx.compose.ui.text.AnnotatedString
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jfaf.irc.data.model.ParsedIrcMessage
@@ -10,11 +10,12 @@ import com.jfaf.irc.data.repositories.IrcRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
-// import kotlinx.coroutines.flow.MutableStateFlow // Eliminado, _allMessages ya no está aquí
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -22,7 +23,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// --- Data classes and Enums for UI Messages (sin cambios) ---
 data class UiChatMessage(
     val fullText: String, 
     val annotatedString: AnnotatedString? = null, 
@@ -47,7 +47,6 @@ enum class UiMessageType {
     UNKNOWN
 }
 
-// --- Grouped State Flows (sin cambios) ---
 data class ChatScreenState(
     val activeTarget: StateFlow<String?>,
     val chatTargets: StateFlow<List<String>>,
@@ -56,7 +55,8 @@ data class ChatScreenState(
     val connectionState: StateFlow<Boolean>,
     val usersInChannel: StateFlow<Map<String, List<String>>>,
     val currentChannelUserList: StateFlow<List<String>>,
-    val showUserList: StateFlow<Boolean>
+    val showUserList: StateFlow<Boolean>,
+    val nickSuggestions: StateFlow<List<String>>
 )
 
 @HiltViewModel
@@ -76,7 +76,7 @@ class MainViewModel @Inject constructor(
 
     private data class UiMessagesFilterContext(
         val activeTarget: String?,
-        val allMessages: Map<String, List<UiChatMessage>>, // Esta estructura se mantiene para el filtro
+        val allMessages: Map<String, List<UiChatMessage>>, 
         val showJpq: Boolean,
         val showNick: Boolean,
         val showMode: Boolean,
@@ -93,7 +93,7 @@ class MainViewModel @Inject constructor(
     private val _userMessageEvents = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
     val userMessageEvents: SharedFlow<String> = _userMessageEvents.asSharedFlow()
 
-    // _allMessages MutableStateFlow ha sido eliminado. Se usará chatStateManager.allMessages
+    private val _nickSuggestions = MutableStateFlow<List<String>>(emptyList())
 
     private val showJoinPartQuitMessagesPref: StateFlow<Boolean> =
         userPreferencesRepository.showJoinPartQuitFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
@@ -110,7 +110,7 @@ class MainViewModel @Inject constructor(
     private val combinedUiMessagesFlow: StateFlow<List<UiChatMessage>> = combine(
         listOf(
             chatStateManager.activeTarget, 
-            chatStateManager.allMessages, // <--- CAMBIO: Usa el flow de ChatStateManager
+            chatStateManager.allMessages, 
             showJoinPartQuitMessagesPref,
             showNickChangesPref,
             showModeChangesPref,
@@ -172,7 +172,8 @@ class MainViewModel @Inject constructor(
         connectionState = ircRepository.connectionState,
         usersInChannel = chatStateManager.usersInChannel,
         currentChannelUserList = currentChannelUserListState,
-        showUserList = chatStateManager.showUserList
+        showUserList = chatStateManager.showUserList,
+        nickSuggestions = _nickSuggestions.asStateFlow()
     )
 
     init {
@@ -196,7 +197,7 @@ class MainViewModel @Inject constructor(
         val snapshot = ChatUiSnapshot(
             currentNickname = this.currentNickname,
             activeTarget = chatStateManager.activeTarget.value, 
-            allMessages = chatStateManager.allMessages.value, // <--- CAMBIO: Usa el snapshot de ChatStateManager
+            allMessages = chatStateManager.allMessages.value, 
             chatTargets = chatStateManager.chatTargets.value, 
             unreadTargets = chatStateManager.unreadTargets.value, 
             usersInChannel = chatStateManager.usersInChannel.value 
@@ -204,11 +205,8 @@ class MainViewModel @Inject constructor(
         val result = ircMessageHandler.processMessage(snapshot, parsedMessage)
         
         result.newCurrentNickname?.let { this.currentNickname = it }
-        // result.newAllMessages ya no se procesa aquí, ChatStateManager lo hace.
 
         chatStateManager.updateStateFromHandlerResult(result) { this.currentNickname }
-        
-        Log.d("MainViewModel.processMessageForUi", "Post-update: activeTarget='${chatStateManager.activeTarget.value}', allMessages keys='${chatStateManager.allMessages.value.keys.joinToString()}', chatTargets='${chatStateManager.chatTargets.value.joinToString()}', unread='${chatStateManager.unreadTargets.value.joinToString()}', usersInChannel keys='${chatStateManager.usersInChannel.value.keys.joinToString()}'") 
         
         result.ownNickChangedTo?.let { 
             Log.d("MainViewModel", "Own nick change to '${it}' (via result.ownNickChangedTo) confirmed by IrcMessageHandler.")
@@ -220,19 +218,12 @@ class MainViewModel @Inject constructor(
                 Log.d("MainViewModel", "PM Event for '$nick' from IrcMessageHandler suppressed as user is in ignored list: ${ignoredUsersLowercase.joinToString()}")
             }
         }
-        // El log de uiMessageToAdd puede ser menos relevante aquí si ChatStateManager lo maneja directamente
-        if (result.uiMessageToAdd != null && result.targetForUiMessage != null) {
-            Log.d("MainViewModel", "IrcMessageHandler result for ${parsedMessage.command} included a UiMessage for [${result.targetForUiMessage}]. ChatStateManager will handle adding it.")
-        } else {
-            Log.d("MainViewModel", "IrcMessageHandler processed ${parsedMessage.command}. ChatStateManager updated from result.")
-        }
     }
 
     override fun emitPrivateMessageEvent(nick: String) {
         val currentIgnoredUsers = ignoredUsersPref.value.map { it.lowercase() }.toSet()
         if (nick.lowercase() !in currentIgnoredUsers) {
             _incomingPrivateMessageEvent.tryEmit(nick)
-            Log.d("MainViewModel", "PM Event for '$nick' emitted via ChatEventListener interface.")
         } else {
             Log.d("MainViewModel", "PM Event for '$nick' (from orchestrator) suppressed as user is in current ignored list.")
         }
@@ -242,17 +233,12 @@ class MainViewModel @Inject constructor(
 
     fun toggleUserListVisibility() {
         chatStateManager.toggleUserListVisibility()
-        Log.d("MainViewModel", "User list visibility toggled to: ${chatStateManager.showUserList.value}")
     }
-
-    // Las funciones addSystemMessageToTarget y addLocalUiMessageToTarget han sido eliminadas.
-    // Se usarán las versiones de ChatStateManager.
 
     private fun handleServiceConnected() {
         chatEventOrchestrator.resetSessionState()
-        chatStateManager.resetStateForConnection() // Esto ya resetea _allMessages en ChatStateManager
+        chatStateManager.resetStateForConnection() 
         
-        // Comprobamos si el mensaje de "Conectado" ya existe a través de ChatStateManager
         val serverMessages = chatStateManager.allMessages.value[ChatStateManager.SERVER_TARGET_ID] ?: emptyList()
         val lastMessageText = serverMessages.lastOrNull()?.let { it.annotatedString?.text ?: it.fullText } ?: ""
 
@@ -261,11 +247,9 @@ class MainViewModel @Inject constructor(
             !lastMessageText.contains("Conectado al servidor", ignoreCase = true)) {
             chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "Conectado al servidor.")
         }
-        Log.i("MainViewModel", "Servicio conectado. ChatStateManager y Orchestrator reseteados.")
     }
 
     private fun handleServiceDisconnected() {
-        // Mensaje de desconexión si es necesario
         val serverMessages = chatStateManager.allMessages.value[ChatStateManager.SERVER_TARGET_ID] ?: emptyList()
         val lastMessageText = serverMessages.lastOrNull()?.let { it.annotatedString?.text ?: it.fullText } ?: ""
         val disconnectMessages = listOf("Desconectado", "Conexión perdida", "El servicio IRC ya no está activo", "Servicio detenido")
@@ -279,16 +263,14 @@ class MainViewModel @Inject constructor(
             chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, messageText)
         }
         
-        chatStateManager.resetStateForDisconnection() // Esto ya maneja _allMessages en ChatStateManager
-        
-        Log.i("MainViewModel", "UI y estado de ChatStateManager actualizados para reflejar desconexión del servicio.")
+        chatStateManager.resetStateForDisconnection() 
     }
 
     fun connect(nickname: String, ssl: Boolean) {
         this.currentNickname = nickname
         val hostToConnect = defaultHost; val portToConnect = if (ssl) 6697 else 6667
         
-        chatStateManager.resetStateForConnection() // Esto inicializa _allMessages en ChatStateManager
+        chatStateManager.resetStateForConnection() 
         
         chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "Conectando a $hostToConnect como $nickname...")
         ircRepository.connect(hostToConnect, portToConnect, ssl, nickname)
@@ -316,14 +298,14 @@ class MainViewModel @Inject constructor(
             return
         }
         
-        // ChatStateManager.openPrivateMessageTarget ahora inicializa la lista de mensajes si es necesario
         chatStateManager.openPrivateMessageTarget(nick, this.currentNickname)
-        // El mensaje de "Chat privado iniciado" se puede añadir directamente en ChatStateManager o aquí
         chatStateManager.addSystemMessageToTarget(nick, "Chat privado con $nick iniciado.")
     }
 
     fun setActiveTarget(targetName: String) {
         chatStateManager.setActiveTarget(targetName, this.currentNickname)
+        // Clear suggestions when changing target
+        clearNickSuggestions()
     }
 
     fun closeTarget(targetName: String) {
@@ -334,13 +316,16 @@ class MainViewModel @Inject constructor(
         }
         
         if (targetName.startsWith("#")) {
-            ircRepository.partChannel(targetName) // ChatStateManager limpiará el estado del canal con la respuesta del servidor
+            ircRepository.partChannel(targetName) 
             if (chatStateManager.unreadTargets.value.contains(targetName) && chatStateManager.activeTarget.value == targetName) {
-                 chatStateManager.setActiveTarget(targetName, this.currentNickname) // Marcar como leído si estaba activo
+                 chatStateManager.setActiveTarget(targetName, this.currentNickname) 
             }
         } else {
-            // ChatStateManager.closeTarget ya elimina los mensajes para PMs.
             chatStateManager.closeTarget(targetName, chatStateManager.activeTarget.value, this.currentNickname)
+        }
+        // Clear suggestions if the closed target was the active one
+        if (chatStateManager.activeTarget.value == targetName) {
+            clearNickSuggestions()
         }
     }
 
@@ -362,6 +347,7 @@ class MainViewModel @Inject constructor(
                 )
                 chatStateManager.addLocalUiMessageToTarget(targetToSend, localUiMessage)
                 ircRepository.sendMessage(targetToSend, messageContent)
+                clearNickSuggestions() // Clear suggestions after sending a message
             } else {
                 val targetForError = chatStateManager.activeTarget.value ?: chatStateManager.chatTargets.value.firstOrNull() ?: ChatStateManager.SERVER_TARGET_ID
                 chatStateManager.addSystemMessageToTarget(targetForError, "No se puede enviar el mensaje. Verifica la conexión y el target.")
@@ -383,6 +369,7 @@ class MainViewModel @Inject constructor(
             _userMessageEvents.emit("Desconectado del servidor.")
         }
         ircRepository.disconnectAndStopService()
+        clearNickSuggestions()
     }
 
     fun ignoreUser(userName: String) {
@@ -390,7 +377,46 @@ class MainViewModel @Inject constructor(
             userPreferencesRepository.addIgnoredUser(userName)
             val targetForMessage = chatStateManager.activeTarget.value ?: ChatStateManager.SERVER_TARGET_ID
             chatStateManager.addSystemMessageToTarget(targetForMessage, "Usuario '$userName' ahora está en la lista de ignorados.")
-            Log.d("MainViewModel", "Usuario '$userName' añadido a ignorados.")
         }
+    }
+
+    // --- Nick Autocompletion Functions ---
+    fun updateNickSuggestions(currentFullText: String, cursorPosition: Int) {
+        val activeTargetValue = chatStateManager.activeTarget.value
+        if (activeTargetValue == null || !activeTargetValue.startsWith("#")) {
+            _nickSuggestions.value = emptyList()
+            return
+        }
+
+        // Extract the word being typed at the cursor position
+        val textUpToCursor = currentFullText.substring(0, cursorPosition)
+        val lastWordStartIndex = textUpToCursor.lastIndexOf(' ') + 1
+        val currentWord = textUpToCursor.substring(lastWordStartIndex)
+
+        if (currentWord.length < 2) { // Minimum length for suggestion
+            _nickSuggestions.value = emptyList()
+            return
+        }
+
+        val usersInCurrentChannel = currentChannelUserListState.value
+        _nickSuggestions.value = usersInCurrentChannel.filter {
+            it.startsWith(currentWord, ignoreCase = true) && 
+            it.length > currentWord.length // Only suggest if different
+        }.take(5) // Limit to 5 suggestions
+    }
+
+    fun clearNickSuggestions() {
+        _nickSuggestions.value = emptyList()
+    }
+
+    fun onNickSuggestionSelected(suggestion: String, currentFullText: String, cursorPosition: Int): String {
+        val textUpToCursor = currentFullText.substring(0, cursorPosition)
+        val lastSpaceIndex = textUpToCursor.lastIndexOf(' ')
+        val prefix = if (lastSpaceIndex == -1) "" else currentFullText.substring(0, lastSpaceIndex + 1)
+        val suffix = currentFullText.substring(cursorPosition)
+        
+        val newText = "$prefix$suggestion $suffix" // Add a space after suggestion
+        clearNickSuggestions()
+        return newText.trimEnd() + if(newText.length > (prefix.length + suggestion.length)) "" else " " // Ensure space at end for next word
     }
 }

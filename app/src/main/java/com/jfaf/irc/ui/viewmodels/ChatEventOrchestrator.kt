@@ -32,35 +32,52 @@ class ChatEventOrchestrator(
                 Pair(parsedMessage, currentIgnoredNicks.map { it.lowercase() }.toSet())
             }
             .onEach { (parsedMessage, ignoredNicksLowercase) ->
-                Log.d("ChatEventOrchestrator", "Combined Event: Message: ${parsedMessage.command}, Ignored: ${ignoredNicksLowercase.joinToString()}")
+                Log.d("ChatEventOrchestrator", "Event: MsgCmd=${parsedMessage.command}, Sender=${parsedMessage.prefix ?: "N/A"}, Target=${parsedMessage.params.firstOrNull() ?: "N/A"}, IgnoredNicks=${ignoredNicksLowercase.joinToString()}")
 
                 val senderNick = parsedMessage.prefix?.takeWhile { it != '!' && it != '@' }
+
                 if (senderNick != null) {
                     val senderNickLowercase = senderNick.lowercase()
                     if (senderNickLowercase in ignoredNicksLowercase) {
+                        // Sender is in the ignore list
                         val command = parsedMessage.command
-                        if (command == "PRIVMSG" || command == "NOTICE") {
-                            if (senderNickLowercase !in _autoRepliedToIgnoredUsersThisSession.value) {
-                                Log.d("ChatEventOrchestrator", "Ignoring incoming $command from ignored user: $senderNick. Sending auto-reply for the first time this session.")
-                                if (eventListener.isConnected()) { // Check connection via listener
-                                    ircRepository.sendMessage(senderNick, "Estás siendo ignorado por este usuario.")
-                                }
-                                _autoRepliedToIgnoredUsersThisSession.value = _autoRepliedToIgnoredUsersThisSession.value + senderNickLowercase
-                            } else {
-                                Log.d("ChatEventOrchestrator", "Ignoring incoming $command from ignored user: $senderNick. Auto-reply already sent this session.")
-                            }
-                            // Notify listener about private message event, even if auto-reply is suppressed by rate limit
-                            // This is because the original logic in MainViewModel for _incomingPrivateMessageEvent was outside the ignore check
-                            // but the new requirement is to suppress it for ignored users.
-                            // The current logic correctly DOES NOT call emitPrivateMessageEvent for ignored users.
-                            // If it were needed for ignored users (e.g. to show a suppressed message indicator), it would go here.
+                        val messageTarget = parsedMessage.params.firstOrNull()
 
-                            return@onEach // Skip further processing for this message
+                        if (command == "PRIVMSG") {
+                            // Determine if it's a private message TO US or a channel message
+                            val isPrivateMessageToUs = messageTarget != null && !messageTarget.startsWith("#")
+
+                            if (isPrivateMessageToUs) {
+                                // Private message from an ignored user TO US. Send auto-reply.
+                                if (senderNickLowercase !in _autoRepliedToIgnoredUsersThisSession.value) {
+                                    Log.d("ChatEventOrchestrator", "Sender $senderNick (ignored) sent PM. Sending auto-reply.")
+                                    if (eventListener.isConnected()) {
+                                        ircRepository.sendMessage(senderNick, "Estás siendo ignorado por este usuario.")
+                                    }
+                                    _autoRepliedToIgnoredUsersThisSession.value += senderNickLowercase
+                                } else {
+                                    Log.d("ChatEventOrchestrator", "Sender $senderNick (ignored) sent PM. Auto-reply already sent.")
+                                }
+                            } else {
+                                // Channel message from an ignored user (or malformed PRIVMSG). No auto-reply.
+                                Log.d("ChatEventOrchestrator", "Sender $senderNick (ignored) sent to channel '$messageTarget'. No auto-reply.")
+                            }
+                            // For ANY PRIVMSG from an ignored user (private or channel), suppress the original message.
+                            Log.d("ChatEventOrchestrator", "Suppressing PRIVMSG from ignored user $senderNick.")
+                            return@onEach
+                        } else if (command == "NOTICE") {
+                            // NOTICE from an ignored user. No auto-reply. Suppress message.
+                            Log.d("ChatEventOrchestrator", "Sender $senderNick (ignored) sent NOTICE to '$messageTarget'. No auto-reply. Suppressing.")
+                            return@onEach
                         }
+                        // Other commands (JOIN, PART, etc.) from ignored users currently pass through.
+                        Log.d("ChatEventOrchestrator", "Command '$command' from ignored user $senderNick not PRIVMSG/NOTICE. Passing to UI processing.")
                     }
                 }
-                Log.d("ChatEventOrchestrator", "Message from ${senderNick ?: "UnknownSender"} not ignored or not PRIVMSG/NOTICE. Processing with listener.")
-                // Pass to listener to process for UI and potentially emit private message events
+
+                // If message was not returned by return@onEach (i.e., not from an ignored user sending PRIVMSG/NOTICE, or senderNick is null)
+                val finalProcessingSender = senderNick ?: parsedMessage.prefix ?: "Unknown/Server"
+                Log.d("ChatEventOrchestrator", "Processing message for UI: Cmd=${parsedMessage.command}, Sender=$finalProcessingSender, Target=${parsedMessage.params.firstOrNull() ?: "N/A"}")
                 eventListener.processMessageForUi(parsedMessage, ignoredNicksLowercase)
             }
             .launchIn(scope)
