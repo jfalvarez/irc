@@ -168,14 +168,11 @@ class IrcService : Service() {
 
                 if (!IrcServiceApi.isAppInForeground.value) { // App is in background
                     val target = parsedMessage.params.firstOrNull()
-                    // Only consider PRIVMSG for user-to-user notifications
                     if (parsedMessage.command == "PRIVMSG" && target != null && !target.startsWith("#")) {
-                        val senderNick = parsedMessage.senderNickname // Extracts nick from prefix
-
+                        val senderNick = parsedMessage.senderNickname
                         if (senderNick != null) {
                             val ignoredUsers = userPreferencesRepository.ignoredUsersFlow.first()
                             val ignoredUsersLowercase = ignoredUsers.map { it.lowercase() }.toSet()
-
                             if (senderNick.lowercase() in ignoredUsersLowercase) {
                                 Log.d(TAG, "App en background. Mensaje PRIVADO de usuario ignorado ($senderNick). No se muestra notificación.")
                             } else {
@@ -183,9 +180,8 @@ class IrcService : Service() {
                                 showNewMessageNotification(parsedMessage)
                             }
                         } else {
-                            // Should not happen for valid user PRIVMSGs, but handle defensively
                             Log.d(TAG, "App en background. Mensaje PRIVADO sin senderNick claro. Mostrando notificación. Raw: ${parsedMessage.rawLine}")
-                            showNewMessageNotification(parsedMessage) // Default to showing if sender is unclear
+                            showNewMessageNotification(parsedMessage)
                         }
                     } else {
                         Log.d(TAG, "App en background. Mensaje de CANAL o no PRIVMSG. No se muestra notificación emergente para: ${parsedMessage.rawLine}")
@@ -231,7 +227,6 @@ class IrcService : Service() {
             ).apply {
                 description = getString(R.string.notification_channel_description_irc_service)
             }
-
             val messageChannel = NotificationChannel(
                 MESSAGE_NOTIFICATION_CHANNEL_ID,
                 getString(R.string.notification_channel_name_irc_messages),
@@ -239,7 +234,6 @@ class IrcService : Service() {
             ).apply {
                 description = getString(R.string.notification_channel_description_irc_messages)
             }
-
             val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(foregroundServiceChannel)
             manager.createNotificationChannel(messageChannel)
@@ -259,7 +253,6 @@ class IrcService : Service() {
         val pendingIntent = PendingIntent.getActivity(
             this, 0, notificationIntent, pendingIntentFlags
         )
-
         return NotificationCompat.Builder(this, FOREGROUND_NOTIFICATION_CHANNEL_ID)
             .setContentTitle(getString(R.string.notification_title_irc_client))
             .setContentText(contentText)
@@ -282,7 +275,8 @@ class IrcService : Service() {
 
         val notificationIntent = Intent(this, MainActivity::class.java).apply {
             putExtra(EXTRA_TARGET_FOR_NOTIFICATION, if (target.startsWith("#")) target else sender)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            // Flags modificadas para evitar limpiar la tarea y para reutilizar la actividad si es posible
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
 
         val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -295,12 +289,10 @@ class IrcService : Service() {
         val title: String
         val text: String
 
-        if (target.startsWith("#")) { // Mensaje de canal
-            // This case should ideally not be reached if we are only calling showNewMessageNotification for private messages
-            // from non-ignored users. However, keeping the logic for safety / future changes.
+        if (target.startsWith("#")) {
             title = getString(R.string.new_message_in_channel_title, target)
             text = "$sender: $messageContent"
-        } else { // Mensaje privado
+        } else {
             title = getString(R.string.new_private_message_from_sender_title, sender)
             text = messageContent
         }

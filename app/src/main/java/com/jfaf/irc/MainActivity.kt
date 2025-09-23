@@ -1,8 +1,7 @@
 package com.jfaf.irc
 
 import android.Manifest
-import android.app.NotificationManager
-import android.content.Context
+import android.content.Intent // Necesario para onNewIntent y getParcelableExtra
 import android.content.pm.PackageManager
 import android.media.RingtoneManager
 import android.os.Build
@@ -17,9 +16,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.background // Importación añadida
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme // Importación añadida para MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -32,12 +31,12 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.jfaf.irc.service.IrcService // Necesario para la constante EXTRA_TARGET_FOR_NOTIFICATION
 import com.jfaf.irc.service.IrcServiceApi
 import com.jfaf.irc.ui.screens.MainScreen
 import com.jfaf.irc.ui.screens.settings.SettingsScreen
 import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
-import com.jfaf.irc.util.NotificationHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 
@@ -49,7 +48,7 @@ class MainActivity : ComponentActivity() {
         private const val TAG_ACTIVITY = "MainActivity"
     }
 
-    private var newMessagesCount = 0
+    private lateinit var mainViewModel: MainViewModel
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -64,13 +63,13 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         IrcServiceApi.appEnteredForeground()
-        Log.d("MainActivity", "App en primer plano.")
+        Log.d(TAG_ACTIVITY, "App en primer plano.")
     }
 
     override fun onStop() {
         super.onStop()
         IrcServiceApi.appEnteredBackground()
-        Log.d("MainActivity", "App en segundo plano.")
+        Log.d(TAG_ACTIVITY, "App en segundo plano.")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,7 +78,8 @@ class MainActivity : ComponentActivity() {
         askNotificationPermission()
 
         setContent {
-            val mainViewModel: MainViewModel = hiltViewModel()
+            // Inicializar el ViewModel aquí para que esté disponible en la Activity
+            mainViewModel = hiltViewModel()
             val context = LocalContext.current
             val currentActiveTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()
 
@@ -96,16 +96,7 @@ class MainActivity : ComponentActivity() {
                     Log.d(TAG_ACTIVITY, "Incoming PM Event from '$pmSourceNick'. App FG: $isAppCurrentlyInForegroundByProcess. Active Target: $currentActiveTarget")
 
                     if (!isAppCurrentlyInForegroundByProcess) {
-                        Log.d(TAG_ACTIVITY, "App en BG. newMessagesCount BEFORE increment: $newMessagesCount")
-                        newMessagesCount++
-                        val notificationTitle = context.getString(R.string.pm_notification_title)
-                        val notificationContent = if (newMessagesCount > 1) {
-                            context.getString(R.string.pm_notification_content_multiple, newMessagesCount)
-                        } else {
-                            context.getString(R.string.pm_notification_content_single)
-                        }
-                        Log.i(TAG_ACTIVITY, "App en segundo plano, mostrando/actualizando notificación para '$pmSourceNick': $newMessagesCount mensajes.")
-                        NotificationHelper.showPrivateMessageNotification(context, notificationTitle, notificationContent)
+                        Log.d(TAG_ACTIVITY, "App en BG. PM Event recibido de '$pmSourceNick'. IrcService se encargará de la notificación si es necesario.")
                     } else {
                         if (pmSourceNick.equals(currentActiveTarget, ignoreCase = true)) {
                             Log.i(TAG_ACTIVITY, "App en primer plano, PM de '$pmSourceNick' que ES el target activo. No hay sonido adicional.")
@@ -123,15 +114,20 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // Procesar el intent inicial después de que el viewModel esté listo
+            LaunchedEffect(Unit) {
+                handleIntent(intent)
+            }
+
             val navController = rememberNavController()
 
-            IRCAppTheme { // Corregido para usar el Composable del Tema
+            IRCAppTheme { 
                 NavHost(
                     navController = navController,
                     startDestination = "main",
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background) // Fondo usa el color primario del tema (PurpleStart)
+                        .background(MaterialTheme.colorScheme.background) 
                 ) {
                     composable(
                         route = "main",
@@ -163,14 +159,54 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        // Procesar el intent si la actividad se crea por primera vez
+        // Lo hemos movido a un LaunchedEffect dentro de setContent para asegurar que mainViewModel está inicializado
+        // handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        Log.d(TAG_ACTIVITY, "onNewIntent recibido.")
+        // Es importante actualizar el intent de la actividad con el nuevo intent
+        setIntent(intent)
+        // Procesar el nuevo intent si el viewModel está inicializado
+        if (::mainViewModel.isInitialized) {
+            handleIntent(intent)
+        } else {
+            // Esto no debería suceder si onNewIntent se llama después de onCreate/setContent
+            // pero es una guarda por si acaso.
+            Log.w(TAG_ACTIVITY, "onNewIntent: mainViewModel no inicializado aún. El intent debería ser procesado en onCreate.")
+        }
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        intent?.getStringExtra(IrcService.EXTRA_TARGET_FOR_NOTIFICATION)?.let { target ->
+            Log.i(TAG_ACTIVITY, "Intent de notificación recibido para target: $target")
+            if (::mainViewModel.isInitialized) {
+                if (target.startsWith("#")) {
+                    // Para canales, simplemente los establecemos como activos.
+                    // MainViewModel se encarga de añadirlo a la lista de targets si es nuevo.
+                    mainViewModel.setActiveTarget(target)
+                } else {
+                    // Para mensajes privados, openPrivateMessage se encarga de crear el target si no existe y activarlo.
+                    mainViewModel.openPrivateMessage(target)
+                }
+                // Considerar si es necesario navegar al NavController a la pantalla principal si no está allí
+            } else {
+                Log.e(TAG_ACTIVITY, "handleIntent no pudo procesar: mainViewModel no está inicializado.")
+            }
+            // Opcional: remover el extra para evitar reprocesamiento en algunos casos de ciclo de vida complejos,
+            // aunque con singleTop y el manejo actual, podría no ser estrictamente necesario.
+            // intent.removeExtra(IrcService.EXTRA_TARGET_FOR_NOTIFICATION)
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        newMessagesCount = 0
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(NotificationHelper.PRIVATE_MESSAGE_NOTIFICATION_ID)
-        Log.d(TAG_ACTIVITY, "onResume: Actividad en primer plano. Contador de mensajes reseteado a $newMessagesCount. Notificación cancelada.")
+        Log.d(TAG_ACTIVITY, "onResume: Actividad en primer plano.")
+        // No es necesario cancelar la notificación del servicio aquí, ya que tiene su propio ID
+        // y el servicio la maneja o se cancela al pulsarla (setAutoCancel).
+        // La lógica de newMessagesCount y cancelación de NOTIFICATION_ID de NotificationHelper fue eliminada.
     }
 
     override fun onPause() {
