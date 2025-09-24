@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,6 +9,16 @@ plugins {
     kotlin("kapt") // Necesario para el procesador de anotaciones de Hilt
     id("com.google.gms.google-services")
 }
+
+// Leer el ID de AdMob desde local.properties
+val localProperties = Properties()
+val localPropertiesFile = project.rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+val admobAppIdFromLocalProps = localProperties.getProperty("admob.appId", "YOUR_DEFAULT_ADMOB_APP_ID_IF_NOT_FOUND") // Proporciona un valor por defecto si no se encuentra
+println("Valor de admobAppId leído de local.properties: '$admobAppIdFromLocalProps'") // IMPRIMIR VALOR
+
 
 android {
     namespace = "com.jfaf.irc"
@@ -19,6 +32,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Usar manifestPlaceholders para el ID de AdMob
+        manifestPlaceholders["admobAppId"] = admobAppIdFromLocalProps
     }
 
     buildTypes {
@@ -28,6 +44,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // También puedes definir placeholders específicos por build type si es necesario
+            // manifestPlaceholders["admobAppId"] = localProperties.getProperty("admob.releaseAppId", "YOUR_RELEASE_ADMOB_APP_ID")
+        }
+        debug {
+            // manifestPlaceholders["admobAppId"] = localProperties.getProperty("admob.debugAppId", "ca-app-pub-3940256099942544~3347511713") // Ejemplo para debug
         }
     }
     compileOptions {
@@ -44,55 +65,36 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/INDEX.LIST"
-            // Si encuentras otros duplicados de META-INF, puedes añadirlos aquí también:
-            // excludes += "/META-INF/LICENSE"
-            // excludes += "/META-INF/LICENSE.txt"
-            // excludes += "/META-INF/NOTICE"
-            // excludes += "/META-INF/NOTICE.txt"
-            // excludes += "/META-INF/DEPENDENCIES"
-            // excludes += "/META-INF/LGPL2.1" // Común con Netty
-             excludes += "META-INF/io.netty.versions.properties" // También de Netty
+            excludes += "META-INF/io.netty.versions.properties"
         }
     }
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.process) // Updated lifecycle-process
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.guava) // Or a newer version
-//    implementation(libs.kitteh.irc.client) // O la última versión estable que encuentres
-//    implementation("org.kitteh.irc:client-lib:9.0.0")
-
-    // Coil for image loading in Compose
-    implementation(libs.coil.compose) // Updated Coil
-
-    // DataStore
-    implementation(libs.androidx.datastore.preferences) // Updated DataStore
-
-    // Kotlinx Coroutines
-    implementation(libs.kotlinx.coroutines.core) // Changed to use version catalog
-
-    // Hilt & Navigation
+    implementation(libs.guava)
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.hilt.android)
     implementation(libs.androidx.material3)
-    implementation(libs.firebase.config) // Updated Hilt
-    kapt(libs.hilt.compiler) // Updated Hilt compiler
-    implementation(libs.androidx.hilt.navigation.compose) // Updated Hilt Navigation Compose
-    implementation(libs.androidx.navigation.compose) // Updated Navigation Compose
-
-    // Firebase
+    implementation(libs.firebase.config)
+    kapt(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.navigation.compose)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.commonKtx) 
     implementation(libs.firebase.analytics)     
     implementation(libs.firebase.remoteconfig)
+    implementation("com.google.android.gms:play-services-ads:23.1.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -103,7 +105,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
-// Allow references to generated code
 kapt {
     correctErrorTypes = true
 }

@@ -41,10 +41,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView // Import AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
 import com.jfaf.irc.R
 import com.jfaf.irc.ui.screens.chat.ChannelUserListView
 import com.jfaf.irc.ui.screens.chat.ChatTopAppBar
@@ -63,7 +68,7 @@ fun MainScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = hiltViewModel(),
     navController: NavHostController,
-    snackbarHostState: SnackbarHostState // Nuevo parámetro
+    snackbarHostState: SnackbarHostState
 ) {
     val connectionState by viewModel.chatScreenState.connectionState.collectAsState()
     var nicknameInput by remember { mutableStateOf("") }
@@ -121,7 +126,7 @@ fun MainScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 containerColor = Color.Transparent,
-                snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, // Añadido SnackbarHost
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 topBar = {
                     if (connectionState) {
                         ChatTopAppBar(
@@ -135,37 +140,58 @@ fun MainScreen(
                     }
                 },
                 bottomBar = {
-                    val activeTargetValue = viewModel.chatScreenState.activeTarget.collectAsState().value
-                    val serverString = stringResource(R.string.cd_server)
-                    if (connectionState && activeTargetValue != null && activeTargetValue != serverString && activeTargetValue.startsWith("#")) { // Autocomplete only for channels
-                        MessageInputSection(
-                            modifier = Modifier.fillMaxWidth(),
-                            nickSuggestions = nickSuggestionsState,
-                            onSendMessage = { viewModel.sendMessage(it) },
-                            onTextInputChanged = { text, cursorPos -> 
-                                viewModel.updateNickSuggestions(text, cursorPos) 
-                            },
-                            onSuggestionSelected = { suggestion, currentText, cursorPos ->
-                                viewModel.onNickSuggestionSelected(suggestion, currentText, cursorPos)
-                            },
-                            onClearSuggestions = { viewModel.clearNickSuggestions() }
-                        )
-                    } else if (connectionState && activeTargetValue != null && activeTargetValue != serverString) { // For PMs or if logic changes
-                        MessageInputSection(
-                             modifier = Modifier.fillMaxWidth(),
-                            nickSuggestions = emptyList(), // No suggestions for PMs
-                            onSendMessage = { viewModel.sendMessage(it) },
-                            onTextInputChanged = { _, _ -> /* No-op for PMs or non-channels */ },
-                            onSuggestionSelected = { _, _, _ -> "" /* Should not be called */ },
-                            onClearSuggestions = { /* No-op */ }
-                        )
+                    Column {
+                        val activeTargetValue = viewModel.chatScreenState.activeTarget.collectAsState().value
+                        val serverString = stringResource(R.string.cd_server)
+                        val showInputSection = connectionState && activeTargetValue != null && activeTargetValue != serverString
+                        
+                        // Ad Banner - Visible when connected
+                        if (connectionState) {
+                            AndroidView(
+                                factory = { context ->
+                                    AdView(context).apply {
+                                        setAdSize(AdSize.BANNER)
+                                        // Replace with your real Ad Unit ID in production and use test ID for development
+                                        adUnitId = "ca-app-pub-3940256099942544/6300978111" // TEST BANNER ID
+                                        loadAd(AdRequest.Builder().build())
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        if (showInputSection) {
+                            if (activeTargetValue!!.startsWith("#")) { // Autocomplete only for channels
+                                MessageInputSection(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    nickSuggestions = nickSuggestionsState,
+                                    onSendMessage = { viewModel.sendMessage(it) },
+                                    onTextInputChanged = { text, cursorPos -> 
+                                        viewModel.updateNickSuggestions(text, cursorPos) 
+                                    },
+                                    onSuggestionSelected = { suggestion, currentText, cursorPos ->
+                                        viewModel.onNickSuggestionSelected(suggestion, currentText, cursorPos)
+                                    },
+                                    onClearSuggestions = { viewModel.clearNickSuggestions() }
+                                )
+                            } else { // For PMs or if logic changes
+                                MessageInputSection(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    nickSuggestions = emptyList(), // No suggestions for PMs
+                                    onSendMessage = { viewModel.sendMessage(it) },
+                                    onTextInputChanged = { _, _ -> /* No-op for PMs or non-channels */ },
+                                    onSuggestionSelected = { _, _, _ -> "" /* Should not be called */ },
+                                    onClearSuggestions = { /* No-op */ }
+                                )
+                            }
+                        }
                     }
                 },
                 modifier = modifier
             ) { paddingValues ->
                 AnimatedContent(
                     targetState = connectionState,
-                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    modifier = Modifier.fillMaxSize().padding(paddingValues), // This paddingValues from Scaffold adjusts for topBar and bottomBar
                     transitionSpec = {
                         if (targetState) {
                             slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
@@ -186,6 +212,7 @@ fun MainScreen(
                                     viewModel.connect(nicknameInput, useSslInput)
                                 }
                             }
+                            // Removed erroneous modifier from here
                         )
                     } else {
                         val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
