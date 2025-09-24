@@ -82,4 +82,8 @@
     <string name="select_channel_to_see_users">Selecciona un canal para ver la lista de usuarios.
     </string>
 
+    <string name="force_update_title">Actualización Requerida</string>
+    <string name="force_update_message">Hay una nueva versión de la aplicación disponible con mejoras importantes y correcciones de errores. Por favor, actualiza para continuar.</string>
+    <string name="force_update_button_text">Actualizar Ahora</string>
+
 </resources>

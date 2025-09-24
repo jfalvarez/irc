@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android) // Updated Hilt plugin
     kotlin("kapt") // Necesario para el procesador de anotaciones de Hilt
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -81,10 +82,17 @@ dependencies {
 
     // Hilt & Navigation
     implementation(libs.hilt.android)
-    implementation(libs.androidx.material3) // Updated Hilt
+    implementation(libs.androidx.material3)
+    implementation(libs.firebase.config) // Updated Hilt
     kapt(libs.hilt.compiler) // Updated Hilt compiler
     implementation(libs.androidx.hilt.navigation.compose) // Updated Hilt Navigation Compose
     implementation(libs.androidx.navigation.compose) // Updated Navigation Compose
+
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.commonKtx) 
+    implementation(libs.firebase.analytics)     
+    implementation(libs.firebase.remoteconfig)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
