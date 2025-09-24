@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets // Import WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding // Import imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DividerDefaults
@@ -44,7 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView // Import AndroidView
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.google.android.gms.ads.AdRequest
@@ -65,7 +67,7 @@ import com.jfaf.irc.ui.screens.chat.AppDrawerContent
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun MainScreen(
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier, // El modifier que se pasa desde MainActivity
     viewModel: MainViewModel = hiltViewModel(),
     navController: NavHostController,
     snackbarHostState: SnackbarHostState
@@ -123,8 +125,9 @@ fun MainScreen(
             }
         }
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) { // El modifier de MainScreen se aplica al Box externo
             Scaffold(
+                modifier = modifier.imePadding(), // Aplicar imePadding al Scaffold
                 containerColor = Color.Transparent,
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 topBar = {
@@ -145,13 +148,11 @@ fun MainScreen(
                         val serverString = stringResource(R.string.cd_server)
                         val showInputSection = connectionState && activeTargetValue != null && activeTargetValue != serverString
                         
-                        // Ad Banner - Visible when connected
                         if (connectionState) {
                             AndroidView(
                                 factory = { context ->
                                     AdView(context).apply {
                                         setAdSize(AdSize.BANNER)
-                                        // Replace with your real Ad Unit ID in production and use test ID for development
                                         adUnitId = "ca-app-pub-3940256099942544/6300978111" // TEST BANNER ID
                                         loadAd(AdRequest.Builder().build())
                                     }
@@ -161,7 +162,7 @@ fun MainScreen(
                         }
 
                         if (showInputSection) {
-                            if (activeTargetValue!!.startsWith("#")) { // Autocomplete only for channels
+                            if (activeTargetValue!!.startsWith("#")) {
                                 MessageInputSection(
                                     modifier = Modifier.fillMaxWidth(),
                                     nickSuggestions = nickSuggestionsState,
@@ -174,24 +175,23 @@ fun MainScreen(
                                     },
                                     onClearSuggestions = { viewModel.clearNickSuggestions() }
                                 )
-                            } else { // For PMs or if logic changes
+                            } else { 
                                 MessageInputSection(
                                     modifier = Modifier.fillMaxWidth(),
-                                    nickSuggestions = emptyList(), // No suggestions for PMs
+                                    nickSuggestions = emptyList(),
                                     onSendMessage = { viewModel.sendMessage(it) },
-                                    onTextInputChanged = { _, _ -> /* No-op for PMs or non-channels */ },
-                                    onSuggestionSelected = { _, _, _ -> "" /* Should not be called */ },
-                                    onClearSuggestions = { /* No-op */ }
+                                    onTextInputChanged = { _, _ -> },
+                                    onSuggestionSelected = { _, _, _ -> "" },
+                                    onClearSuggestions = { }
                                 )
                             }
                         }
                     }
                 },
-                modifier = modifier
-            ) { paddingValues ->
+            ) { paddingValues -> // paddingValues del Scaffold
                 AnimatedContent(
                     targetState = connectionState,
-                    modifier = Modifier.fillMaxSize().padding(paddingValues), // This paddingValues from Scaffold adjusts for topBar and bottomBar
+                    modifier = Modifier.fillMaxSize().padding(paddingValues), // Aplicar paddingValues aquí
                     transitionSpec = {
                         if (targetState) {
                             slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
@@ -212,7 +212,6 @@ fun MainScreen(
                                     viewModel.connect(nicknameInput, useSslInput)
                                 }
                             }
-                            // Removed erroneous modifier from here
                         )
                     } else {
                         val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()

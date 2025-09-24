@@ -28,7 +28,8 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
-            android:theme="@style/Theme.Irc">
+            android:theme="@style/Theme.Irc"
+            android:windowSoftInputMode="adjustResize"> <!-- Añadido aquí -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
