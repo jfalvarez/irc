@@ -1,9 +1,11 @@
 package com.jfaf.irc.ui.viewmodels
 
+import android.os.Bundle // Import Bundle for Firebase Analytics
 import android.util.Log
 import androidx.compose.ui.text.AnnotatedString
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.analytics.FirebaseAnalytics // Import FirebaseAnalytics
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
@@ -64,7 +66,8 @@ class MainViewModel @Inject constructor(
     private val ircRepository: IrcRepository,
     private val ircMessageHandler: IrcMessageHandler,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val chatStateManager: ChatStateManager 
+    private val chatStateManager: ChatStateManager,
+    private val firebaseAnalytics: FirebaseAnalytics // Inyectar FirebaseAnalytics
 ) : ViewModel(), ChatEventListener {
 
     private var chatEventOrchestrator = ChatEventOrchestrator(
@@ -381,6 +384,7 @@ class MainViewModel @Inject constructor(
             val targetForMessage = chatStateManager.activeTarget.value ?: ChatStateManager.SERVER_TARGET_ID
             chatStateManager.addSystemMessageToTarget(targetForMessage, "Usuario '$userName' ahora está en la lista de ignorados.")
             _snackbarEvents.tryEmit("Usuario '$userName' añadido a ignorados.") // Snackbar para confirmar acción
+            firebaseAnalytics.logEvent("ignore_user", null)
         }
     }
 
@@ -389,6 +393,12 @@ class MainViewModel @Inject constructor(
             Log.w("MainViewModel", "performWhois llamado con nick vacío.")
             return
         }
+        // Registrar evento de Analytics ANTES de las comprobaciones de conexión
+        // para capturar la intención del usuario incluso si la acción no se completa.
+        val bundle = Bundle()
+        bundle.putString("whois_target_nick", nick) // Opcional: añadir parámetro con el nick
+        firebaseAnalytics.logEvent("whois_request", bundle)
+
         if (!ircRepository.connectionState.value) {
             Log.w("MainViewModel", "performWhois llamado pero no conectado al servidor.")
             chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "No conectado. No se puede enviar WHOIS.")
@@ -398,7 +408,7 @@ class MainViewModel @Inject constructor(
         Log.i("MainViewModel", "Enviando comando WHOIS para $nick")
         chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "[WHOIS] Solicitando información para $nick...")
         ircRepository.sendRawCommand("WHOIS $nick")
-        _snackbarEvents.tryEmit("WHOIS para '$nick' solicitado. Ver pestaña 'Servidor'.") // Emitir evento para Snackbar
+        _snackbarEvents.tryEmit("WHOIS para '$nick' solicitado. Ver pestaña 'Servidor'.") 
     }
 
     // --- Nick Autocompletion Functions ---
