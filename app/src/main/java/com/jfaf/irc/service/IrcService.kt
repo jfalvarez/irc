@@ -243,7 +243,8 @@ class IrcService : Service() {
 
     private fun createForegroundServiceNotification(contentText: String): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            // Flags modificadas para evitar reiniciar la tarea y para reutilizar la actividad si es posible
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
@@ -275,7 +276,6 @@ class IrcService : Service() {
 
         val notificationIntent = Intent(this, MainActivity::class.java).apply {
             putExtra(EXTRA_TARGET_FOR_NOTIFICATION, if (target.startsWith("#")) target else sender)
-            // Flags modificadas para evitar limpiar la tarea y para reutilizar la actividad si es posible
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
 

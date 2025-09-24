@@ -86,4 +86,9 @@
     <string name="force_update_message">Hay una nueva versión de la aplicación disponible con mejoras importantes y correcciones de errores. Por favor, actualiza para continuar.</string>
     <string name="force_update_button_text">Actualizar Ahora</string>
 
+    <string name="dialog_exit_title">Confirmar Salida</string>
+    <string name="dialog_exit_message">¿Estás seguro de que quieres desconectar y salir?</string>
+    <string name="dialog_exit_confirm_button">Salir</string>
+    <string name="dialog_exit_cancel_button">Cancelar</string>
+
 </resources>

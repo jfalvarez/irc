@@ -5,12 +5,14 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,15 +24,19 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults // Importación añadida
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -45,9 +51,10 @@ import com.jfaf.irc.ui.screens.MainScreen
 import com.jfaf.irc.ui.screens.settings.SettingsScreen
 import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
+import com.jfaf.irc.util.NotificationHelper // Importación para NotificationHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
-import javax.inject.Inject 
+import javax.inject.Inject
 
 @OptIn(ExperimentalAnimationApi::class)
 @AndroidEntryPoint
@@ -55,6 +62,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG_ACTIVITY = "MainActivity"
+        private const val VIBRATION_DURATION_MS = 150L
     }
 
     @Inject
@@ -92,53 +100,62 @@ class MainActivity : ComponentActivity() {
         setContent {
             mainViewModel = hiltViewModel()
             val context = LocalContext.current
-            val currentActiveTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()
+            val navController = rememberNavController()
+            val connectionState by IrcServiceApi.connectionState.collectAsState()
+            var showExitConfirmationDialog by remember { mutableStateOf(false) }
             
+            val currentActiveTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()
             val showUpdateDialog by remoteConfigManager.isUpdateRequired.collectAsState()
 
             LaunchedEffect(Unit) {
                 remoteConfigManager.fetchAndActivateConfig()
-                handleIntent(intent) 
+                handleIntent(intent)
             }
 
-            LaunchedEffect(mainViewModel.chatScreenState.connectionState) {
+            LaunchedEffect(mainViewModel.chatScreenState.connectionState) { // Observar connectionState desde ViewModel
                 mainViewModel.chatScreenState.connectionState.collectLatest { isConnected ->
                     logToUi("Estado Conexión VM (MainActivity): ${if (isConnected) "CONECTADO" else "DESCONECTADO"}")
                 }
             }
 
-            LaunchedEffect(mainViewModel.incomingPrivateMessageEvent) { 
-                mainViewModel.incomingPrivateMessageEvent.collectLatest { pmSourceNick -> 
+            LaunchedEffect(mainViewModel.incomingPrivateMessageEvent) {
+                mainViewModel.incomingPrivateMessageEvent.collectLatest { pmSourceNick ->
                     val isAppCurrentlyInForegroundByProcess = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
                     Log.d(TAG_ACTIVITY, "Incoming PM Event from '$pmSourceNick'. App FG: $isAppCurrentlyInForegroundByProcess. Active Target: $currentActiveTarget")
                     if (!isAppCurrentlyInForegroundByProcess) {
                         Log.d(TAG_ACTIVITY, "App en BG. PM Event recibido de '$pmSourceNick'. IrcService se encargará de la notificación si es necesario.")
                     } else {
                         if (pmSourceNick.equals(currentActiveTarget, ignoreCase = true)) {
-                            Log.i(TAG_ACTIVITY, "App en primer plano, PM de '$pmSourceNick' que ES el target activo. No hay sonido adicional.")
+                            Log.i(TAG_ACTIVITY, "App en primer plano, PM de '$pmSourceNick' que ES el target activo. No hay feedback adicional.")
                         } else {
-                            Log.i(TAG_ACTIVITY, "App en primer plano, PM de '$pmSourceNick' que NO ES el target activo ('$currentActiveTarget'). Reproduciendo sonido.")
+                            Log.i(TAG_ACTIVITY, "App en primer plano, PM de '$pmSourceNick' que NO ES el target activo ('$currentActiveTarget'). Activando vibración.")
                             try {
-                                val notificationSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                                val ringtone = RingtoneManager.getRingtone(context, notificationSoundUri)
-                                ringtone.play()
+                                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    vibrator.vibrate(VibrationEffect.createOneShot(VIBRATION_DURATION_MS, VibrationEffect.DEFAULT_AMPLITUDE))
+                                } else {
+                                    @Suppress("DEPRECATION")
+                                    vibrator.vibrate(VIBRATION_DURATION_MS)
+                                }
                             } catch (e: Exception) {
-                                Log.e(TAG_ACTIVITY, "Error al reproducir sonido de notificación", e)
+                                Log.e(TAG_ACTIVITY, "Error al activar vibración", e)
                             }
                         }
                     }
                 }
             }
 
-            val navController = rememberNavController()
+            IRCAppTheme {
+                BackHandler(enabled = connectionState && navController.previousBackStackEntry == null) {
+                    showExitConfirmationDialog = true
+                }
 
-            IRCAppTheme { 
                 NavHost(
                     navController = navController,
                     startDestination = "main",
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background) 
+                        .background(MaterialTheme.colorScheme.background)
                 ) {
                     composable(
                         route = "main",
@@ -158,16 +175,46 @@ class MainActivity : ComponentActivity() {
 
                 if (showUpdateDialog) {
                     AlertDialog(
-                        onDismissRequest = { /* No hacer nada para que no se pueda cerrar fácilmente */ },
-                        containerColor = MaterialTheme.colorScheme.surface, 
-                        title = { Text(getString(R.string.force_update_title)) },
-                        text = { Text(getString(R.string.force_update_message)) },
+                        onDismissRequest = { /* No hacer nada */ },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        title = { Text(stringResource(R.string.force_update_title)) },
+                        text = { Text(stringResource(R.string.force_update_message)) },
                         confirmButton = {
                             TextButton(
                                 onClick = { redirectToPlayStore(this@MainActivity) },
-                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface) // Color de texto del botón
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                             ) {
-                                Text(getString(R.string.force_update_button_text))
+                                Text(stringResource(R.string.force_update_button_text))
+                            }
+                        }
+                    )
+                }
+
+                if (showExitConfirmationDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showExitConfirmationDialog = false },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        title = { Text(stringResource(R.string.dialog_exit_title)) },
+                        text = { Text(stringResource(R.string.dialog_exit_message)) },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showExitConfirmationDialog = false
+                                    mainViewModel.disconnectFromServerAndStopService()
+                                    NotificationHelper.clearAllNotifications(context)
+                                    finishAndRemoveTask() 
+                                },
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error) // Usar color de error para la acción destructiva
+                            ) {
+                                Text(stringResource(R.string.dialog_exit_confirm_button))
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = { showExitConfirmationDialog = false },
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+                            ) {
+                                Text(stringResource(R.string.dialog_exit_cancel_button))
                             }
                         }
                     )
@@ -201,7 +248,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    
+
     private fun redirectToPlayStore(context: Context) {
         val appPackageName = context.packageName
         try {

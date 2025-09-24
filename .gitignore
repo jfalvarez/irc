@@ -13,3 +13,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Application Insights settings
+appInsightsSettings.xml
+
+# Google Services file
+google-services.json

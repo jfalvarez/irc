@@ -40,8 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-// Import androidx.compose.ui.text.input.TextFieldValue if MainScreen were to handle it directly
-// Import androidx.compose.ui.text.TextRange if MainScreen were to handle it directly
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -55,7 +53,7 @@ import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import kotlinx.coroutines.launch
-import com.jfaf.irc.ui.screens.chat.AppDrawerContent // Corrected import path
+import com.jfaf.irc.ui.screens.chat.AppDrawerContent
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -145,7 +143,6 @@ fun MainScreen(
                             },
                             onSuggestionSelected = { suggestion, currentText, cursorPos ->
                                 viewModel.onNickSuggestionSelected(suggestion, currentText, cursorPos)
-                                // The VM now returns the new String, MessageInputSection handles TextFieldValue update
                             },
                             onClearSuggestions = { viewModel.clearNickSuggestions() }
                         )
@@ -188,9 +185,14 @@ fun MainScreen(
                         )
                     } else {
                         val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
+                        val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
+                        val serverString = stringResource(R.string.cd_server)
+
+                        val currentTargetIsChannel = activeTarget?.startsWith("#") == true && activeTarget != serverString
+                        val shouldDisplayUserList = showUserListState && currentTargetIsChannel
+
                         Row(modifier = Modifier.fillMaxSize().background(IRCTheme.gradientBrush)) {
-                            Box(modifier = Modifier.weight(if (showUserListState) 0.6f else 1f)) {
-                                val activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value
+                            Box(modifier = Modifier.weight(if (shouldDisplayUserList) 0.6f else 1f)) {
                                 val messages = viewModel.chatScreenState.uiMessages.collectAsState().value
                                 if (activeTarget != null) {
                                     MessagesList(
@@ -211,7 +213,7 @@ fun MainScreen(
                                     }
                                 }
                             }
-                            if (showUserListState) {
+                            if (shouldDisplayUserList) {
                                 VerticalDivider(
                                     modifier = Modifier.fillMaxHeight().width(DividerDefaults.Thickness),
                                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
