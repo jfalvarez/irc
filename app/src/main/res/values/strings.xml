@@ -90,5 +90,6 @@
     <string name="dialog_exit_message">¿Estás seguro de que quieres desconectar y salir?</string>
     <string name="dialog_exit_confirm_button">Salir</string>
     <string name="dialog_exit_cancel_button">Cancelar</string>
+    <string name="action_whois">Whois</string>
 
 </resources>

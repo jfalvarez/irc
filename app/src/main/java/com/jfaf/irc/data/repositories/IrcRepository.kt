@@ -79,4 +79,13 @@ class IrcRepository @Inject constructor(
         }
         context.startService(intent)
     }
+
+    fun sendRawCommand(command: String) {
+        Log.d(TAG, "Solicitando enviar comando crudo: '$command' vía servicio")
+        val intent = Intent(context, IrcService::class.java).apply {
+            action = IrcService.ACTION_SEND_RAW_COMMAND // Nueva acción
+            putExtra(IrcService.EXTRA_RAW_COMMAND, command) // Nuevo extra
+        }
+        context.startService(intent)
+    }
 }

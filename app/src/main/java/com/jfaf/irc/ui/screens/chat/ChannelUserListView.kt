@@ -37,6 +37,15 @@ fun ChannelUserListView(
     val activeTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()
     var expandedUserMenu by remember { mutableStateOf<String?>(null) }
 
+    // Helper function to strip common channel mode prefixes from nicks
+    fun cleanNickForWhois(nick: String): String {
+        return if (nick.startsWith("@") || nick.startsWith("+") || nick.startsWith("%") || nick.startsWith("&") || nick.startsWith("~")) {
+            nick.substring(1)
+        } else {
+            nick
+        }
+    }
+
     if (activeTarget?.startsWith("#") == true) {
         if (userList.isEmpty()) {
             Text(
@@ -60,7 +69,7 @@ fun ChannelUserListView(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = userName,
+                                text = userName, // Display userName with prefix
                                 modifier = Modifier.weight(1f),
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
@@ -79,7 +88,8 @@ fun ChannelUserListView(
                                     )
                                 },
                                 onClick = {
-                                    mainViewModel.openPrivateMessage(userName)
+                                    // For PMs, we might also want to clean the nick if server doesn't handle prefixes
+                                    mainViewModel.openPrivateMessage(cleanNickForWhois(userName)) 
                                     expandedUserMenu = null
                                 }
                             )
@@ -91,7 +101,20 @@ fun ChannelUserListView(
                                     )
                                 },
                                 onClick = {
-                                    mainViewModel.ignoreUser(userName)
+                                    mainViewModel.ignoreUser(cleanNickForWhois(userName)) // Clean nick for ignore as well
+                                    expandedUserMenu = null
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { 
+                                    Text(
+                                        stringResource(R.string.action_whois),
+                                        color = MaterialTheme.colorScheme.onPrimary // Color de texto explícito
+                                    )
+                                },
+                                onClick = {
+                                    val cleanedUserName = cleanNickForWhois(userName)
+                                    mainViewModel.performWhois(cleanedUserName)
                                     expandedUserMenu = null
                                 }
                             )

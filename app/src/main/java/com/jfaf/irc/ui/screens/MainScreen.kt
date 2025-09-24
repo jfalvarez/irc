@@ -25,6 +25,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberDrawerState
@@ -60,7 +62,8 @@ import com.jfaf.irc.ui.screens.chat.AppDrawerContent
 fun MainScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = hiltViewModel(),
-    navController: NavHostController
+    navController: NavHostController,
+    snackbarHostState: SnackbarHostState // Nuevo parámetro
 ) {
     val connectionState by viewModel.chatScreenState.connectionState.collectAsState()
     var nicknameInput by remember { mutableStateOf("") }
@@ -118,6 +121,7 @@ fun MainScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 containerColor = Color.Transparent,
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, // Añadido SnackbarHost
                 topBar = {
                     if (connectionState) {
                         ChatTopAppBar(

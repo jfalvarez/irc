@@ -52,6 +52,7 @@ class IrcService : Service() {
         const val ACTION_JOIN_CHANNEL = "com.jfaf.irc.service.ACTION_JOIN_CHANNEL"
         const val ACTION_PART_CHANNEL = "com.jfaf.irc.service.ACTION_PART_CHANNEL"
         const val ACTION_DISCONNECT_AND_STOP_SERVICE = "com.jfaf.irc.service.ACTION_DISCONNECT_AND_STOP_SERVICE"
+        const val ACTION_SEND_RAW_COMMAND = "com.jfaf.irc.service.ACTION_SEND_RAW_COMMAND" // Nueva Acción
 
         const val EXTRA_NICKNAME = "nickname"
         const val EXTRA_SERVER_HOST = "server_host"
@@ -61,6 +62,7 @@ class IrcService : Service() {
         const val EXTRA_MESSAGE = "message"
         const val EXTRA_CHANNEL_NAME = "channel_name"
         const val EXTRA_TARGET_FOR_NOTIFICATION = "target_for_notification"
+        const val EXTRA_RAW_COMMAND = "raw_command" // Nuevo Extra
     }
 
     override fun onCreate() {
@@ -120,6 +122,14 @@ class IrcService : Service() {
                 val channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME)
                 if (channelName != null) {
                     partChannel(channelName)
+                }
+            }
+            ACTION_SEND_RAW_COMMAND -> { 
+                val rawCommand = intent.getStringExtra(EXTRA_RAW_COMMAND)
+                if (!rawCommand.isNullOrBlank()) {
+                    sendRawCommand(rawCommand)
+                } else {
+                    Log.w(TAG, "ACTION_SEND_RAW_COMMAND recibido con comando nulo o vacío.")
                 }
             }
             else -> {
@@ -218,6 +228,11 @@ class IrcService : Service() {
         manualIrcClient?.partFromChannel(channelName)
     }
 
+    private fun sendRawCommand(command: String) {
+        Log.d(TAG, "Enviando comando crudo al cliente IRC: $command")
+        manualIrcClient?.sendRaw(command) // Corregido para usar sendRaw
+    }
+
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val foregroundServiceChannel = NotificationChannel(
@@ -243,7 +258,6 @@ class IrcService : Service() {
 
     private fun createForegroundServiceNotification(contentText: String): Notification {
         val notificationIntent = Intent(this, MainActivity::class.java).apply {
-            // Flags modificadas para evitar reiniciar la tarea y para reutilizar la actividad si es posible
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

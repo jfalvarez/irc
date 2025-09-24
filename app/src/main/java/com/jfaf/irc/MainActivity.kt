@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
@@ -33,6 +35,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -54,6 +57,7 @@ import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.util.NotificationHelper // Importación para NotificationHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -107,9 +111,23 @@ class MainActivity : ComponentActivity() {
             val currentActiveTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()
             val showUpdateDialog by remoteConfigManager.isUpdateRequired.collectAsState()
 
+            val snackbarHostState = remember { SnackbarHostState() }
+            val coroutineScope = rememberCoroutineScope() 
+
             LaunchedEffect(Unit) {
                 remoteConfigManager.fetchAndActivateConfig()
                 handleIntent(intent)
+            }
+
+            LaunchedEffect(mainViewModel.snackbarEvents) { // Observar snackbarEvents
+                mainViewModel.snackbarEvents.collectLatest { message ->
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = message,
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+                }
             }
 
             LaunchedEffect(mainViewModel.chatScreenState.connectionState) { // Observar connectionState desde ViewModel
@@ -162,7 +180,11 @@ class MainActivity : ComponentActivity() {
                         exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) + fadeOut() },
                         popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) + fadeIn() }
                     ) {
-                        MainScreen(viewModel = mainViewModel, navController = navController)
+                        MainScreen(
+                            viewModel = mainViewModel, 
+                            navController = navController, 
+                            snackbarHostState = snackbarHostState // Pasar snackbarHostState
+                        )
                     }
                     composable(
                         route = "settings",

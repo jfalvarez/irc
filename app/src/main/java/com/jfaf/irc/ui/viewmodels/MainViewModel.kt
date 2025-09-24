@@ -93,6 +93,9 @@ class MainViewModel @Inject constructor(
     private val _userMessageEvents = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
     val userMessageEvents: SharedFlow<String> = _userMessageEvents.asSharedFlow()
 
+    private val _snackbarEvents = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
+    val snackbarEvents: SharedFlow<String> = _snackbarEvents.asSharedFlow()
+
     private val _nickSuggestions = MutableStateFlow<List<String>>(emptyList())
 
     private val showJoinPartQuitMessagesPref: StateFlow<Boolean> =
@@ -377,7 +380,25 @@ class MainViewModel @Inject constructor(
             userPreferencesRepository.addIgnoredUser(userName)
             val targetForMessage = chatStateManager.activeTarget.value ?: ChatStateManager.SERVER_TARGET_ID
             chatStateManager.addSystemMessageToTarget(targetForMessage, "Usuario '$userName' ahora está en la lista de ignorados.")
+            _snackbarEvents.tryEmit("Usuario '$userName' añadido a ignorados.") // Snackbar para confirmar acción
         }
+    }
+
+    fun performWhois(nick: String) {
+        if (nick.isBlank()) {
+            Log.w("MainViewModel", "performWhois llamado con nick vacío.")
+            return
+        }
+        if (!ircRepository.connectionState.value) {
+            Log.w("MainViewModel", "performWhois llamado pero no conectado al servidor.")
+            chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "No conectado. No se puede enviar WHOIS.")
+            _snackbarEvents.tryEmit("Error: No conectado al servidor para enviar WHOIS.")
+            return
+        }
+        Log.i("MainViewModel", "Enviando comando WHOIS para $nick")
+        chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "[WHOIS] Solicitando información para $nick...")
+        ircRepository.sendRawCommand("WHOIS $nick")
+        _snackbarEvents.tryEmit("WHOIS para '$nick' solicitado. Ver pestaña 'Servidor'.") // Emitir evento para Snackbar
     }
 
     // --- Nick Autocompletion Functions ---

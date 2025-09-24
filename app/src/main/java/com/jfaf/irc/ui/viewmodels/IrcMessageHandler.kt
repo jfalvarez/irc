@@ -575,14 +575,30 @@ class IrcMessageHandler @Inject constructor() {
         val params = parsedMessage.params
         val trailing = parsedMessage.trailing
 
-        val targetKey = activeTarget ?: SERVER_TARGET_ID 
-        val errorParams = params.joinToString(" ")
-        val errorTrailing = trailing ?: ""
-        val errorMessageText = "Error $command: $errorParams $errorTrailing"
-        val annotatedContent = MircColorParser.parse("$errorParams $errorTrailing")
+        var targetKey: String
+        var errorMessageText: String
+        var annotatedContentText: String
+        var errorPrefix: String
+
+        if (command == "401") { // ERR_NOSUCHNICK
+            targetKey = SERVER_TARGET_ID
+            val nickWithError = params.getOrNull(1) ?: "Usuario desconocido"
+            errorMessageText = "[WHOIS Error] Usuario '$nickWithError' no encontrado."
+            annotatedContentText = "Usuario '$nickWithError' no encontrado."
+            errorPrefix = "[WHOIS Error] "
+        } else {
+            targetKey = activeTarget ?: SERVER_TARGET_ID
+            val errorParams = params.joinToString(" ")
+            val errorTrailing = trailing ?: ""
+            errorMessageText = "Error $command: $errorParams $errorTrailing"
+            annotatedContentText = "$errorParams $errorTrailing"
+            errorPrefix = "Error $command: "
+        }
+
+        val annotatedContent = MircColorParser.parse(annotatedContentText)
         val finalAnnotatedString = buildAnnotatedString {
             withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                append("Error $command: ")
+                append(errorPrefix)
             }
             append(annotatedContent)
         }
