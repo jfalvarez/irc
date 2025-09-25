@@ -92,4 +92,10 @@
     <string name="dialog_exit_cancel_button">Cancelar</string>
     <string name="action_whois">Whois</string>
 
+    <!-- Nuevas strings para AppDrawerContent -->
+    <string name="drawer_section_channels">Canales</string>
+    <string name="drawer_section_conversations">Conversaciones</string>
+    <string name="cd_expand">Expandir</string>
+    <string name="cd_collapse">Colapsar</string>
+
 </resources>
