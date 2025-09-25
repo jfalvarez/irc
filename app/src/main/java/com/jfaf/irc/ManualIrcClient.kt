@@ -39,7 +39,7 @@ class ManualIrcClient(
     private val _isRegistered = MutableStateFlow(false)
     val isRegistered: StateFlow<Boolean> = _isRegistered.asStateFlow()
 
-    private var currentNickname: String = AppConstants.DEFAULT_BOT_NICKNAME // MODIFIED HERE
+    private var currentNickname: String = AppConstants.DEFAULT_BOT_NICKNAME
 
     val isConnected: Boolean
         get() = _connectionState.value && socket?.isConnected == true
@@ -78,7 +78,7 @@ class ManualIrcClient(
 
                     listenForMessages()
                 } else {
-                    throw Exception(AppConstants.ERROR_MSG_SOCKET_CONNECT_FAILED) // MODIFIED HERE
+                    throw Exception(AppConstants.ERROR_MSG_SOCKET_CONNECT_FAILED)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error de conexión: ${e.message}", e)
@@ -191,18 +191,18 @@ class ManualIrcClient(
         }
     }
 
-    fun joinChannel(channel: String) {
+    fun joinChannel(channelName: String, key: String? = null) {
         if (_isRegistered.value) {
-            sendRaw("JOIN $channel")
+            sendRaw("JOIN $channelName${key?.let { " $it" } ?: ""}")
         } else {
-            Log.w(TAG, "Aún no registrado con el servidor. Comando JOIN para '$channel' no enviado.")
+            Log.w(TAG, "Aún no registrado con el servidor. Comando JOIN para '$channelName' no enviado.")
         }
     }
 
-    fun partFromChannel(channelName: String) {
+    fun partFromChannel(channelName: String, partMessage: String? = null) {
         if (_isRegistered.value) {
-            sendRaw("PART $channelName")
-            Log.i(TAG, "Enviando PART para el canal: $channelName")
+            sendRaw("PART $channelName${partMessage?.let { " :$it" } ?: ""}")
+            Log.i(TAG, "Enviando PART para el canal: $channelName${partMessage?.let { " con mensaje: $it"} ?: ""}")
         } else {
             Log.w(TAG, "Aún no registrado con el servidor. Comando PART para '$channelName' no enviado.")
         }
@@ -212,7 +212,7 @@ class ManualIrcClient(
         sendRaw("PRIVMSG $channel :$message")
     }
 
-    fun quitServer(quitMessage: String = AppConstants.DEFAULT_QUIT_MESSAGE) { // MODIFIED HERE
+    fun quitServer(quitMessage: String = AppConstants.DEFAULT_QUIT_MESSAGE) {
         sendRaw("QUIT :$quitMessage")
     }
 
@@ -233,7 +233,7 @@ class ManualIrcClient(
     fun disconnectAndCleanup() {
         if (_connectionState.value) {
             if (writer != null) { 
-                quitServer(AppConstants.QUIT_MSG_CLIENT_SHUTDOWN) // MODIFIED HERE
+                quitServer(AppConstants.QUIT_MSG_CLIENT_SHUTDOWN)
             }
         }
         cleanupConnection()

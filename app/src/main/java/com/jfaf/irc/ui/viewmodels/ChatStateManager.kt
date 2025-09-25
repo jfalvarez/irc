@@ -8,10 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
-
-// Asegúrate de que UiChatMessage y UiMessageType estén accesibles o defínelas aquí si es necesario.
-// Asumo que están definidas en el mismo paquete o importadas correctamente.
 
 @ViewModelScoped
 class ChatStateManager @Inject constructor() {
@@ -36,7 +34,6 @@ class ChatStateManager @Inject constructor() {
     private val _showUserList = MutableStateFlow(false)
     val showUserList: StateFlow<Boolean> = _showUserList.asStateFlow()
 
-    // Gestión de mensajes movida aquí
     private val _allMessages = MutableStateFlow<Map<String, List<UiChatMessage>>>(emptyMap())
     val allMessages: StateFlow<Map<String, List<UiChatMessage>>> = _allMessages.asStateFlow()
 
@@ -47,43 +44,70 @@ class ChatStateManager @Inject constructor() {
         usersMap[activeTarget] ?: emptyList()
     }
 
-    // --- Funciones para añadir mensajes (movidas desde MainViewModel) ---
+    // --- Funciones privadas de ayuda ---
+    private fun getSortedUserList(users: List<String>): List<String> {
+        return users.sortedWith(
+            compareBy<String> {
+                when {
+                    it.startsWith("@") -> 0
+                    it.startsWith("+") -> 1
+                    else -> 2
+                }
+            }.thenBy { it.lowercase() }
+        )
+    }
+
+    private fun appendMessageToTargetInternal(target: String, message: UiChatMessage) {
+        _allMessages.update { currentAllMessages ->
+            val currentMessagesForTarget = currentAllMessages[target] ?: emptyList()
+            currentAllMessages + (target to (currentMessagesForTarget + message).takeLast(MAX_MESSAGES_PER_TARGET))
+        }
+    }
+
+    // --- Funciones para añadir mensajes ---
     fun addSystemMessageToTarget(target: String, text: String) {
         val systemMessage = UiChatMessage(
             fullText = text,
             annotatedString = AnnotatedString(text),
             type = UiMessageType.SYSTEM_MESSAGE
         )
-        val currentMessages = _allMessages.value[target] ?: emptyList()
-        _allMessages.value = _allMessages.value + (target to (currentMessages + systemMessage).takeLast(MAX_MESSAGES_PER_TARGET))
+        appendMessageToTargetInternal(target, systemMessage)
         Log.d("ChatStateManager", "System message added to '$target': $text")
     }
 
     fun addLocalUiMessageToTarget(target: String, uiMessage: UiChatMessage) {
         val messageToAdd = if (uiMessage.annotatedString == null && uiMessage.type != UiMessageType.SYSTEM_MESSAGE) {
-            // Los mensajes del sistema ya crean su AnnotatedString en addSystemMessageToTarget
             uiMessage.copy(annotatedString = AnnotatedString(uiMessage.fullText))
         } else {
             uiMessage
         }
-        val currentMessagesForTarget = _allMessages.value[target] ?: emptyList()
-        _allMessages.value = _allMessages.value + (target to (currentMessagesForTarget + messageToAdd).takeLast(MAX_MESSAGES_PER_TARGET))
+        appendMessageToTargetInternal(target, messageToAdd)
         Log.d("ChatStateManager", "Local UI message added to '$target': ${uiMessage.fullText}")
     }
 
-    // --- Funciones de gestión de estado existentes (modificadas si es necesario) ---
+    fun clearMessagesForTarget(target: String) {
+        _allMessages.update { currentAllMessages ->
+            if (currentAllMessages.containsKey(target)) {
+                Log.d("ChatStateManager", "Messages cleared for target: $target")
+                currentAllMessages + (target to emptyList())
+            } else {
+                Log.w("ChatStateManager", "Attempted to clear messages for non-existent target: $target")
+                currentAllMessages
+            }
+        }
+    }
+
+    // --- Funciones de gestión de estado existentes ---
     fun toggleUserListVisibility() {
-        _showUserList.value = !_showUserList.value
+        _showUserList.update { !it }
         Log.d("ChatStateManager", "User list visibility toggled to: ${_showUserList.value}")
     }
 
     fun setActiveTarget(targetName: String, currentOwnNickname: String) {
         if (_chatTargets.value.any { it.equals(targetName, ignoreCase = true) } || targetName == SERVER_TARGET_ID) {
             _activeTarget.value = targetName
-            if (_unreadTargets.value.contains(targetName)) {
-                _unreadTargets.value = _unreadTargets.value - targetName
-                Log.d("ChatStateManager", "Target '$targetName' marked as read.")
-            }
+            _unreadTargets.update { it - targetName } // Mark as read
+            Log.d("ChatStateManager", "Target '$targetName' activated and marked as read.")
         } else {
             Log.w("ChatStateManager", "Attempt to activate non-existent target: $targetName. Current targets: ${_chatTargets.value.joinToString()}")
             _activeTarget.value = _chatTargets.value.firstOrNull() ?: SERVER_TARGET_ID
@@ -93,27 +117,55 @@ class ChatStateManager @Inject constructor() {
     fun openPrivateMessageTarget(nick: String, currentOwnNickname: String) {
         if (nick.isBlank() || nick.startsWith("#") || nick.equals(currentOwnNickname, ignoreCase = true)) {
             Log.w("ChatStateManager", "Invalid nick for PM: $nick")
-            // MainViewModel se encargará del feedback si es necesario, CSM solo actualiza estado.
             return
         }
-        if (!_chatTargets.value.any { it.equals(nick, ignoreCase = true) }) {
-            _chatTargets.value = ensureServerTargetIsFirstLocal((_chatTargets.value + nick).distinct())
+        _chatTargets.update { currentTargets ->
+            if (!currentTargets.any { it.equals(nick, ignoreCase = true) }) {
+                ensureServerTargetIsFirstLocal((currentTargets + nick).distinct())
+            } else {
+                currentTargets
+            }
         }
-        // Inicializar mensajes para el nuevo target de PM si no existen
-        if (_allMessages.value[nick] == null) {
-            _allMessages.value = _allMessages.value + (nick to emptyList())
+        _allMessages.update { currentAll -> // Ensure message list exists
+            if (currentAll[nick] == null) currentAll + (nick to emptyList()) else currentAll
         }
         _activeTarget.value = nick
-        if (_unreadTargets.value.contains(nick)) {
-            _unreadTargets.value = _unreadTargets.value - nick
-        }
+        _unreadTargets.update { it - nick }
         Log.d("ChatStateManager", "PM Target opened/activated: '$nick'")
     }
 
+    fun ensurePmTargetExists(nick: String, currentOwnNickname: String): Boolean {
+        if (nick.isBlank() || nick.startsWith("#") || nick.equals(currentOwnNickname, ignoreCase = true)) {
+            Log.w("ChatStateManager", "[ensurePmTargetExists] Invalid nick for PM: $nick")
+            return false
+        }
+        _chatTargets.update { currentTargets ->
+            if (!currentTargets.any { it.equals(nick, ignoreCase = true) }) {
+                Log.d("ChatStateManager", "[ensurePmTargetExists] PM Target added to chatTargets: '$nick'")
+                ensureServerTargetIsFirstLocal((currentTargets + nick).distinct())
+            } else {
+                currentTargets
+            }
+        }
+        _allMessages.update { currentAll ->
+            if (currentAll[nick] == null) {
+                Log.d("ChatStateManager", "[ensurePmTargetExists] Message list initialized for PM Target: '$nick'")
+                currentAll + (nick to emptyList()) 
+            } else currentAll
+        }
+        return true
+    }
+
     fun addChannelTarget(channelName: String) {
-        if (channelName.startsWith("#") && !_chatTargets.value.any { it.equals(channelName, ignoreCase = true) }) {
-            _chatTargets.value = ensureServerTargetIsFirstLocal((_chatTargets.value + channelName).distinct())
-            Log.d("ChatStateManager", "Channel target added: $channelName")
+        if (channelName.startsWith("#")) {
+            _chatTargets.update { currentTargets ->
+                 if (!currentTargets.any { it.equals(channelName, ignoreCase = true) }) {
+                    Log.d("ChatStateManager", "Channel target added: $channelName")
+                    ensureServerTargetIsFirstLocal((currentTargets + channelName).distinct())
+                 } else {
+                    currentTargets
+                 }
+            }
         }
     }
 
@@ -126,23 +178,21 @@ class ChatStateManager @Inject constructor() {
         var newActiveTargetToSuggest: String? = null
 
         if (!targetName.startsWith("#")) { // Es un PM
-            _chatTargets.value = ensureServerTargetIsFirstLocal(_chatTargets.value.filterNot { it.equals(targetName, ignoreCase = true) })
-            _unreadTargets.value = _unreadTargets.value - targetName
-            _usersInChannel.value = _usersInChannel.value - targetName 
-            _allMessages.value = _allMessages.value - targetName 
+            _chatTargets.update { ensureServerTargetIsFirstLocal(it.filterNot { t -> t.equals(targetName, ignoreCase = true) }) }
+            _unreadTargets.update { it - targetName }
+            _usersInChannel.update { it - targetName }
+            _allMessages.update { it - targetName }
 
             if (currentActiveTargetFromVM?.equals(targetName, ignoreCase = true) == true) {
                 val nextTarget = _chatTargets.value.firstOrNull() ?: SERVER_TARGET_ID
                 _activeTarget.value = nextTarget
                 newActiveTargetToSuggest = nextTarget
-                if (_unreadTargets.value.contains(nextTarget)) {
-                    _unreadTargets.value = _unreadTargets.value - nextTarget
-                }
+                _unreadTargets.update { it - nextTarget } // Mark new active as read
             }
             Log.d("ChatStateManager", "PM target '$targetName' closed. New active: $newActiveTargetToSuggest")
         } else { // Es un canal
-            if (currentActiveTargetFromVM == targetName && _unreadTargets.value.contains(targetName)){
-                 _unreadTargets.value = _unreadTargets.value - targetName
+            if (currentActiveTargetFromVM == targetName){
+                 _unreadTargets.update { it - targetName}
                  Log.d("ChatStateManager", "Channel target '$targetName' marked as read due to active close initiation.")
             }
         }
@@ -150,16 +200,8 @@ class ChatStateManager @Inject constructor() {
     }
 
     fun updateUsersForChannel(channel: String, users: List<String>) {
-        val sortedUsers = users.sortedWith(
-            compareBy<String> {
-                when {
-                    it.startsWith("@") -> 0
-                    it.startsWith("+") -> 1
-                    else -> 2
-                }
-            }.thenBy { it.lowercase() }
-        )
-        _usersInChannel.value = _usersInChannel.value + (channel to sortedUsers)
+        val sortedUsers = getSortedUserList(users)
+        _usersInChannel.update { it + (channel to sortedUsers) }
         Log.d("ChatStateManager", "Users updated for channel '$channel': ${sortedUsers.size} users.")
     }
 
@@ -191,23 +233,14 @@ class ChatStateManager @Inject constructor() {
 
         result.newCurrentNickname?.let {
             if (oldNick != it) {
-                renameUserInAllChannelsInternal(oldNick, it)
+                renameUserInAllChannelsInternal(oldNick, it) // renameUserInAllChannelsInternal usa getSortedUserList
             }
         }
         result.newActiveTarget?.let { _activeTarget.value = it }
         result.newChatTargets?.let { _chatTargets.value = ensureServerTargetIsFirstLocal(it) }
         result.newUnreadTargets?.let { _unreadTargets.value = it }
         result.newUsersInChannel?.let { newMap ->
-            val sortedMap = newMap.mapValues { (_, userList) ->
-                userList.sortedWith(compareBy<String> {
-                    when {
-                        it.startsWith("@") -> 0
-                        it.startsWith("+") -> 1
-                        else -> 2
-                    }
-                }.thenBy { it.lowercase() })
-            }
-            _usersInChannel.value = sortedMap
+            _usersInChannel.value = newMap.mapValues { (_, userList) -> getSortedUserList(userList) }
         }
         result.ownNickChangedTo?.let {
              if (oldNick != it) {
@@ -215,50 +248,44 @@ class ChatStateManager @Inject constructor() {
              }
         }
 
-        // --- Lógica de actualización de mensajes MODIFICADA ---
         if (result.newAllMessages != null) {
-            // Si newAllMessages está presente, es la fuente autoritativa.
             _allMessages.value = result.newAllMessages.mapValues { entry -> 
                 entry.value.takeLast(MAX_MESSAGES_PER_TARGET) 
             }
             Log.d("ChatStateManager", "Messages updated from newAllMessages in handler result.")
         } else if (result.uiMessageToAdd != null && result.targetForUiMessage != null) {
-            // Si no hay newAllMessages, pero sí un uiMessageToAdd, procesarlo.
-            addLocalUiMessageToTarget(result.targetForUiMessage, result.uiMessageToAdd)
+            appendMessageToTargetInternal(result.targetForUiMessage, result.uiMessageToAdd)
             Log.d("ChatStateManager", "Single message added from uiMessageToAdd in handler result.")
         }
-        // Si ambos son null, no se hace nada con los mensajes en este paso.
 
         Log.d("ChatStateManager", "State updated from IrcMessageHandler result. Active: ${_activeTarget.value}, Targets: ${_chatTargets.value.joinToString()}, Unread: ${_unreadTargets.value.joinToString()}, Messages keys: ${_allMessages.value.keys.joinToString()}")
     }
 
     private fun renameUserInAllChannelsInternal(oldNick: String, newNick: String) {
-        val updatedUsersInChannel = _usersInChannel.value.toMutableMap()
-        var ownNickAffected = false
-        _usersInChannel.value.forEach { (channel, users) ->
-            val newUsersList = users.map { user ->
-                val baseNick = user.removePrefix("@").removePrefix("+")
-                val prefix = user.takeWhile { it == '@' || it == '+' }
-                if (baseNick.equals(oldNick, ignoreCase = true)) {
-                    if (baseNick == oldNick) ownNickAffected = true
-                    prefix + newNick
-                } else {
-                    user
+        _usersInChannel.update { currentUsersInChannel ->
+            val updatedMap = currentUsersInChannel.toMutableMap()
+            var changed = false
+            currentUsersInChannel.forEach { (channel, users) ->
+                val newUsersList = users.map { user ->
+                    val baseNick = user.removePrefix("@").removePrefix("+")
+                    val prefix = user.takeWhile { it == '@' || it == '+' }
+                    if (baseNick.equals(oldNick, ignoreCase = true)) {
+                        changed = true
+                        prefix + newNick
+                    } else {
+                        user
+                    }
+                }
+                if (newUsersList != users) {
+                    updatedMap[channel] = getSortedUserList(newUsersList) // Usar la función de ordenación
                 }
             }
-            if (newUsersList != users) {
-                updatedUsersInChannel[channel] = newUsersList.sortedWith(compareBy<String> {
-                    when {
-                        it.startsWith("@") -> 0
-                        it.startsWith("+") -> 1
-                        else -> 2
-                    }
-                }.thenBy { it.lowercase() })
+            if (changed) {
+                 Log.d("ChatStateManager", "User '$oldNick' renamed to '$newNick' in channels.")
+                 updatedMap
+            } else {
+                 currentUsersInChannel
             }
-        }
-        if (updatedUsersInChannel.keys.isNotEmpty() || ownNickAffected) {
-            _usersInChannel.value = updatedUsersInChannel
-            Log.d("ChatStateManager", "User '$oldNick' renamed to '$newNick' in channels.")
         }
     }
 
@@ -269,6 +296,7 @@ class ChatStateManager @Inject constructor() {
         return if (serverTargetPresent) {
             listOf(SERVER_TARGET_ID) + otherTargets
         } else {
+            // Si SERVER_TARGET_ID no estaba, lo añadimos. Esto asegura que siempre esté.
             listOf(SERVER_TARGET_ID) + otherTargets
         }
     }

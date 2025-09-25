@@ -1,6 +1,6 @@
 package com.jfaf.irc.ui.screens
 
-import android.util.Log // Asegurarse de que el import está presente
+import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -14,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,28 +53,27 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.jfaf.irc.R
+import com.jfaf.irc.ui.screens.chat.AppDrawerContent
 import com.jfaf.irc.ui.screens.chat.ChannelUserListView
 import com.jfaf.irc.ui.screens.chat.ChatTopAppBar
 import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer
-import com.jfaf.irc.ui.screens.chat.MessagesList
 import com.jfaf.irc.ui.screens.chat.MessageInputSection
+import com.jfaf.irc.ui.screens.chat.MessagesList
 import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import kotlinx.coroutines.launch
-import com.jfaf.irc.ui.screens.chat.AppDrawerContent
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun MainScreen(
-    modifier: Modifier = Modifier, 
+    modifier: Modifier = Modifier,
     viewModel: MainViewModel = hiltViewModel(),
     navController: NavHostController,
     snackbarHostState: SnackbarHostState
 ) {
     val connectionState by viewModel.chatScreenState.connectionState.collectAsState()
-    var nicknameInput by remember { mutableStateOf("") }
-    var useSslInput by remember { mutableStateOf(false) }
+    // nicknameInput y useSslInput se mueven a MainScreenScaffoldContent
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -85,46 +85,15 @@ fun MainScreen(
         }
     }
 
-    val unreadTargetsState = viewModel.chatScreenState.unreadTargets.collectAsState()
-    val nickSuggestionsState by viewModel.chatScreenState.nickSuggestions.collectAsState()
-
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            if (connectionState) {
-                AppDrawerContent(
-                    chatTargets = viewModel.chatScreenState.chatTargets.collectAsState().value,
-                    activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value,
-                    unreadTargets = unreadTargetsState.value,
-                    currentNick = viewModel.currentNickname,
-                    onTargetSelected = {
-                        viewModel.setActiveTarget(it)
-                        scope.launch { drawerState.close() }
-                    },
-                    // onJoinChannelRequest = { scope.launch { drawerState.close() } }, // Eliminado
-                    // onOpenPrivateMessageRequest = { scope.launch { drawerState.close() } }, // Eliminado
-                    onCloseTargetAction = { viewModel.closeTarget(it) },
-                    onSettingsClick = {
-                        scope.launch { drawerState.close() }
-                        navController.navigate("settings")
-                    }
-                )
-            } else {
-                Column(
-                    modifier = Modifier.fillMaxHeight().padding(16.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        stringResource(R.string.status_not_connected),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+            AppDrawerMainContent(viewModel = viewModel, connectionState = connectionState, navController = navController) {
+                scope.launch { drawerState.close() }
             }
         }
     ) {
-        Box(modifier = Modifier.fillMaxSize()) { 
+        Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 modifier = modifier.imePadding(),
                 containerColor = Color.Transparent,
@@ -135,127 +104,28 @@ fun MainScreen(
                             activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value,
                             onNavigationIconClick = { scope.launch { drawerState.open() } },
                             onDisconnectClick = { viewModel.disconnectFromServerAndStopService() },
-                            onJoinChannelRequest = { viewModel.joinChannel(it) }, 
-                            onOpenPrivateMessageRequest = { viewModel.openPrivateMessage(it) }, 
+                            onJoinChannelRequest = { viewModel.joinChannel(it) },
+                            onOpenPrivateMessageRequest = { viewModel.openPrivateMessage(it) },
                             onToggleUserList = { viewModel.toggleUserListVisibility() }
                         )
                     }
                 },
                 bottomBar = {
-                    Column {
-                        val activeTargetValue = viewModel.chatScreenState.activeTarget.collectAsState().value
-                        val serverString = stringResource(R.string.cd_server)
-                        val showInputSection = connectionState && activeTargetValue != null && activeTargetValue != serverString
-                        
-                        if (connectionState) {
-                            AndroidView(
-                                factory = { context ->
-                                    AdView(context).apply {
-                                        setAdSize(AdSize.BANNER)
-                                        val currentAdUnitId = "ca-app-pub-3940256099942544/6300978111" // TEST BANNER ID
-                                        adUnitId = currentAdUnitId
-                                        Log.d("AdViewConfig", "AdView adUnitId set to: $currentAdUnitId") // Línea reinsertada
-                                        loadAd(AdRequest.Builder().build())
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-
-                        if (showInputSection) {
-                            if (activeTargetValue.startsWith("#")) { // Smart cast, no !! needed
-                                MessageInputSection(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    nickSuggestions = nickSuggestionsState,
-                                    onSendMessage = { viewModel.sendMessage(it) },
-                                    onTextInputChanged = { text, cursorPos -> 
-                                        viewModel.updateNickSuggestions(text, cursorPos) 
-                                    },
-                                    onSuggestionSelected = { suggestion, currentText, cursorPos ->
-                                        viewModel.onNickSuggestionSelected(suggestion, currentText, cursorPos)
-                                    },
-                                    onClearSuggestions = { viewModel.clearNickSuggestions() }
-                                )
-                            } else { 
-                                MessageInputSection(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    nickSuggestions = emptyList(),
-                                    onSendMessage = { viewModel.sendMessage(it) },
-                                    onTextInputChanged = { _, _ -> },
-                                    onSuggestionSelected = { _, _, _ -> "" },
-                                    onClearSuggestions = { }
-                                )
-                            }
-                        }
-                    }
+                    MainScreenBottomBar(
+                        viewModel = viewModel,
+                        connectionState = connectionState,
+                        activeTargetValue = viewModel.chatScreenState.activeTarget.collectAsState().value,
+                        nickSuggestionsState = viewModel.chatScreenState.nickSuggestions.collectAsState().value
+                    )
                 }
-            ) { paddingValues -> 
-                AnimatedContent(
-                    targetState = connectionState,
-                    modifier = Modifier.fillMaxSize().padding(paddingValues), 
-                    transitionSpec = {
-                        if (targetState) {
-                            slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
-                        } else {
-                            slideInHorizontally { -it } + fadeIn() togetherWith slideOutHorizontally { it } + fadeOut()
-                        }
-                    },
-                    label = "ConnectionStateAnimation"
-                ) { targetIsConnected ->
-                    if (!targetIsConnected) {
-                        ConnectionSetupSection(
-                            nickname = nicknameInput,
-                            onNicknameChange = { nicknameInput = it },
-                            useSsl = useSslInput,
-                            onUseSslChange = { useSslInput = it },
-                            onConnect = {
-                                if (nicknameInput.isNotBlank()) {
-                                    viewModel.connect(nicknameInput, useSslInput)
-                                }
-                            }
-                        )
-                    } else {
-                        val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
-                        val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
-                        val serverString = stringResource(R.string.cd_server)
-
-                        val currentTargetIsChannel = activeTarget?.startsWith("#") == true && activeTarget != serverString
-                        val shouldDisplayUserList = showUserListState && currentTargetIsChannel
-
-                        Row(modifier = Modifier.fillMaxSize().background(IRCTheme.gradientBrush)) {
-                            Box(modifier = Modifier.weight(if (shouldDisplayUserList) 0.6f else 1f)) {
-                                val messages = viewModel.chatScreenState.uiMessages.collectAsState().value
-                                if (activeTarget != null) {
-                                    MessagesList(
-                                        messages = messages,
-                                        onImageClick = { selectedImageUrlForFullScreen = it }
-                                    )
-                                } else {
-                                    Column(
-                                        modifier = Modifier.fillMaxSize().padding(16.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(
-                                            stringResource(R.string.prompt_select_channel_or_conversation),
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onPrimary
-                                        )
-                                    }
-                                }
-                            }
-                            if (shouldDisplayUserList) {
-                                VerticalDivider(
-                                    modifier = Modifier.fillMaxHeight().width(DividerDefaults.Thickness),
-                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                                )
-                                Box(modifier = Modifier.weight(0.4f)) {
-                                    ChannelUserListView(mainViewModel = viewModel)
-                                }
-                            }
-                        }
-                    }
-                }
+            ) { paddingValues ->
+                MainScreenScaffoldContent(
+                    paddingValues = paddingValues,
+                    connectionState = connectionState,
+                    viewModel = viewModel,
+                    // nicknameInput y useSslInput ya no se pasan desde aquí
+                    onImageClick = { selectedImageUrlForFullScreen = it }
+                )
             }
             AnimatedVisibility(
                 visible = selectedImageUrlForFullScreen != null,
@@ -272,3 +142,180 @@ fun MainScreen(
         }
     }
 }
+
+@Composable
+private fun AppDrawerMainContent(
+    viewModel: MainViewModel,
+    connectionState: Boolean,
+    navController: NavHostController,
+    closeDrawerAction: () -> Unit
+) {
+    if (connectionState) {
+        AppDrawerContent(
+            chatTargets = viewModel.chatScreenState.chatTargets.collectAsState().value,
+            activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value,
+            unreadTargets = viewModel.chatScreenState.unreadTargets.collectAsState().value,
+            currentNick = viewModel.currentNickname,
+            onTargetSelected = {
+                viewModel.setActiveTarget(it)
+                closeDrawerAction()
+            },
+            onCloseTargetAction = { viewModel.closeTarget(it) },
+            onSettingsClick = {
+                closeDrawerAction()
+                navController.navigate("settings")
+            }
+        )
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                stringResource(R.string.status_not_connected),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainScreenBottomBar(
+    viewModel: MainViewModel,
+    connectionState: Boolean,
+    activeTargetValue: String?,
+    nickSuggestionsState: List<String>
+) {
+    Column {
+        val showInputSection = connectionState && activeTargetValue != null
+
+        if (connectionState) {
+            AndroidView(
+                factory = { context ->
+                    AdView(context).apply {
+                        setAdSize(AdSize.BANNER)
+                        adUnitId = "ca-app-pub-3940256099942544/6300978111" // TEST BANNER ID
+                        Log.d("AdViewConfig", "AdView adUnitId set to: $adUnitId")
+                        loadAd(AdRequest.Builder().build())
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        if (showInputSection) {
+            MessageInputSection(
+                modifier = Modifier.fillMaxWidth(),
+                nickSuggestions = nickSuggestionsState,
+                onSendMessage = { viewModel.sendMessage(it) },
+                onTextInputChanged = { text, cursorPos ->
+                    viewModel.updateNickSuggestions(text, cursorPos)
+                },
+                onSuggestionSelected = { suggestion, currentText, cursorPos ->
+                    viewModel.onNickSuggestionSelected(suggestion, currentText, cursorPos)
+                },
+                onClearSuggestions = { viewModel.clearNickSuggestions() }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+private fun MainScreenScaffoldContent(
+    paddingValues: PaddingValues,
+    connectionState: Boolean,
+    viewModel: MainViewModel, // viewModel sigue siendo necesario para .connect
+    onImageClick: (String) -> Unit
+) {
+    // El estado para nickname y useSsl ahora vive aquí
+    var nicknameInput by remember { mutableStateOf("") }
+    var useSslInput by remember { mutableStateOf(false) }
+
+    AnimatedContent(
+        targetState = connectionState,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues),
+        transitionSpec = {
+            if (targetState) {
+                slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()
+            } else {
+                slideInHorizontally { -it } + fadeIn() togetherWith slideOutHorizontally { it } + fadeOut()
+            }
+        },
+        label = "ConnectionStateAnimation"
+    ) { targetIsConnected ->
+        if (!targetIsConnected) {
+            ConnectionSetupSection(
+                nickname = nicknameInput,
+                onNicknameChange = { nicknameInput = it },
+                useSsl = useSslInput,
+                onUseSslChange = { useSslInput = it },
+                onConnect = {
+                    if (nicknameInput.isNotBlank()) {
+                        viewModel.connect(nicknameInput, useSslInput)
+                    }
+                }
+            )
+        } else {
+            ConnectedStateView(viewModel = viewModel, onImageClick = onImageClick)
+        }
+    }
+}
+
+@Composable
+private fun ConnectedStateView(
+    viewModel: MainViewModel,
+    onImageClick: (String) -> Unit
+) {
+    val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
+    val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
+
+    val currentTargetIsChannel = activeTarget?.startsWith("#") == true
+    val shouldDisplayUserList = showUserListState && currentTargetIsChannel
+
+    Row(modifier = Modifier
+        .fillMaxSize()
+        .background(IRCTheme.gradientBrush)) {
+        Box(modifier = Modifier.weight(if (shouldDisplayUserList) 0.6f else 1f)) {
+            val messages = viewModel.chatScreenState.uiMessages.collectAsState().value
+            if (activeTarget != null) {
+                MessagesList(
+                    messages = messages,
+                    onImageClick = onImageClick
+                )
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        stringResource(R.string.prompt_select_channel_or_conversation),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        }
+        if (shouldDisplayUserList) {
+            VerticalDivider(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(DividerDefaults.Thickness),
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+            )
+            Box(modifier = Modifier.weight(0.4f)) {
+                ChannelUserListView(mainViewModel = viewModel)
+            }
+        }
+    }
+}
+

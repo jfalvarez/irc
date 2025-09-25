@@ -52,7 +52,7 @@ class IrcService : Service() {
         const val ACTION_JOIN_CHANNEL = "com.jfaf.irc.service.ACTION_JOIN_CHANNEL"
         const val ACTION_PART_CHANNEL = "com.jfaf.irc.service.ACTION_PART_CHANNEL"
         const val ACTION_DISCONNECT_AND_STOP_SERVICE = "com.jfaf.irc.service.ACTION_DISCONNECT_AND_STOP_SERVICE"
-        const val ACTION_SEND_RAW_COMMAND = "com.jfaf.irc.service.ACTION_SEND_RAW_COMMAND" // Nueva Acción
+        const val ACTION_SEND_RAW_COMMAND = "com.jfaf.irc.service.ACTION_SEND_RAW_COMMAND"
 
         const val EXTRA_NICKNAME = "nickname"
         const val EXTRA_SERVER_HOST = "server_host"
@@ -62,7 +62,11 @@ class IrcService : Service() {
         const val EXTRA_MESSAGE = "message"
         const val EXTRA_CHANNEL_NAME = "channel_name"
         const val EXTRA_TARGET_FOR_NOTIFICATION = "target_for_notification"
-        const val EXTRA_RAW_COMMAND = "raw_command" // Nuevo Extra
+        const val EXTRA_RAW_COMMAND = "raw_command"
+        // Nuevos Extras
+        const val EXTRA_CHANNEL_KEY = "channel_key"
+        const val EXTRA_PART_MESSAGE = "part_message"
+        const val EXTRA_QUIT_MESSAGE = "quit_message"
     }
 
     override fun onCreate() {
@@ -95,7 +99,7 @@ class IrcService : Service() {
             }
             ACTION_DISCONNECT -> {
                 Log.i(TAG, "Acción DISCONNECT recibida. Desconectando socket, servicio permanece en foreground.")
-                manualIrcClient?.disconnectAndCleanup()
+                manualIrcClient?.disconnectAndCleanup() // Podríamos considerar enviar QUIT aquí también si es un disconnect manual sin mensaje
                 if (IrcServiceApi.connectionState.value) {
                     IrcServiceApi.updateConnectionState(false)
                 }
@@ -103,7 +107,8 @@ class IrcService : Service() {
             }
             ACTION_DISCONNECT_AND_STOP_SERVICE -> {
                 Log.i(TAG, "Acción DISCONNECT_AND_STOP_SERVICE recibida. Desconectando y deteniendo el servicio.")
-                disconnect()
+                val quitMessage = intent.getStringExtra(EXTRA_QUIT_MESSAGE)
+                disconnect(quitMessage)
             }
             ACTION_SEND_MESSAGE -> {
                 val target = intent.getStringExtra(EXTRA_TARGET)
@@ -114,14 +119,16 @@ class IrcService : Service() {
             }
             ACTION_JOIN_CHANNEL -> {
                 val channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME)
+                val channelKey = intent.getStringExtra(EXTRA_CHANNEL_KEY)
                 if (channelName != null) {
-                    joinChannel(channelName)
+                    joinChannel(channelName, channelKey)
                 }
             }
             ACTION_PART_CHANNEL -> {
                 val channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME)
+                val partMessage = intent.getStringExtra(EXTRA_PART_MESSAGE)
                 if (channelName != null) {
-                    partChannel(channelName)
+                    partChannel(channelName, partMessage)
                 }
             }
             ACTION_SEND_RAW_COMMAND -> { 
@@ -204,9 +211,15 @@ class IrcService : Service() {
         manualIrcClient?.connect(nickname)
     }
 
-    private fun disconnect() {
-        Log.i(TAG, "Función disconnect() llamada. Limpiando cliente, quitando foreground y deteniendo servicio.")
+    private fun disconnect(quitMessage: String? = null) {
+        Log.i(TAG, "Función disconnect(quitMessage: $quitMessage) llamada. Limpiando cliente, quitando foreground y deteniendo servicio.")
         val wasConnected = IrcServiceApi.connectionState.value
+        if (wasConnected && !quitMessage.isNullOrBlank()) {
+            manualIrcClient?.sendRaw("QUIT :$quitMessage")
+            // Dar un pequeño margen para que el mensaje QUIT se envíe antes de cerrar el socket
+            // Esto es una simplificación; una solución más robusta podría esperar un acknowledge o usar un delay.
+            // Thread.sleep(100) // Considerar alternativas a Thread.sleep en un service scope
+        }
         manualIrcClient?.disconnectAndCleanup()
         if (wasConnected) {
             IrcServiceApi.updateConnectionState(false)
@@ -220,17 +233,17 @@ class IrcService : Service() {
         manualIrcClient?.sendMessageToChannel(target, message)
     }
 
-    private fun joinChannel(channelName: String) {
-        manualIrcClient?.joinChannel(channelName)
+    private fun joinChannel(channelName: String, key: String? = null) {
+        manualIrcClient?.joinChannel(channelName, key) // Asumiendo que ManualIrcClient se actualizará
     }
 
-    private fun partChannel(channelName: String) {
-        manualIrcClient?.partFromChannel(channelName)
+    private fun partChannel(channelName: String, partMessage: String? = null) {
+        manualIrcClient?.partFromChannel(channelName, partMessage) // Asumiendo que ManualIrcClient se actualizará
     }
 
     private fun sendRawCommand(command: String) {
         Log.d(TAG, "Enviando comando crudo al cliente IRC: $command")
-        manualIrcClient?.sendRaw(command) // Corregido para usar sendRaw
+        manualIrcClient?.sendRaw(command)
     }
 
     private fun createNotificationChannels() {

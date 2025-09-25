@@ -39,10 +39,17 @@ fun MessageRow(message: UiChatMessage, onImageClick: (String) -> Unit) {
         UiMessageType.SYSTEM_MESSAGE, UiMessageType.JOIN_PART_QUIT, UiMessageType.NICK_CHANGE, UiMessageType.MODE_CHANGE -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
         UiMessageType.SERVER_INFO -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
         UiMessageType.NOTICE -> MaterialTheme.colorScheme.onPrimary
+        // ACTION_MSG will use the default color from 'else' block which is fine
         else -> MaterialTheme.colorScheme.onPrimary
     }
     val fontStyle = when (message.type) {
-        UiMessageType.SYSTEM_MESSAGE, UiMessageType.JOIN_PART_QUIT, UiMessageType.NICK_CHANGE, UiMessageType.MODE_CHANGE, UiMessageType.SERVER_INFO, UiMessageType.NOTICE -> FontStyle.Italic
+        UiMessageType.SYSTEM_MESSAGE, 
+        UiMessageType.JOIN_PART_QUIT, 
+        UiMessageType.NICK_CHANGE, 
+        UiMessageType.MODE_CHANGE, 
+        UiMessageType.SERVER_INFO, 
+        UiMessageType.NOTICE,
+        UiMessageType.ACTION_MSG -> FontStyle.Italic // ACTION_MSG ahora también es cursiva
         else -> FontStyle.Normal
     }
     val fontWeight = if (message.isOwnMessage && message.annotatedString?.spanStyles?.all { it.item.fontWeight != FontWeight.Bold } == true) FontWeight.Bold else FontWeight.Normal
