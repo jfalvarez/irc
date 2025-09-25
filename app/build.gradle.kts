@@ -5,9 +5,10 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.hilt.android) // Updated Hilt plugin
-    kotlin("kapt") // Necesario para el procesador de anotaciones de Hilt
+    alias(libs.plugins.hilt.android)
+    kotlin("kapt")
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics") // Plugin de Crashlytics
 }
 
 // Leer el ID de AdMob desde local.properties
@@ -16,9 +17,10 @@ val localPropertiesFile = project.rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localProperties.load(FileInputStream(localPropertiesFile))
 }
-val admobAppIdFromLocalProps = localProperties.getProperty("admob.appId", "YOUR_DEFAULT_ADMOB_APP_ID_IF_NOT_FOUND") // Proporciona un valor por defecto si no se encuentra
-println("Valor de admobAppId leído de local.properties: '$admobAppIdFromLocalProps'") // IMPRIMIR VALOR
-
+// Asegúrate de que admob.appId en local.properties NO tenga comillas alrededor del valor.
+// Ejemplo en local.properties: admob.appId=ca-app-pub-3940256099942544~3347511713
+val admobAppIdFromLocalProps = localProperties.getProperty("admob.appId", "ca-app-pub-3940256099942544~3347511713") // Default al ID de prueba
+println("ADMOB APP ID FROM GRADLE: '$admobAppIdFromLocalProps'") // Para depuración, puedes quitarlo después
 
 android {
     namespace = "com.jfaf.irc"
@@ -30,27 +32,21 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // Usar manifestPlaceholders para el ID de AdMob
         manifestPlaceholders["admobAppId"] = admobAppIdFromLocalProps
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = false // Considera habilitar ProGuard/R8 para release
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // También puedes definir placeholders específicos por build type si es necesario
-            // manifestPlaceholders["admobAppId"] = localProperties.getProperty("admob.releaseAppId", "YOUR_RELEASE_ADMOB_APP_ID")
         }
-        debug {
-            // manifestPlaceholders["admobAppId"] = localProperties.getProperty("admob.debugAppId", "ca-app-pub-3940256099942544~3347511713") // Ejemplo para debug
-        }
+        debug {}
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -61,7 +57,6 @@ android {
     buildFeatures {
         compose = true
     }
-
     packaging {
         resources {
             excludes += "/META-INF/INDEX.LIST"
@@ -80,21 +75,25 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.material.icons.extended) 
     implementation(libs.guava)
     implementation(libs.coil.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.hilt.android)
-    implementation(libs.androidx.material3)
-    implementation(libs.firebase.config)
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.navigation.compose)
+
+    // Firebase - Asegúrate de que el BoM (Bill of Materials) esté presente
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.commonKtx) 
-    implementation(libs.firebase.analytics)     
-    implementation(libs.firebase.remoteconfig)
-    implementation("com.google.android.gms:play-services-ads:23.1.0")
+    implementation(libs.firebase.commonKtx)
+    implementation(libs.firebase.analytics)       // Firebase Analytics KTX
+    implementation(libs.firebase.remoteconfig)   // Firebase Remote Config KTX
+    implementation(libs.firebase.crashlytics)    // Firebase Crashlytics KTX
+
+    // AdMob
+    implementation("com.google.android.gms:play-services-ads:23.0.0") // Versión cambiada a 23.0.0
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

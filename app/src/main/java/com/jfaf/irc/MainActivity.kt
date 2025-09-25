@@ -47,6 +47,8 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.android.gms.ads.MobileAds // Import MobileAds
+import com.google.android.gms.ads.RequestConfiguration // Import RequestConfiguration
 import com.jfaf.irc.config.RemoteConfigManager
 import com.jfaf.irc.service.IrcService
 import com.jfaf.irc.service.IrcServiceApi
@@ -54,10 +56,11 @@ import com.jfaf.irc.ui.screens.MainScreen
 import com.jfaf.irc.ui.screens.settings.SettingsScreen
 import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
-import com.jfaf.irc.util.NotificationHelper // Importación para NotificationHelper
+import com.jfaf.irc.util.NotificationHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.Arrays // Import Arrays for test device IDs list
 import javax.inject.Inject
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -98,6 +101,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Inicializar Mobile Ads y configurar dispositivo de prueba
+        MobileAds.initialize(this) { initializationStatus ->
+            Log.d(TAG_ACTIVITY, "Estado inicialización AdMob: ${initializationStatus.adapterStatusMap}")
+        }
+
+        // Asegúrate de que este es el ID que te mostró Logcat
+        val testDeviceIds = Arrays.asList("CC7C862030BF02013922527B26AC1285") 
+        val configuration = RequestConfiguration.Builder().setTestDeviceIds(testDeviceIds).build()
+        MobileAds.setRequestConfiguration(configuration)
+
         enableEdgeToEdge()
         askNotificationPermission()
 
@@ -119,7 +133,7 @@ class MainActivity : ComponentActivity() {
                 handleIntent(intent)
             }
 
-            LaunchedEffect(mainViewModel.snackbarEvents) { // Observar snackbarEvents
+            LaunchedEffect(mainViewModel.snackbarEvents) { 
                 mainViewModel.snackbarEvents.collectLatest { message ->
                     coroutineScope.launch {
                         snackbarHostState.showSnackbar(
@@ -130,7 +144,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(mainViewModel.chatScreenState.connectionState) { // Observar connectionState desde ViewModel
+            LaunchedEffect(mainViewModel.chatScreenState.connectionState) { 
                 mainViewModel.chatScreenState.connectionState.collectLatest { isConnected ->
                     logToUi("Estado Conexión VM (MainActivity): ${if (isConnected) "CONECTADO" else "DESCONECTADO"}")
                 }
@@ -183,7 +197,7 @@ class MainActivity : ComponentActivity() {
                         MainScreen(
                             viewModel = mainViewModel, 
                             navController = navController, 
-                            snackbarHostState = snackbarHostState // Pasar snackbarHostState
+                            snackbarHostState = snackbarHostState
                         )
                     }
                     composable(
@@ -226,7 +240,7 @@ class MainActivity : ComponentActivity() {
                                     NotificationHelper.clearAllNotifications(context)
                                     finishAndRemoveTask() 
                                 },
-                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error) // Usar color de error para la acción destructiva
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                             ) {
                                 Text(stringResource(R.string.dialog_exit_confirm_button))
                             }

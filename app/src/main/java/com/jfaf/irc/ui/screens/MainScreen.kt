@@ -1,5 +1,6 @@
 package com.jfaf.irc.ui.screens
 
+import android.util.Log // Asegurarse de que el import está presente
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -14,11 +15,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets // Import WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding // Import imePadding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DividerDefaults
@@ -43,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -67,7 +66,7 @@ import com.jfaf.irc.ui.screens.chat.AppDrawerContent
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun MainScreen(
-    modifier: Modifier = Modifier, // El modifier que se pasa desde MainActivity
+    modifier: Modifier = Modifier, 
     viewModel: MainViewModel = hiltViewModel(),
     navController: NavHostController,
     snackbarHostState: SnackbarHostState
@@ -125,9 +124,9 @@ fun MainScreen(
             }
         }
     ) {
-        Box(modifier = Modifier.fillMaxSize()) { // El modifier de MainScreen se aplica al Box externo
+        Box(modifier = Modifier.fillMaxSize()) { 
             Scaffold(
-                modifier = modifier.imePadding(), // Aplicar imePadding al Scaffold
+                modifier = modifier.imePadding(),
                 containerColor = Color.Transparent,
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 topBar = {
@@ -153,7 +152,9 @@ fun MainScreen(
                                 factory = { context ->
                                     AdView(context).apply {
                                         setAdSize(AdSize.BANNER)
-                                        adUnitId = "ca-app-pub-3940256099942544/6300978111" // TEST BANNER ID
+                                        val currentAdUnitId = "ca-app-pub-3940256099942544/6300978111" // TEST BANNER ID
+                                        adUnitId = currentAdUnitId
+                                        Log.d("AdViewConfig", "AdView adUnitId set to: $currentAdUnitId") // Línea reinsertada
                                         loadAd(AdRequest.Builder().build())
                                     }
                                 },
@@ -162,7 +163,7 @@ fun MainScreen(
                         }
 
                         if (showInputSection) {
-                            if (activeTargetValue!!.startsWith("#")) {
+                            if (activeTargetValue.startsWith("#")) { // Smart cast, no !! needed
                                 MessageInputSection(
                                     modifier = Modifier.fillMaxWidth(),
                                     nickSuggestions = nickSuggestionsState,
@@ -187,11 +188,11 @@ fun MainScreen(
                             }
                         }
                     }
-                },
-            ) { paddingValues -> // paddingValues del Scaffold
+                }
+            ) { paddingValues -> 
                 AnimatedContent(
                     targetState = connectionState,
-                    modifier = Modifier.fillMaxSize().padding(paddingValues), // Aplicar paddingValues aquí
+                    modifier = Modifier.fillMaxSize().padding(paddingValues), 
                     transitionSpec = {
                         if (targetState) {
                             slideInHorizontally { it } + fadeIn() togetherWith slideOutHorizontally { -it } + fadeOut()

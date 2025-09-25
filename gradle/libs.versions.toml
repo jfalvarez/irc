@@ -26,13 +26,15 @@ firebaseCommonKtxVersion = "21.0.0" # (Ej: Mayo 2024)
 firebaseAnalyticsKtxVersion = "22.0.0" # (Ej: Mayo 2024)
 firebaseConfigKtxVersion = "22.0.0"
 firebaseConfig = "23.0.1" # (Ej: Mayo 2024)
+firebaseCrashlyticsKtx = "19.0.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
-firebase-commonKtx = { module = "com.google.firebase:firebase-common-ktx", version.ref = "firebaseCommonKtxVersion" } 
+firebase-commonKtx = { module = "com.google.firebase:firebase-common-ktx", version.ref = "firebaseCommonKtxVersion" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics-ktx", version.ref = "firebaseAnalyticsKtxVersion" }
-firebase-remoteconfig = { module = "com.google.firebase:firebase-config-ktx", version.ref = "firebaseConfigKtxVersion" } # Artefacto es firebase-config-ktx, alias es firebase-remoteconfig
+firebase-remoteconfig = { module = "com.google.firebase:firebase-config-ktx", version.ref = "firebaseConfigKtxVersion" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics-ktx", version.ref = "firebaseCrashlyticsKtx" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -47,6 +49,7 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" } # Añadida librería de iconos extendida
 kitteh-irc-client = { module = "org.kitteh.irc:client-lib", version.ref = "kittehirc" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 # New libraries
