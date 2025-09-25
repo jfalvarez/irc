@@ -101,8 +101,8 @@ fun MainScreen(
                         viewModel.setActiveTarget(it)
                         scope.launch { drawerState.close() }
                     },
-                    onJoinChannelRequest = { scope.launch { drawerState.close() } }, 
-                    onOpenPrivateMessageRequest = { scope.launch { drawerState.close() } }, 
+                    // onJoinChannelRequest = { scope.launch { drawerState.close() } }, // Eliminado
+                    // onOpenPrivateMessageRequest = { scope.launch { drawerState.close() } }, // Eliminado
                     onCloseTargetAction = { viewModel.closeTarget(it) },
                     onSettingsClick = {
                         scope.launch { drawerState.close() }

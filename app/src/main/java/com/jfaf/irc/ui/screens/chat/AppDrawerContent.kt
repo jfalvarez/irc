@@ -13,8 +13,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Forum // Icono para Canales
-import androidx.compose.material.icons.outlined.Person // Icono para Conversaciones
+import androidx.compose.material.icons.outlined.Forum
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,11 +31,80 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jfaf.irc.R
 import com.jfaf.irc.ui.theme.IRCTheme
+
+@Composable
+private fun SectionHeader(
+    title: String,
+    icon: ImageVector,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onToggleExpand() }
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = title, // Consider more specific CD for screen readers if title isn't enough
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+            modifier = Modifier.padding(start = 12.dp, end = 12.dp)
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            imageVector = if (isExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+            contentDescription = if (isExpanded) stringResource(R.string.cd_collapse) else stringResource(R.string.cd_expand),
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+            modifier = Modifier.padding(end = 12.dp)
+        )
+    }
+}
+
+@Composable
+private fun DrawerListItem(
+    target: String,
+    isSelected: Boolean,
+    isUnread: Boolean,
+    onTargetSelected: (String) -> Unit,
+    onCloseTargetAction: (String) -> Unit
+) {
+    val fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal
+    val textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+
+    NavigationDrawerItem(
+        label = { Text(target, fontWeight = fontWeight, color = textColor) },
+        selected = isSelected,
+        onClick = { onTargetSelected(target) },
+        badge = {
+            IconButton(onClick = { onCloseTargetAction(target) }) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ExitToApp,
+                    stringResource(R.string.cd_close_target, target),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
+        },
+        colors = NavigationDrawerItemDefaults.colors(
+            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+            unselectedContainerColor = Color.Transparent,
+        ),
+        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding).padding(start = 16.dp)
+    )
+}
 
 @Composable
 fun AppDrawerContent(
@@ -44,8 +113,8 @@ fun AppDrawerContent(
     unreadTargets: Set<String>,
     currentNick: String,
     onTargetSelected: (String) -> Unit,
-    onJoinChannelRequest: () -> Unit,
-    onOpenPrivateMessageRequest: () -> Unit,
+    // onJoinChannelRequest: () -> Unit, // Eliminado
+    // onOpenPrivateMessageRequest: () -> Unit, // Eliminado
     onCloseTargetAction: (String) -> Unit,
     onSettingsClick: () -> Unit
 ) {
@@ -60,7 +129,7 @@ fun AppDrawerContent(
     var conversationsExpanded by remember { mutableStateOf(true) }
 
     ModalDrawerSheet(drawerContainerColor = IRCTheme.drawerContainerOpaque) {
-        Column(modifier = Modifier.padding(bottom = 8.dp)) { // Added padding to avoid settings sticking to bottom edge
+        Column(modifier = Modifier.padding(bottom = 8.dp)) {
             Text(
                 stringResource(R.string.drawer_title_channels_chats),
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
@@ -80,9 +149,8 @@ fun AppDrawerContent(
                 serverTargetItem?.let { target ->
                     item {
                         val isSelected = target == activeTarget
-                        val iconColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                         NavigationDrawerItem(
-                            icon = { Icon(Icons.Filled.Menu, stringResource(R.string.cd_server), tint = iconColor) },
+                            icon = { Icon(Icons.Filled.Menu, stringResource(R.string.cd_server), tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)) },
                             label = {
                                 Text(
                                     target,
@@ -96,68 +164,31 @@ fun AppDrawerContent(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                                 unselectedContainerColor = Color.Transparent,
                             ),
-                            modifier = Modifier // Removed NavigationDrawerItemDefaults.ItemPadding
+                            modifier = Modifier 
                         )
                     }
                 }
 
-                // Channels Section Header
+                // Channels Section
                 if (channelItems.isNotEmpty()) {
                     item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { channelsExpanded = !channelsExpanded }
-                                .padding(horizontal = 4.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Outlined.Forum,
-                                contentDescription = stringResource(R.string.drawer_section_channels),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                                modifier = Modifier.padding(start = 12.dp, end = 12.dp)
-                            )
-                            Text(
-                                stringResource(R.string.drawer_section_channels),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                                modifier = Modifier.weight(1f)
-                            )
-                            Icon(
-                                imageVector = if (channelsExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                                contentDescription = if (channelsExpanded) stringResource(R.string.cd_collapse) else stringResource(R.string.cd_expand),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                                modifier = Modifier.padding(end = 12.dp)
-                            )
-                        }
+                        SectionHeader(
+                            title = stringResource(R.string.drawer_section_channels),
+                            icon = Icons.Outlined.Forum,
+                            isExpanded = channelsExpanded,
+                            onToggleExpand = { channelsExpanded = !channelsExpanded }
+                        )
                     }
-                    // Channel Items (conditionally visible)
-                    item { // Wrap AnimatedVisibility in an item
-                        AnimatedVisibility(visible = channelsExpanded && channelItems.isNotEmpty()) {
+                    item {
+                        AnimatedVisibility(visible = channelsExpanded) {
                             Column {
                                 channelItems.forEach { target ->
-                                    val isUnread = unreadTargets.contains(target)
-                                    val fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal
-                                    val isSelected = target == activeTarget
-                                    val textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
-                                    NavigationDrawerItem(
-                                        label = { Text(target, fontWeight = fontWeight, color = textColor) },
-                                        selected = isSelected,
-                                        onClick = { onTargetSelected(target) },
-                                        badge = {
-                                            IconButton(onClick = { onCloseTargetAction(target) }) {
-                                                Icon(
-                                                    Icons.AutoMirrored.Filled.ExitToApp,
-                                                    stringResource(R.string.cd_close_target, target),
-                                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                                )
-                                            }
-                                        },
-                                        colors = NavigationDrawerItemDefaults.colors(
-                                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                                            unselectedContainerColor = Color.Transparent,
-                                        ),
-                                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding).padding(start = 16.dp)
+                                    DrawerListItem(
+                                        target = target,
+                                        isSelected = target == activeTarget,
+                                        isUnread = unreadTargets.contains(target),
+                                        onTargetSelected = onTargetSelected,
+                                        onCloseTargetAction = onCloseTargetAction
                                     )
                                 }
                             }
@@ -165,63 +196,26 @@ fun AppDrawerContent(
                     }
                 }
 
-                // Conversations Section Header
+                // Conversations Section
                 if (conversationItems.isNotEmpty()) {
                     item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { conversationsExpanded = !conversationsExpanded }
-                                .padding(horizontal = 4.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Outlined.Person,
-                                contentDescription = stringResource(R.string.drawer_section_conversations),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                                modifier = Modifier.padding(start = 12.dp, end = 12.dp)
-                            )
-                            Text(
-                                stringResource(R.string.drawer_section_conversations),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                                modifier = Modifier.weight(1f)
-                            )
-                            Icon(
-                                imageVector = if (conversationsExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                                contentDescription = if (conversationsExpanded) stringResource(R.string.cd_collapse) else stringResource(R.string.cd_expand),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                                 modifier = Modifier.padding(end = 12.dp)
-                            )
-                        }
+                        SectionHeader(
+                            title = stringResource(R.string.drawer_section_conversations),
+                            icon = Icons.Outlined.Person,
+                            isExpanded = conversationsExpanded,
+                            onToggleExpand = { conversationsExpanded = !conversationsExpanded }
+                        )
                     }
-                    // Conversation Items (conditionally visible)
-                    item { // Wrap AnimatedVisibility in an item
-                        AnimatedVisibility(visible = conversationsExpanded && conversationItems.isNotEmpty()) {
+                    item {
+                        AnimatedVisibility(visible = conversationsExpanded) {
                             Column {
                                 conversationItems.forEach { target ->
-                                    val isUnread = unreadTargets.contains(target)
-                                    val fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal
-                                    val isSelected = target == activeTarget
-                                    val textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
-                                    NavigationDrawerItem(
-                                        label = { Text(target, fontWeight = fontWeight, color = textColor) },
-                                        selected = isSelected,
-                                        onClick = { onTargetSelected(target) },
-                                        badge = {
-                                            IconButton(onClick = { onCloseTargetAction(target) }) {
-                                                Icon(
-                                                    Icons.AutoMirrored.Filled.ExitToApp,
-                                                    stringResource(R.string.cd_close_target, target),
-                                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                                )
-                                            }
-                                        },
-                                        colors = NavigationDrawerItemDefaults.colors(
-                                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                                            unselectedContainerColor = Color.Transparent,
-                                        ),
-                                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding).padding(start = 16.dp)
+                                    DrawerListItem(
+                                        target = target,
+                                        isSelected = target == activeTarget,
+                                        isUnread = unreadTargets.contains(target),
+                                        onTargetSelected = onTargetSelected,
+                                        onCloseTargetAction = onCloseTargetAction
                                     )
                                 }
                             }
@@ -237,7 +231,7 @@ fun AppDrawerContent(
                     Icon(
                         Icons.Filled.Settings,
                         stringResource(R.string.menu_item_settings),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f) 
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                     )
                 },
                 label = {
@@ -246,13 +240,13 @@ fun AppDrawerContent(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                     )
                 },
-                selected = false, 
+                selected = false,
                 onClick = onSettingsClick,
                 colors = NavigationDrawerItemDefaults.colors(
                     selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                     unselectedContainerColor = Color.Transparent,
                 ),
-                modifier = Modifier // Removed NavigationDrawerItemDefaults.ItemPadding
+                modifier = Modifier
             )
         }
     }
