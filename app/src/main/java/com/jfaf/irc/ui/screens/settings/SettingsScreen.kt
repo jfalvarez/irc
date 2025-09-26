@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+// import androidx.compose.foundation.text.KeyboardOptions // No longer needed for NickServ
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -19,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+// import androidx.compose.ui.text.input.KeyboardType // No longer needed for NickServ
+// import androidx.compose.ui.text.input.PasswordVisualTransformation // No longer needed for NickServ
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jfaf.irc.R
@@ -36,6 +39,7 @@ fun SettingsScreen(
     val showModeChanges by viewModel.showModeChanges.collectAsState()
     val showPingPongMessages by viewModel.showPingPongMessages.collectAsState()
     val ignoredUsers by viewModel.ignoredUsers.collectAsState()
+    // val nickServPassword by viewModel.nickServPassword.collectAsState() // Removed
 
     var nickToIgnoreInput by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -60,19 +64,18 @@ fun SettingsScreen(
                 )
             )
         }
-        // Scaffold containerColor will default to MaterialTheme.colorScheme.background (PurpleStart)
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp) 
+                .padding(horizontal = 16.dp)
         ) {
             LazyColumn(modifier = Modifier.fillMaxWidth()){
                 item {
                     Text(
                         text = stringResource(R.string.settings_section_message_preferences),
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onBackground, // Text on PurpleStart
+                        color = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
                 }
@@ -108,16 +111,51 @@ fun SettingsScreen(
                 item {
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant // IRCWhite20
+                        color = MaterialTheme.colorScheme.outlineVariant
                     )
                 }
+
+                // NickServ Password Section - REMOVED
+                // item {
+                //     Text(
+                //         text = stringResource(R.string.settings_section_nickserv_auth),
+                //         style = MaterialTheme.typography.titleMedium,
+                //         color = MaterialTheme.colorScheme.onBackground,
+                //         modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+                //     )
+                // }
+                // item {
+                //     OutlinedTextField(
+                //         value = nickServPassword,
+                //         onValueChange = { viewModel.setNickServPassword(it) },
+                //         label = { Text(stringResource(R.string.settings_label_nickserv_password)) },
+                //         visualTransformation = PasswordVisualTransformation(),
+                //         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                //         singleLine = true,
+                //         modifier = Modifier.fillMaxWidth()
+                //     )
+                // }
+                // item {
+                //     Text(
+                //         text = stringResource(R.string.settings_explanation_nickserv_password),
+                //         style = MaterialTheme.typography.bodySmall,
+                //         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                //         modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                //     )
+                // }
+                // item {
+                //     HorizontalDivider(
+                //         modifier = Modifier.padding(vertical = 16.dp),
+                //         color = MaterialTheme.colorScheme.outlineVariant
+                //     )
+                // }
 
                 item {
                     Text(
                         text = stringResource(R.string.settings_section_ignored_users),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+                        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp) // Adjusted top padding if previous divider was removed
                     )
                 }
 
@@ -134,18 +172,7 @@ fun SettingsScreen(
                             onValueChange = { nickToIgnoreInput = it },
                             label = { Text(stringResource(R.string.settings_ignore_user_dialog_label)) },
                             modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = MaterialTheme.colorScheme.onSurface, // IRCWhite
-                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface, // IRCWhite
-                                cursorColor = MaterialTheme.colorScheme.primary, // PurpleStart
-                                focusedBorderColor = MaterialTheme.colorScheme.primary, // PurpleStart
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline, // IRCWhite60
-                                focusedLabelColor = MaterialTheme.colorScheme.primary, // PurpleStart
-                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant, // IRCWhite (on surfaceVariant)
-                                focusedContainerColor = IRCTheme.outlinedTextFieldContainer, // IRCWhite08
-                                unfocusedContainerColor = IRCTheme.outlinedTextFieldContainer // IRCWhite08
-                            )
+                            singleLine = true
                         )
                         Button(
                             onClick = {
@@ -155,11 +182,7 @@ fun SettingsScreen(
                                     keyboardController?.hide()
                                     focusManager.clearFocus()
                                 } 
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f), // Adjusted color
-                                contentColor = MaterialTheme.colorScheme.onSecondary // IRCWhite
-                            )
+                            }
                         ) {
                             Text(stringResource(R.string.settings_button_add_ignored))
                         }
@@ -201,23 +224,18 @@ private fun SettingRowWithCheckbox(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 8.dp), // Removed horizontal padding, inherited from Column
+            .padding(vertical = 8.dp), 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = text,
-            color = MaterialTheme.colorScheme.onBackground, // Text on PurpleStart
+            color = MaterialTheme.colorScheme.onBackground, 
             modifier = Modifier.weight(1f)
         )
         Checkbox(
             checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = CheckboxDefaults.colors(
-                checkedColor = MaterialTheme.colorScheme.secondary, // BlueEnd for checked
-                uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant, // IRCWhite for unchecked border
-                checkmarkColor = MaterialTheme.colorScheme.onSecondary // IRCWhite for checkmark
-            )
+            onCheckedChange = onCheckedChange
         )
     }
 }
@@ -231,21 +249,17 @@ private fun IgnoredUserRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp), // Removed horizontal padding
+            .padding(vertical = 4.dp), 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = nick, 
-            color = MaterialTheme.colorScheme.onBackground, // Text on PurpleStart
+            color = MaterialTheme.colorScheme.onBackground, 
             modifier = Modifier.weight(1f)
         )
         Button(
-            onClick = onUnignoreClicked,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.7f), // Lighter BlueEnd
-                contentColor = MaterialTheme.colorScheme.onSecondary // IRCWhite
-            )
+            onClick = onUnignoreClicked
         ) {
             Text(stringResource(R.string.settings_button_unignore))
         }

@@ -73,7 +73,6 @@ fun MainScreen(
     snackbarHostState: SnackbarHostState
 ) {
     val connectionState by viewModel.chatScreenState.connectionState.collectAsState()
-    // nicknameInput y useSslInput se mueven a MainScreenScaffoldContent
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -96,7 +95,7 @@ fun MainScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 modifier = modifier.imePadding(),
-                containerColor = Color.Transparent,
+                containerColor = Color.Transparent, // Allows gradient to show through
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 topBar = {
                     if (connectionState) {
@@ -123,7 +122,6 @@ fun MainScreen(
                     paddingValues = paddingValues,
                     connectionState = connectionState,
                     viewModel = viewModel,
-                    // nicknameInput y useSslInput ya no se pasan desde aquí
                     onImageClick = { selectedImageUrlForFullScreen = it }
                 )
             }
@@ -177,7 +175,7 @@ private fun AppDrawerMainContent(
             Text(
                 stringResource(R.string.status_not_connected),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface // On default surface when drawer is open and not connected
             )
         }
     }
@@ -229,12 +227,14 @@ private fun MainScreenBottomBar(
 private fun MainScreenScaffoldContent(
     paddingValues: PaddingValues,
     connectionState: Boolean,
-    viewModel: MainViewModel, // viewModel sigue siendo necesario para .connect
+    viewModel: MainViewModel,
     onImageClick: (String) -> Unit
 ) {
-    // El estado para nickname y useSsl ahora vive aquí
     var nicknameInput by remember { mutableStateOf("") }
     var useSslInput by remember { mutableStateOf(false) }
+    // States for NickServ password and remember preference
+    val nickServPasswordInputState = remember { mutableStateOf("") } 
+    val rememberNickServPasswordInputState = remember { mutableStateOf(false) } // Default to false
 
     AnimatedContent(
         targetState = connectionState,
@@ -256,9 +256,12 @@ private fun MainScreenScaffoldContent(
                 onNicknameChange = { nicknameInput = it },
                 useSsl = useSslInput,
                 onUseSslChange = { useSslInput = it },
-                onConnect = {
-                    if (nicknameInput.isNotBlank()) {
-                        viewModel.connect(nicknameInput, useSslInput)
+                nickServPasswordState = nickServPasswordInputState, // Pass the MutableState
+                rememberNickServPasswordState = rememberNickServPasswordInputState, // Pass the MutableState
+                onConnect = { nick, ssl, nickServPass, rememberPass -> // Updated lambda parameters
+                    if (nick.isNotBlank()) {
+                        // Pass all parameters to the viewModel's connect function
+                        viewModel.connect(nick, ssl, nickServPass, rememberPass)
                     }
                 }
             )
@@ -318,4 +321,3 @@ private fun ConnectedStateView(
         }
     }
 }
-

@@ -54,7 +54,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // --- Nueva preferencia para mensajes PING/PONG ---
     val showPingPongMessages: StateFlow<Boolean> =
         userPreferencesRepository.showPingPongMessagesFlow.stateIn(
             scope = viewModelScope,
@@ -68,7 +67,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // StateFlow for Ignored Users
     val ignoredUsers: StateFlow<Set<String>> =
         userPreferencesRepository.ignoredUsersFlow.stateIn(
             scope = viewModelScope,
@@ -89,4 +87,18 @@ class SettingsViewModel @Inject constructor(
             userPreferencesRepository.removeIgnoredUser(nick)
         }
     }
+
+    // --- NickServ Password Preference (REMOVED) ---
+    // val nickServPassword: StateFlow<String> =
+    //     userPreferencesRepository.nickServPasswordFlow.stateIn(
+    //         scope = viewModelScope,
+    //         started = SharingStarted.WhileSubscribed(5000),
+    //         initialValue = "" // Default to empty string
+    //     )
+
+    // fun setNickServPassword(password: String) {
+    //     viewModelScope.launch {
+    //         userPreferencesRepository.updateNickServPassword(password)
+    //     }
+    // }
 }

@@ -65,14 +65,14 @@ class ChatStateManager @Inject constructor() {
     }
 
     // --- Funciones para añadir mensajes ---
-    fun addSystemMessageToTarget(target: String, text: String) {
+    fun addSystemMessageToTarget(target: String, text: String, isError: Boolean = false) { // Parámetro isError añadido
         val systemMessage = UiChatMessage(
             fullText = text,
             annotatedString = AnnotatedString(text),
-            type = UiMessageType.SYSTEM_MESSAGE
+            type = UiMessageType.SYSTEM_MESSAGE // De momento, isError no cambia el tipo aquí
         )
         appendMessageToTargetInternal(target, systemMessage)
-        Log.d("ChatStateManager", "System message added to '$target': $text")
+        Log.d("ChatStateManager", "System message added to '$target' (isError: $isError): $text")
     }
 
     fun addLocalUiMessageToTarget(target: String, uiMessage: UiChatMessage) {

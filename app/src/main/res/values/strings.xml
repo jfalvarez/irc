@@ -98,4 +98,7 @@
     <string name="cd_expand">Expandir</string>
     <string name="cd_collapse">Colapsar</string>
 
+    <string name="checkbox_label_remember_nickserv_password">Recordar contraseña de NickServ</string>
+    <string name="label_nickserv_password_optional">Contraseña de NickServ (opcional)</string>
+
 </resources>
