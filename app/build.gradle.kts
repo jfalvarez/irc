@@ -11,16 +11,21 @@ plugins {
     id("com.google.firebase.crashlytics") // Plugin de Crashlytics
 }
 
-// Leer el ID de AdMob desde local.properties
+// Leer propiedades desde local.properties
 val localProperties = Properties()
 val localPropertiesFile = project.rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localProperties.load(FileInputStream(localPropertiesFile))
 }
+
 // Asegúrate de que admob.appId en local.properties NO tenga comillas alrededor del valor.
 // Ejemplo en local.properties: admob.appId=ca-app-pub-3940256099942544~3347511713
 val admobAppIdFromLocalProps = localProperties.getProperty("admob.appId", "ca-app-pub-3940256099942544~3347511713") // Default al ID de prueba
 println("ADMOB APP ID FROM GRADLE: '$admobAppIdFromLocalProps'") // Para depuración, puedes quitarlo después
+
+// Obtener las palabras clave del filtro de imagen, o una cadena vacía si no se define
+val imageFilterKeywords = localProperties.getProperty("IMAGE_FILTER_KEYWORDS", "")
+println("IMAGE FILTER KEYWORDS FROM GRADLE: '$imageFilterKeywords'") // Para depuración
 
 android {
     namespace = "com.jfaf.irc"
@@ -34,6 +39,9 @@ android {
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["admobAppId"] = admobAppIdFromLocalProps
+
+        // Exponer IMAGE_FILTER_KEYWORDS como un campo en BuildConfig
+        buildConfigField("String", "IMAGE_FILTER_KEYWORDS", "\"$imageFilterKeywords\"")
     }
 
     buildTypes {
@@ -56,6 +64,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true // Habilitar BuildConfig
     }
     packaging {
         resources {

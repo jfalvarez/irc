@@ -3,6 +3,7 @@ package com.jfaf.irc.ui.viewmodels
 import android.util.Log
 import androidx.compose.ui.text.* // Importación global para androidx.compose.ui.text
 import androidx.compose.ui.text.font.FontWeight
+import com.jfaf.irc.BuildConfig // Import BuildConfig
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import javax.inject.Inject
 
@@ -57,6 +58,14 @@ class IrcMessageHandler @Inject constructor() {
     private val SERVER_TARGET_ID = "Servidor"
     private val maxUiMessagesPerTarget = 150
 
+    private val imageFilterKeywordsSet: Set<String> by lazy {
+        com.jfaf.irc.BuildConfig.IMAGE_FILTER_KEYWORDS
+            .split(',')
+            .map { it.trim().lowercase() }
+            .filter { it.isNotEmpty() }
+            .toSet()
+    }
+
     private fun extractImageUrl(text: String): String? {
         Log.d("extractImageUrl", "Input text: '$text'")
         val urlRegex = "(https|http)://.+?\\.(png|jpg|jpeg|gif|webp)".toRegex()
@@ -64,6 +73,26 @@ class IrcMessageHandler @Inject constructor() {
         Log.d("extractImageUrl", "Regex pattern: '${urlRegex.pattern}'")
         Log.d("extractImageUrl", "Match result: '${matchResult?.value}'")
         return matchResult?.value
+    }
+
+    /**
+     * Determines if an image URL should be considered for download and display.
+     * Checks against a list of keywords defined in BuildConfig (from local.properties).
+     * @param imageUrl The URL of the image.
+     * @return True if the image should be processed, false if it should be filtered out.
+     */
+    private fun shouldAttemptImageDownload(imageUrl: String): Boolean {
+        if (imageFilterKeywordsSet.isEmpty()) { // If no keywords are defined, don't filter
+            return true
+        }
+        val lowerImageUrl = imageUrl.lowercase() // Convert once for efficiency
+        for (keyword in imageFilterKeywordsSet) {
+            if (lowerImageUrl.contains(keyword)) {
+                Log.d("IrcMessageHandler", "Filtered out image URL due to keyword '$keyword': $imageUrl")
+                return false
+            }
+        }
+        return true
     }
 
     private fun ensureServerTargetIsFirst(targets: List<String>): List<String> {
@@ -256,7 +285,12 @@ class IrcMessageHandler @Inject constructor() {
             append(parsedContent)
         }
 
-        val imageUrl = extractImageUrl(content) // Extract from raw content
+        var finalImageUrl: String? = null
+        val extractedUrl = extractImageUrl(content) 
+        if (extractedUrl != null && shouldAttemptImageDownload(extractedUrl)) {
+            finalImageUrl = extractedUrl
+        }
+
         val newUiMsg = UiChatMessage(
             fullText = rawMessageTextForFullText, 
             annotatedString = finalAnnotatedString,
@@ -268,7 +302,7 @@ class IrcMessageHandler @Inject constructor() {
             },
             sender = sender,
             isOwnMessage = currentIsOwn,
-            imageUrl = imageUrl
+            imageUrl = finalImageUrl 
         )
         return FiveTuple(determinedTargetKey, newUiMsg, pmEventNick, updatedChatTargets, updatedUnreadTargets)
     }
@@ -298,13 +332,18 @@ class IrcMessageHandler @Inject constructor() {
             append(parsedContent)
         }
 
-        val imageUrl = extractImageUrl(content)
+        var finalImageUrl: String? = null
+        val extractedUrl = extractImageUrl(content)
+        if (extractedUrl != null && shouldAttemptImageDownload(extractedUrl)) {
+            finalImageUrl = extractedUrl
+        }
+
         val newUiMsg = UiChatMessage(
             fullText = rawMessageTextForFullText, 
             annotatedString = finalAnnotatedString,
             type = UiMessageType.NOTICE, 
             sender = from,
-            imageUrl = imageUrl
+            imageUrl = finalImageUrl 
         )
 
         var updatedUnreadTargets: Set<String>? = null
