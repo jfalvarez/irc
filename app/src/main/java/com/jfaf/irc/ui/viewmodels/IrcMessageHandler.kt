@@ -1,13 +1,16 @@
 package com.jfaf.irc.ui.viewmodels
 
 import android.util.Log
-import androidx.compose.ui.text.* // Importación global para androidx.compose.ui.text
+import androidx.compose.ui.text.* 
 import androidx.compose.ui.text.font.FontWeight
-import com.jfaf.irc.BuildConfig // Import BuildConfig
+import com.jfaf.irc.BuildConfig 
 import com.jfaf.irc.data.model.ParsedIrcMessage
+import java.util.Locale
 import javax.inject.Inject
 
-// Data classes used by IrcMessageHandler
+// Data classes used by IrcMessageHandler (ensure MediaTypeEnum is accessible)
+// Assuming MediaTypeEnum is defined in MainViewModel.kt in the same package or imported.
+
 data class ChatUiSnapshot(
     val currentNickname: String,
     val activeTarget: String?,
@@ -30,7 +33,6 @@ data class ChatUpdateResult(
     val ownNickChangedTo: String? = null
 )
 
-// Nueva clase de datos para JOIN y PART
 data class ChannelEventResult(
     val targetForUiMessage: String?,
     val uiMessageToAdd: UiChatMessage?,
@@ -40,17 +42,15 @@ data class ChannelEventResult(
     val updatedUsersInChannel: Map<String, List<String>> 
 )
 
-// Clase de datos actualizada para NICK
 data class NickChangeInternalResult(
     val newNickname: String?,
     val newActiveTarget: String?,
     val newChatTargets: List<String>,
     val newUnreadTargets: Set<String>,
     val ownNickChanged: Boolean,
-    val updatedUsersInChannel: Map<String, List<String>> // Campo añadido
+    val updatedUsersInChannel: Map<String, List<String>> 
 )
 
-// Mantenemos FiveTuple por si se usa en otro lugar o para PRIVMSG/NOTICE si no necesitan usersInChannel
 data class FiveTuple<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
 
 class IrcMessageHandler @Inject constructor() {
@@ -61,31 +61,47 @@ class IrcMessageHandler @Inject constructor() {
     private val imageFilterKeywordsSet: Set<String> by lazy {
         com.jfaf.irc.BuildConfig.IMAGE_FILTER_KEYWORDS
             .split(',')
-            .map { it.trim().lowercase() }
+            .map { it.trim().lowercase(Locale.getDefault()) }
             .filter { it.isNotEmpty() }
             .toSet()
     }
 
-    private fun extractImageUrl(text: String): String? {
-        Log.d("extractImageUrl", "Input text: '$text'")
-        val urlRegex = "(https|http)://.+?\\.(png|jpg|jpeg|gif|webp)".toRegex()
-        val matchResult = urlRegex.find(text)
-        Log.d("extractImageUrl", "Regex pattern: '${urlRegex.pattern}'")
-        Log.d("extractImageUrl", "Match result: '${matchResult?.value}'")
-        return matchResult?.value
+    private val supportedImageExtensions = setOf("png", "jpg", "jpeg", "gif", "webp")
+    private val supportedVideoExtensions = setOf("webm") // Can add "mp4" etc. later
+    private val generalUrlRegex = "(https?://[^\\s]+)".toRegex() // Corrected regex
+
+    private fun extractAndClassifyMediaUrl(text: String): Pair<String?, MediaTypeEnum> {
+        val matchResult = generalUrlRegex.find(text)
+        val url = matchResult?.value
+        if (url != null) {
+            try {
+                val uri = android.net.Uri.parse(url)
+                val path = uri.path
+                if (path != null) {
+                    val extension = path.substringAfterLast('.', "").lowercase(Locale.getDefault())
+                    if (supportedImageExtensions.contains(extension)) {
+                        Log.d("MediaExtract", "Found image URL: $url (ext: $extension)")
+                        return Pair(url, MediaTypeEnum.IMAGE)
+                    }
+                    if (supportedVideoExtensions.contains(extension)) {
+                        Log.d("MediaExtract", "Found video URL: $url (ext: $extension)")
+                        return Pair(url, MediaTypeEnum.VIDEO)
+                    }
+                    Log.d("MediaExtract", "URL found but unsupported extension: $url (ext: $extension)")
+                }
+            } catch (e: Exception) {
+                Log.e("MediaExtract", "Error parsing URL: $url", e)
+                return Pair(null, MediaTypeEnum.NONE) 
+            }
+        }
+        return Pair(null, MediaTypeEnum.NONE)
     }
 
-    /**
-     * Determines if an image URL should be considered for download and display.
-     * Checks against a list of keywords defined in BuildConfig (from local.properties).
-     * @param imageUrl The URL of the image.
-     * @return True if the image should be processed, false if it should be filtered out.
-     */
     private fun shouldAttemptImageDownload(imageUrl: String): Boolean {
-        if (imageFilterKeywordsSet.isEmpty()) { // If no keywords are defined, don't filter
+        if (imageFilterKeywordsSet.isEmpty()) { 
             return true
         }
-        val lowerImageUrl = imageUrl.lowercase() // Convert once for efficiency
+        val lowerImageUrl = imageUrl.lowercase(Locale.getDefault())
         for (keyword in imageFilterKeywordsSet) {
             if (lowerImageUrl.contains(keyword)) {
                 Log.d("IrcMessageHandler", "Filtered out image URL due to keyword '$keyword': $imageUrl")
@@ -105,7 +121,7 @@ class IrcMessageHandler @Inject constructor() {
         message: UiChatMessage,
         currentMessages: MutableMap<String, List<UiChatMessage>>
     ) {
-        Log.d("IrcMessageHandler.AddMsg", "Target: '$target', Msg: '${message.fullText}', Annotated: '${message.annotatedString}', Img: ${message.imageUrl}, List size before: ${currentMessages[target]?.size ?: 0}")
+        Log.d("IrcMessageHandler.AddMsg", "Target: '$target', Msg: '${message.fullText}', Media: ${message.mediaUrl} (${message.mediaType}), List size before: ${currentMessages[target]?.size ?: 0}")
         val currentMessagesForTarget = currentMessages[target] ?: emptyList()
         val updatedMessagesForTarget = (currentMessagesForTarget + message).takeLast(maxUiMessagesPerTarget)
         currentMessages[target] = updatedMessagesForTarget
@@ -277,7 +293,7 @@ class IrcMessageHandler @Inject constructor() {
         }
         
         val parsedContent = MircColorParser.parse(content)
-        val senderDisplay = sender ?: currentNickname // Fallback for sender display
+        val senderDisplay = sender ?: currentNickname 
         val finalAnnotatedString = buildAnnotatedString {
             withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                 append("<$senderDisplay> ")
@@ -285,10 +301,24 @@ class IrcMessageHandler @Inject constructor() {
             append(parsedContent)
         }
 
-        var finalImageUrl: String? = null
-        val extractedUrl = extractImageUrl(content) 
-        if (extractedUrl != null && shouldAttemptImageDownload(extractedUrl)) {
-            finalImageUrl = extractedUrl
+        var finalMediaUrl: String? = null
+        var finalMediaType: MediaTypeEnum = MediaTypeEnum.NONE
+        val (extractedUrl, mediaType) = extractAndClassifyMediaUrl(content)
+
+        if (extractedUrl != null) {
+            when (mediaType) {
+                MediaTypeEnum.IMAGE -> {
+                    if (shouldAttemptImageDownload(extractedUrl)) {
+                        finalMediaUrl = extractedUrl
+                        finalMediaType = MediaTypeEnum.IMAGE
+                    }
+                }
+                MediaTypeEnum.VIDEO -> {
+                    finalMediaUrl = extractedUrl // No specific filter for videos yet
+                    finalMediaType = MediaTypeEnum.VIDEO
+                }
+                MediaTypeEnum.NONE -> { /* Do nothing */ }
+            }
         }
 
         val newUiMsg = UiChatMessage(
@@ -302,7 +332,8 @@ class IrcMessageHandler @Inject constructor() {
             },
             sender = sender,
             isOwnMessage = currentIsOwn,
-            imageUrl = finalImageUrl 
+            mediaUrl = finalMediaUrl, 
+            mediaType = finalMediaType 
         )
         return FiveTuple(determinedTargetKey, newUiMsg, pmEventNick, updatedChatTargets, updatedUnreadTargets)
     }
@@ -332,10 +363,24 @@ class IrcMessageHandler @Inject constructor() {
             append(parsedContent)
         }
 
-        var finalImageUrl: String? = null
-        val extractedUrl = extractImageUrl(content)
-        if (extractedUrl != null && shouldAttemptImageDownload(extractedUrl)) {
-            finalImageUrl = extractedUrl
+        var finalMediaUrl: String? = null
+        var finalMediaType: MediaTypeEnum = MediaTypeEnum.NONE
+        val (extractedUrl, mediaType) = extractAndClassifyMediaUrl(content)
+
+        if (extractedUrl != null) {
+            when (mediaType) {
+                MediaTypeEnum.IMAGE -> {
+                    if (shouldAttemptImageDownload(extractedUrl)) {
+                        finalMediaUrl = extractedUrl
+                        finalMediaType = MediaTypeEnum.IMAGE
+                    }
+                }
+                MediaTypeEnum.VIDEO -> {
+                    finalMediaUrl = extractedUrl // No specific filter for videos yet
+                    finalMediaType = MediaTypeEnum.VIDEO
+                }
+                MediaTypeEnum.NONE -> { /* Do nothing */ }
+            }
         }
 
         val newUiMsg = UiChatMessage(
@@ -343,7 +388,8 @@ class IrcMessageHandler @Inject constructor() {
             annotatedString = finalAnnotatedString,
             type = UiMessageType.NOTICE, 
             sender = from,
-            imageUrl = finalImageUrl 
+            mediaUrl = finalMediaUrl, 
+            mediaType = finalMediaType 
         )
 
         var updatedUnreadTargets: Set<String>? = null
@@ -376,7 +422,7 @@ class IrcMessageHandler @Inject constructor() {
         val currentChannelUsers = mutableUsersMap[channel]?.toMutableList() ?: mutableListOf()
         if (!currentChannelUsers.any { it.equals(userJoining, ignoreCase = true) }) {
             currentChannelUsers.add(userJoining)
-            mutableUsersMap[channel] = currentChannelUsers.distinctBy { it.lowercase() }.sortedWith(String.CASE_INSENSITIVE_ORDER)
+            mutableUsersMap[channel] = currentChannelUsers.distinctBy { it.lowercase(Locale.getDefault()) }.sortedWith(String.CASE_INSENSITIVE_ORDER)
         }
 
         if (userJoining.equals(currentNickname, ignoreCase = true)) {
@@ -389,7 +435,7 @@ class IrcMessageHandler @Inject constructor() {
             }
         }
         val messageText = "* $userJoining ha entrado a $channel"
-        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), UiMessageType.JOIN_PART_QUIT, userJoining)
+        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.JOIN_PART_QUIT, sender = userJoining)
         return ChannelEventResult(channel, newUiMsg, newActiveTarget, updatedChatTargets, updatedUnreadTargets, mutableUsersMap.toMap())
     }
 
@@ -429,7 +475,7 @@ class IrcMessageHandler @Inject constructor() {
         val reasonMsgContent = reasonPart?.let { if (it.startsWith(":")) it.substring(1) else it } ?: ""
         val reasonMsg = if (reasonMsgContent.isNotBlank()) " ($reasonMsgContent)" else ""
         val messageText = "* $userParting ha salido de $channelName$reasonMsg"
-        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), UiMessageType.JOIN_PART_QUIT, userParting)
+        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.JOIN_PART_QUIT, sender = userParting)
 
         if (userParting.equals(currentNickname, ignoreCase = true)) {
             if (currentChatTargets.any { it.equals(channelName, ignoreCase = true) }) {
@@ -455,7 +501,7 @@ class IrcMessageHandler @Inject constructor() {
         val trailing = parsedMessage.trailing
         val reason = trailing?.let { " ($it)" } ?: ""
         val quitMessageText = "* ${userQuitting ?: "Alguien"} ha salido del IRC$reason"
-        val quitMessage = UiChatMessage(quitMessageText, annotatedString = AnnotatedString(quitMessageText), UiMessageType.JOIN_PART_QUIT, userQuitting)
+        val quitMessage = UiChatMessage(quitMessageText, annotatedString = AnnotatedString(quitMessageText), type = UiMessageType.JOIN_PART_QUIT, sender = userQuitting)
         
         val mutableUsersMap = currentUsersInChannel.toMutableMap()
         if (userQuitting != null) {
@@ -505,12 +551,12 @@ class IrcMessageHandler @Inject constructor() {
             if (channelUsers != null && channelUsers.any { it.equals(oldNick, ignoreCase = false) }) {
                 channelUsers.removeIf { it.equals(oldNick, ignoreCase = false) }
                 channelUsers.add(newNick)
-                mutableUsersMap[channel] = channelUsers.distinctBy { it.lowercase() }.sortedWith(String.CASE_INSENSITIVE_ORDER)
+                mutableUsersMap[channel] = channelUsers.distinctBy { it.lowercase(Locale.getDefault()) }.sortedWith(String.CASE_INSENSITIVE_ORDER)
             }
         }
 
         val messageText = "* $oldNick ahora es conocido como $newNick"
-        val nickChangeMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), UiMessageType.NICK_CHANGE, oldNick)
+        val nickChangeMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.NICK_CHANGE, sender = oldNick)
         
         val currentMessageKeys = allMessages.keys.toList()
         for (target in currentMessageKeys) {
@@ -572,7 +618,7 @@ class IrcMessageHandler @Inject constructor() {
         val by = sender ?: parsedMessage.prefix ?: "Server"
         val modes = params.drop(1).joinToString(" ") + (trailing?.let { " :$it" } ?: "")
         val messageText = "* $by establece modo $modes en $determinedTargetKey"
-        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), UiMessageType.MODE_CHANGE, by)
+        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.MODE_CHANGE, sender = by)
         return Pair(determinedTargetKey, newUiMsg)
     }
 
@@ -602,7 +648,7 @@ class IrcMessageHandler @Inject constructor() {
             }
             append(annotatedContent)
         }
-        val uiMsg = UiChatMessage(messageText, annotatedString = finalAnnotatedString, UiMessageType.SERVER_INFO, parsedMessage.prefix ?: "Server")
+        val uiMsg = UiChatMessage(messageText, annotatedString = finalAnnotatedString, type = UiMessageType.SERVER_INFO, sender = parsedMessage.prefix ?: "Server")
         return Triple(targetKey, uiMsg, newNickname)
     }
 
@@ -641,7 +687,7 @@ class IrcMessageHandler @Inject constructor() {
             }
             append(annotatedContent)
         }
-        val uiMsg = UiChatMessage(errorMessageText, annotatedString = finalAnnotatedString, UiMessageType.SERVER_INFO, parsedMessage.prefix ?: "Server")
+        val uiMsg = UiChatMessage(errorMessageText, annotatedString = finalAnnotatedString, type = UiMessageType.SERVER_INFO, sender = parsedMessage.prefix ?: "Server")
         return Pair(targetKey, uiMsg)
     }
 
@@ -657,8 +703,8 @@ class IrcMessageHandler @Inject constructor() {
         val targetKey = activeTarget ?: SERVER_TARGET_ID
         val fullOriginalText = "${prefix?.let { ":$it " } ?: ""}$command ${params.joinToString(" ")}${trailing?.let { " :$it" } ?: ""}"
         val uiMsg = UiChatMessage(
-            fullText = "[${command.uppercase()}] $fullOriginalText", 
-            annotatedString = AnnotatedString("[${command.uppercase()}] $fullOriginalText"), 
+            fullText = "[${command.uppercase(Locale.getDefault())}] $fullOriginalText", 
+            annotatedString = AnnotatedString("[${command.uppercase(Locale.getDefault())}] $fullOriginalText"), 
             type = UiMessageType.OTHER_COMMAND, 
             sender = prefix
         )
@@ -682,8 +728,6 @@ class IrcMessageHandler @Inject constructor() {
         val namesList = namesString.trim().split(" ")
             .map { nickWithPrefix ->
                 var cleanNick = nickWithPrefix
-                if (cleanNick.startsWith("@") || cleanNick.startsWith("+") || cleanNick.startsWith("%") || cleanNick.startsWith("&") || cleanNick.startsWith("~")) {
-                }
                 cleanNick
             }
             .filter { it.isNotBlank() }
@@ -696,14 +740,14 @@ class IrcMessageHandler @Inject constructor() {
                 existingNames.add(newName)
             }
         }
-        updatedUsersMap[channel] = existingNames.distinctBy { it.lowercase() }
+        updatedUsersMap[channel] = existingNames.distinctBy { it.lowercase(Locale.getDefault()) }
             .sortedWith(compareBy<String> {
                 when {
                     it.startsWith("@") -> 0 
                     it.startsWith("+") -> 1 
                     else -> 2 
                 }
-            }.thenBy { it.lowercase() })
+            }.thenBy { it.lowercase(Locale.getDefault()) })
         
         return Triple(null, null, updatedUsersMap.toMap())
     }

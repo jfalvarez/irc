@@ -56,12 +56,13 @@ import com.jfaf.irc.R
 import com.jfaf.irc.ui.screens.chat.AppDrawerContent
 import com.jfaf.irc.ui.screens.chat.ChannelUserListView
 import com.jfaf.irc.ui.screens.chat.ChatTopAppBar
-import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer
+import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer // Will modify this soon
 import com.jfaf.irc.ui.screens.chat.MessageInputSection
 import com.jfaf.irc.ui.screens.chat.MessagesList
 import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
+import com.jfaf.irc.ui.viewmodels.MediaTypeEnum // Import MediaTypeEnum
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
@@ -76,7 +77,8 @@ fun MainScreen(
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var selectedImageUrlForFullScreen by remember { mutableStateOf<String?>(null) }
+    // Changed from selectedImageUrlForFullScreen to selectedMediaForFullScreen
+    var selectedMediaForFullScreen by remember { mutableStateOf<Pair<String, MediaTypeEnum>?>(null) }
 
     LaunchedEffect(connectionState) {
         if (connectionState && drawerState.currentValue == DrawerValue.Open) {
@@ -122,18 +124,22 @@ fun MainScreen(
                     paddingValues = paddingValues,
                     connectionState = connectionState,
                     viewModel = viewModel,
-                    onImageClick = { selectedImageUrlForFullScreen = it }
+                    // Updated lambda to pass mediaUrl and mediaType
+                    onMediaClick = { mediaUrl, mediaType -> 
+                        selectedMediaForFullScreen = Pair(mediaUrl, mediaType) 
+                    }
                 )
             }
             AnimatedVisibility(
-                visible = selectedImageUrlForFullScreen != null,
+                visible = selectedMediaForFullScreen != null, // Condition uses new state variable
                 enter = fadeIn(animationSpec = tween(150)),
                 exit = fadeOut(animationSpec = tween(150))
             ) {
-                selectedImageUrlForFullScreen?.let {
-                    FullScreenImageViewer(
-                        imageUrl = it,
-                        onClose = { selectedImageUrlForFullScreen = null }
+                selectedMediaForFullScreen?.let { (mediaUrl, mediaType) ->
+                    FullScreenImageViewer( // Will be adapted to handle mediaType
+                        mediaUrl = mediaUrl,
+                        mediaType = mediaType, // Pass mediaType
+                        onClose = { selectedMediaForFullScreen = null }
                     )
                 }
             }
@@ -175,7 +181,7 @@ private fun AppDrawerMainContent(
             Text(
                 stringResource(R.string.status_not_connected),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface // On default surface when drawer is open and not connected
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -228,13 +234,12 @@ private fun MainScreenScaffoldContent(
     paddingValues: PaddingValues,
     connectionState: Boolean,
     viewModel: MainViewModel,
-    onImageClick: (String) -> Unit
+    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit // Changed from onImageClick
 ) {
     var nicknameInput by remember { mutableStateOf("") }
     var useSslInput by remember { mutableStateOf(false) }
-    // States for NickServ password and remember preference
     val nickServPasswordInputState = remember { mutableStateOf("") } 
-    val rememberNickServPasswordInputState = remember { mutableStateOf(false) } // Default to false
+    val rememberNickServPasswordInputState = remember { mutableStateOf(false) } 
 
     AnimatedContent(
         targetState = connectionState,
@@ -256,17 +261,17 @@ private fun MainScreenScaffoldContent(
                 onNicknameChange = { nicknameInput = it },
                 useSsl = useSslInput,
                 onUseSslChange = { useSslInput = it },
-                nickServPasswordState = nickServPasswordInputState, // Pass the MutableState
-                rememberNickServPasswordState = rememberNickServPasswordInputState, // Pass the MutableState
-                onConnect = { nick, ssl, nickServPass, rememberPass -> // Updated lambda parameters
+                nickServPasswordState = nickServPasswordInputState, 
+                rememberNickServPasswordState = rememberNickServPasswordInputState, 
+                onConnect = { nick, ssl, nickServPass, rememberPass -> 
                     if (nick.isNotBlank()) {
-                        // Pass all parameters to the viewModel's connect function
                         viewModel.connect(nick, ssl, nickServPass, rememberPass)
                     }
                 }
             )
         } else {
-            ConnectedStateView(viewModel = viewModel, onImageClick = onImageClick)
+            // Pass the new onMediaClick lambda
+            ConnectedStateView(viewModel = viewModel, onMediaClick = onMediaClick)
         }
     }
 }
@@ -274,7 +279,7 @@ private fun MainScreenScaffoldContent(
 @Composable
 private fun ConnectedStateView(
     viewModel: MainViewModel,
-    onImageClick: (String) -> Unit
+    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit // Changed from onImageClick
 ) {
     val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
     val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
@@ -290,7 +295,7 @@ private fun ConnectedStateView(
             if (activeTarget != null) {
                 MessagesList(
                     messages = messages,
-                    onImageClick = onImageClick
+                    onMediaClick = onMediaClick // Pass the new lambda
                 )
             } else {
                 Column(

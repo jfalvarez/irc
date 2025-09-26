@@ -37,13 +37,20 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class MediaTypeEnum {
+    IMAGE,
+    VIDEO,
+    NONE
+}
+
 data class UiChatMessage(
     val fullText: String, 
     val annotatedString: AnnotatedString? = null, 
     val type: UiMessageType,
     val sender: String? = null,
     val isOwnMessage: Boolean = false,
-    val imageUrl: String? = null
+    val mediaUrl: String? = null, // Replaced imageUrl
+    val mediaType: MediaTypeEnum = MediaTypeEnum.NONE // Added mediaType
 )
 
 enum class UiMessageType {
@@ -243,8 +250,6 @@ class MainViewModel @Inject constructor(
         Log.d("MainViewModel", "PM Event for '$nick' being emitted via _incomingPrivateMessageEvent.")
         _incomingPrivateMessageEvent.tryEmit(nick)
     }
-
-    // isConnected() method removed as it's no longer part of ChatEventListener
 
     fun toggleUserListVisibility() {
         chatStateManager.toggleUserListVisibility()

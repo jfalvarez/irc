@@ -74,6 +74,7 @@
     <string name="cd_toggle_user_list">Mostrar/ocultar lista de usuarios</string>
     <string name="cd_full_screen_image">Imagen a pantalla completa</string>
     <string name="error_loading_image">Error al cargar la imagen</string>
+    <string name="error_unsupported_media">Tipo de medio no soportado o enlace inválido.</string>
     <!-- ... tus otros strings ... -->
     <string name="no_users_in_channel">No hay usuarios en este canal o la lista aún no se ha cargado.</string>
     <string name="cd_user_options">Opciones para %s</string>

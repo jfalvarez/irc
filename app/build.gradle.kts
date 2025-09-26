@@ -87,9 +87,13 @@ dependencies {
     implementation(libs.androidx.material.icons.extended) 
     implementation(libs.guava)
     implementation(libs.coil.compose)
+    implementation("io.coil-kt:coil-gif:2.7.0")
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.hilt.android)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
+
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.navigation.compose)
