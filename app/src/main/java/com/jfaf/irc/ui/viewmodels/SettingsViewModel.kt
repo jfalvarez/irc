@@ -67,6 +67,21 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    // --- Preferencia para Previsualizaciones de Medios ---
+    val showMediaPreviews: StateFlow<Boolean> =
+        userPreferencesRepository.showMediaPreviewsFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true // Coincide con el predeterminado en el repositorio
+        )
+
+    fun setShowMediaPreviews(show: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.updateShowMediaPreviews(show)
+        }
+    }
+    // --- Fin Preferencia para Previsualizaciones de Medios ---
+
     val ignoredUsers: StateFlow<Set<String>> =
         userPreferencesRepository.ignoredUsersFlow.stateIn(
             scope = viewModelScope,

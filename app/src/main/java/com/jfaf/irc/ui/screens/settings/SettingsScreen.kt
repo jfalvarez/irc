@@ -38,8 +38,8 @@ fun SettingsScreen(
     val showNickChanges by viewModel.showNickChanges.collectAsState()
     val showModeChanges by viewModel.showModeChanges.collectAsState()
     val showPingPongMessages by viewModel.showPingPongMessages.collectAsState()
+    val showMediaPreviews by viewModel.showMediaPreviews.collectAsState() // Nueva preferencia
     val ignoredUsers by viewModel.ignoredUsers.collectAsState()
-    // val nickServPassword by viewModel.nickServPassword.collectAsState() // Removed
 
     var nickToIgnoreInput by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -107,6 +107,13 @@ fun SettingsScreen(
                         onCheckedChange = { viewModel.setShowPingPongMessages(it) }
                     )
                 }
+                item { // Nueva opción para previsualizaciones de medios
+                    SettingRowWithCheckbox(
+                        text = stringResource(R.string.settings_option_show_media_previews),
+                        checked = showMediaPreviews,
+                        onCheckedChange = { viewModel.setShowMediaPreviews(it) }
+                    )
+                }
 
                 item {
                     HorizontalDivider(
@@ -115,47 +122,12 @@ fun SettingsScreen(
                     )
                 }
 
-                // NickServ Password Section - REMOVED
-                // item {
-                //     Text(
-                //         text = stringResource(R.string.settings_section_nickserv_auth),
-                //         style = MaterialTheme.typography.titleMedium,
-                //         color = MaterialTheme.colorScheme.onBackground,
-                //         modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
-                //     )
-                // }
-                // item {
-                //     OutlinedTextField(
-                //         value = nickServPassword,
-                //         onValueChange = { viewModel.setNickServPassword(it) },
-                //         label = { Text(stringResource(R.string.settings_label_nickserv_password)) },
-                //         visualTransformation = PasswordVisualTransformation(),
-                //         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                //         singleLine = true,
-                //         modifier = Modifier.fillMaxWidth()
-                //     )
-                // }
-                // item {
-                //     Text(
-                //         text = stringResource(R.string.settings_explanation_nickserv_password),
-                //         style = MaterialTheme.typography.bodySmall,
-                //         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                //         modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
-                //     )
-                // }
-                // item {
-                //     HorizontalDivider(
-                //         modifier = Modifier.padding(vertical = 16.dp),
-                //         color = MaterialTheme.colorScheme.outlineVariant
-                //     )
-                // }
-
                 item {
                     Text(
                         text = stringResource(R.string.settings_section_ignored_users),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp) // Adjusted top padding if previous divider was removed
+                        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp) 
                     )
                 }
 

@@ -281,6 +281,7 @@ private fun ConnectedStateView(
     val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
     val messages by viewModel.chatScreenState.uiMessages.collectAsState()
     val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
+    val showMediaPreviews by viewModel.chatScreenState.showMediaPreviews.collectAsState() // Obtener el estado de la preferencia
 
     val currentTargetIsChannel = activeTarget?.startsWith("#") == true
     val shouldShowUserListComposite = showUserListState && currentTargetIsChannel
@@ -293,11 +294,12 @@ private fun ConnectedStateView(
         MessagesList(
             messages = messages,
             onMediaClick = onMediaClick, 
-            modifier = Modifier.weight(if (shouldShowUserListComposite) 0.6f else 1f) // Use composite state for weight
+            modifier = Modifier.weight(if (shouldShowUserListComposite) 0.6f else 1f),
+            showMediaPreviews = showMediaPreviews // Pasar el estado a MessagesList
         )
 
         AnimatedVisibility(
-            visible = shouldShowUserListComposite, // Use composite state for visibility
+            visible = shouldShowUserListComposite, 
             modifier = Modifier.weight(0.4f) 
         ) {
             Row {

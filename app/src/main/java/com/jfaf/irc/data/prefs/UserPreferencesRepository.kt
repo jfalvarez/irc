@@ -6,7 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.stringPreferencesKey // Import for stringPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey 
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -25,16 +25,38 @@ class UserPreferencesRepository @Inject constructor(
         private const val SHOW_MODE_CHANGES_KEY_NAME = "show_mode_changes"
         private const val SHOW_PING_PONG_KEY_NAME = "show_ping_pong_messages"
         private const val IGNORED_USERS_NICKS_KEY_NAME = "ignored_users_nicks"
-        private const val NICKSERV_PASSWORD_KEY_NAME = "nickserv_password" // Key for NickServ password
+        private const val NICKSERV_PASSWORD_KEY_NAME = "nickserv_password"
+        private const val SHOW_MEDIA_PREVIEWS_KEY_NAME = "show_media_previews" // Nueva clave
 
         val SHOW_JOIN_PART_QUIT = booleanPreferencesKey(SHOW_JOIN_PART_QUIT_KEY_NAME)
         val SHOW_NICK_CHANGES = booleanPreferencesKey(SHOW_NICK_CHANGES_KEY_NAME)
         val SHOW_MODE_CHANGES = booleanPreferencesKey(SHOW_MODE_CHANGES_KEY_NAME)
         val SHOW_PING_PONG_MESSAGES = booleanPreferencesKey(SHOW_PING_PONG_KEY_NAME)
         val IGNORED_USERS_NICKS = stringSetPreferencesKey(IGNORED_USERS_NICKS_KEY_NAME)
-        val NICKSERV_PASSWORD = stringPreferencesKey(NICKSERV_PASSWORD_KEY_NAME) // Preferences key for NickServ password
+        val NICKSERV_PASSWORD = stringPreferencesKey(NICKSERV_PASSWORD_KEY_NAME) 
+        val SHOW_MEDIA_PREVIEWS = booleanPreferencesKey(SHOW_MEDIA_PREVIEWS_KEY_NAME) // Nueva Preferences.Key
 
         const val TAG = "UserPrefsRepository"
+    }
+
+    // --- Flujo y función para previsualizaciones de medios ---
+    val showMediaPreviewsFlow: Flow<Boolean> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                Log.e(TAG, "Error reading SHOW_MEDIA_PREVIEWS preferences.", exception)
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[SHOW_MEDIA_PREVIEWS] ?: true // Predeterminado a true
+        }
+
+    suspend fun updateShowMediaPreviews(show: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[SHOW_MEDIA_PREVIEWS] = show
+        }
     }
 
     // --- Flujos y funciones para preferencias existentes ---

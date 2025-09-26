@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.MaterialTheme
+// import androidx.compose.material3.Text // No longer needed for placeholder
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
+// import androidx.compose.ui.res.stringResource // No longer needed for placeholder text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -23,13 +25,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+// import com.jfaf.irc.R // No longer needed for string resources of placeholder
 import com.jfaf.irc.ui.chat.MediaPreview 
-import com.jfaf.irc.ui.viewmodels.MediaTypeEnum // Import MediaTypeEnum
+import com.jfaf.irc.ui.viewmodels.MediaTypeEnum
 import com.jfaf.irc.ui.viewmodels.UiChatMessage
 import com.jfaf.irc.ui.viewmodels.UiMessageType
 
 @Composable
-fun MessageRow(message: UiChatMessage, onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit) {
+fun MessageRow(
+    message: UiChatMessage, 
+    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit,
+    showMediaPreviews: Boolean 
+) {
     val baseTextColor = when (message.type) {
         UiMessageType.SYSTEM_MESSAGE, UiMessageType.JOIN_PART_QUIT, UiMessageType.NICK_CHANGE, UiMessageType.MODE_CHANGE -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
         UiMessageType.SERVER_INFO -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
@@ -61,10 +68,12 @@ fun MessageRow(message: UiChatMessage, onMediaClick: (mediaUrl: String, mediaTyp
             if (url != null) {
                 val startIndex = matcher.start()
                 val endIndex = matcher.end()
-                if (url != message.mediaUrl) { 
+                // Ensure we don't underline the mediaUrl if it's also a general web URL
+                // (MediaPreview itself handles the click for the media URL)
+                if (url != message.mediaUrl || !showMediaPreviews) { 
                     addStyle(
                         style = SpanStyle(
-                            color = Color.White, 
+                            color = Color.White, // Consider MaterialTheme.colorScheme.primary for theming
                             textDecoration = TextDecoration.Underline
                         ),
                         start = startIndex,
@@ -97,20 +106,21 @@ fun MessageRow(message: UiChatMessage, onMediaClick: (mediaUrl: String, mediaTyp
             }
         )
         
-        if (!message.mediaUrl.isNullOrBlank()) {
+        if (!message.mediaUrl.isNullOrBlank() && showMediaPreviews) {
             Spacer(modifier = Modifier.height(4.dp))
             MediaPreview(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp) 
                     .clickable { 
-                        message.mediaUrl?.let { mediaUrl -> // Ensure mediaUrl is not null
-                            onMediaClick(mediaUrl, message.mediaType) // Pass mediaType as well
+                        message.mediaUrl?.let { mediaUrl -> 
+                            onMediaClick(mediaUrl, message.mediaType) 
                         } 
                     },
                 mediaUrl = message.mediaUrl,
                 mediaType = message.mediaType
             )
-        }
+        } 
+        // No 'else' block, so no placeholder text if showMediaPreviews is false
     }
 }

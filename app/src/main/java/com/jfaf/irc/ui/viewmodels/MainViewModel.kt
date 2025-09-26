@@ -78,7 +78,8 @@ data class ChatScreenState(
     val usersInChannel: StateFlow<Map<String, List<String>>>,
     val currentChannelUserList: StateFlow<List<String>>,
     val showUserList: StateFlow<Boolean>,
-    val nickSuggestions: StateFlow<List<String>>
+    val nickSuggestions: StateFlow<List<String>>,
+    val showMediaPreviews: StateFlow<Boolean> // Nueva preferencia para UI
 )
 
 @HiltViewModel
@@ -142,6 +143,13 @@ class MainViewModel @Inject constructor(
         userPreferencesRepository.showModeChangesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     private val ignoredUsersPref: StateFlow<Set<String>> = 
         userPreferencesRepository.ignoredUsersFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+    // Preferencia para mostrar previsualizaciones de medios
+    private val showMediaPreviewsPref: StateFlow<Boolean> =
+        userPreferencesRepository.showMediaPreviewsFlow.stateIn(
+            viewModelScope, 
+            SharingStarted.WhileSubscribed(5000), 
+            true // Coincide con el valor por defecto en el UserPreferencesRepository
+        )
 
     private fun shouldDisplayMessage(message: UiChatMessage, filterContext: UiMessagesFilterContext): Boolean {
         if (message.sender != null &&
@@ -211,7 +219,8 @@ class MainViewModel @Inject constructor(
         usersInChannel = chatStateManager.usersInChannel,
         currentChannelUserList = currentChannelUserListState,
         showUserList = chatStateManager.showUserList,
-        nickSuggestions = _nickSuggestions.asStateFlow()
+        nickSuggestions = _nickSuggestions.asStateFlow(),
+        showMediaPreviews = showMediaPreviewsPref // Pasar la nueva preferencia
     )
 
     init {
