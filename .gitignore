@@ -19,3 +19,6 @@ appInsightsSettings.xml
 
 # Google Services file
 google-services.json
+
+# Ignore all contents of .idea directory
+/.idea/
