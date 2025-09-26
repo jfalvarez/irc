@@ -112,6 +112,10 @@ class ChatStateManager @Inject constructor() {
             Log.w("ChatStateManager", "Attempt to activate non-existent target: $targetName. Current targets: ${_chatTargets.value.joinToString()}")
             _activeTarget.value = _chatTargets.value.firstOrNull() ?: SERVER_TARGET_ID
         }
+        if (_showUserList.value) { // If the list is currently shown, hide it
+            _showUserList.value = false
+            Log.d("ChatStateManager", "User list hidden due to active target change/selection.")
+        }
     }
 
     fun openPrivateMessageTarget(nick: String, currentOwnNickname: String) {
@@ -132,6 +136,10 @@ class ChatStateManager @Inject constructor() {
         _activeTarget.value = nick
         _unreadTargets.update { it - nick }
         Log.d("ChatStateManager", "PM Target opened/activated: '$nick'")
+        if (_showUserList.value) { // If the list is currently shown, hide it
+            _showUserList.value = false
+            Log.d("ChatStateManager", "User list hidden due to PM target opening.")
+        }
     }
 
     fun ensurePmTargetExists(nick: String, currentOwnNickname: String): Boolean {
@@ -188,13 +196,22 @@ class ChatStateManager @Inject constructor() {
                 _activeTarget.value = nextTarget
                 newActiveTargetToSuggest = nextTarget
                 _unreadTargets.update { it - nextTarget } // Mark new active as read
+                 if (_showUserList.value) { // Also hide user list if active target changed due to closing current PM
+                    _showUserList.value = false
+                    Log.d("ChatStateManager", "User list hidden due to active target change from closing PM.")
+                }
             }
             Log.d("ChatStateManager", "PM target '$targetName' closed. New active: $newActiveTargetToSuggest")
         } else { // Es un canal
-            if (currentActiveTargetFromVM == targetName){
-                 _unreadTargets.update { it - targetName}
-                 Log.d("ChatStateManager", "Channel target '$targetName' marked as read due to active close initiation.")
+            // For channels, closing doesn't automatically change active target unless it WAS the active one.
+            // The MainViewModel calls partChannelUseCase, which might then lead to an activeTarget change via server messages if PART is successful.
+            // Hiding user list if the channel being closed IS the active one AND the list is shown:
+            if (currentActiveTargetFromVM == targetName && _showUserList.value) {
+                 _showUserList.value = false
+                 Log.d("ChatStateManager", "User list hidden because active channel '$targetName' is being closed.")
             }
+             _unreadTargets.update { it - targetName}
+             Log.d("ChatStateManager", "Channel target '$targetName' marked as read due to active close initiation.")
         }
         return newActiveTargetToSuggest
     }
@@ -211,6 +228,7 @@ class ChatStateManager @Inject constructor() {
         _unreadTargets.value = emptySet()
         _usersInChannel.value = emptyMap()
         _allMessages.value = mapOf(SERVER_TARGET_ID to emptyList()) 
+        _showUserList.value = false // Also hide on new connection
         Log.d("ChatStateManager", "State reset for new connection.")
     }
 
@@ -225,18 +243,26 @@ class ChatStateManager @Inject constructor() {
         } else {
             mapOf(SERVER_TARGET_ID to emptyList())
         }
+        _showUserList.value = false // Also hide on disconnection
         Log.d("ChatStateManager", "State reset for disconnection, server messages preserved if any.")
     }
 
     fun updateStateFromHandlerResult(result: ChatUpdateResult, currentOwnNickProvider: () -> String) {
         val oldNick = currentOwnNickProvider()
+        val oldActiveTarget = _activeTarget.value
 
         result.newCurrentNickname?.let {
             if (oldNick != it) {
-                renameUserInAllChannelsInternal(oldNick, it) // renameUserInAllChannelsInternal usa getSortedUserList
+                renameUserInAllChannelsInternal(oldNick, it) 
             }
         }
-        result.newActiveTarget?.let { _activeTarget.value = it }
+        result.newActiveTarget?.let { 
+            _activeTarget.value = it 
+            if (oldActiveTarget != it && _showUserList.value) { // If active target actually changed AND list was shown
+                 _showUserList.value = false
+                 Log.d("ChatStateManager", "User list hidden due to active target change from handler result.")
+            }
+        }
         result.newChatTargets?.let { _chatTargets.value = ensureServerTargetIsFirstLocal(it) }
         result.newUnreadTargets?.let { _unreadTargets.value = it }
         result.newUsersInChannel?.let { newMap ->
@@ -277,7 +303,7 @@ class ChatStateManager @Inject constructor() {
                     }
                 }
                 if (newUsersList != users) {
-                    updatedMap[channel] = getSortedUserList(newUsersList) // Usar la función de ordenación
+                    updatedMap[channel] = getSortedUserList(newUsersList) 
                 }
             }
             if (changed) {
@@ -296,7 +322,6 @@ class ChatStateManager @Inject constructor() {
         return if (serverTargetPresent) {
             listOf(SERVER_TARGET_ID) + otherTargets
         } else {
-            // Si SERVER_TARGET_ID no estaba, lo añadimos. Esto asegura que siempre esté.
             listOf(SERVER_TARGET_ID) + otherTargets
         }
     }

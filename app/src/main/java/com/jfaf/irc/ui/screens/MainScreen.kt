@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+// import androidx.compose.foundation.layout.width // No longer directly used for user list width
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,7 +60,7 @@ import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer
 import com.jfaf.irc.ui.screens.chat.MessageInputSection
 import com.jfaf.irc.ui.screens.chat.MessagesList
 import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
-import com.jfaf.irc.ui.theme.IRCTheme
+import com.jfaf.irc.ui.theme.IRCTheme 
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.MediaTypeEnum 
 import kotlinx.coroutines.launch
@@ -93,7 +93,7 @@ fun MainScreen(
             }
         }
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) { 
             Scaffold(
                 modifier = modifier.imePadding(),
                 containerColor = Color.Transparent, 
@@ -280,25 +280,35 @@ private fun ConnectedStateView(
 ) {
     val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
     val messages by viewModel.chatScreenState.uiMessages.collectAsState()
+    val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
 
-    Row(modifier = Modifier.fillMaxSize()) {
+    val currentTargetIsChannel = activeTarget?.startsWith("#") == true
+    val shouldShowUserListComposite = showUserListState && currentTargetIsChannel
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(IRCTheme.gradientBrush) 
+    ) {
         MessagesList(
             messages = messages,
             onMediaClick = onMediaClick, 
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(if (shouldShowUserListComposite) 0.6f else 1f) // Use composite state for weight
         )
-        AnimatedVisibility(visible = showUserListState) {
+
+        AnimatedVisibility(
+            visible = shouldShowUserListComposite, // Use composite state for visibility
+            modifier = Modifier.weight(0.4f) 
+        ) {
             Row {
                 VerticalDivider(
                     modifier = Modifier.fillMaxHeight(),
                     thickness = 1.dp,
-                    color = DividerDefaults.color
+                    color = DividerDefaults.color 
                 )
-                Box(modifier = Modifier.width(120.dp)) { 
-                    ChannelUserListView(
-                        mainViewModel = viewModel 
-                    )
-                }
+                ChannelUserListView(
+                    mainViewModel = viewModel 
+                )
             }
         }
     }
