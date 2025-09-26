@@ -130,6 +130,10 @@ class MainViewModel @Inject constructor(
 
     private val _nickSuggestions = MutableStateFlow<List<String>>(emptyList())
 
+    // State for FullScreenImageViewer
+    private val _selectedMediaForFullScreen = MutableStateFlow<Pair<String, MediaTypeEnum>?>(null)
+    val selectedMediaForFullScreen: StateFlow<Pair<String, MediaTypeEnum>?> = _selectedMediaForFullScreen.asStateFlow()
+
     private val showJoinPartQuitMessagesPref: StateFlow<Boolean> =
         userPreferencesRepository.showJoinPartQuitFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     private val showNickChangesPref: StateFlow<Boolean> =
@@ -222,6 +226,16 @@ class MainViewModel @Inject constructor(
             }
         }.launchIn(viewModelScope)
     }
+
+    // --- Functions for FullScreenImageViewer State ---
+    fun userClickedOnMedia(mediaUrl: String, mediaType: MediaTypeEnum) {
+        _selectedMediaForFullScreen.value = Pair(mediaUrl, mediaType)
+    }
+
+    fun clearExpandedMedia() {
+        _selectedMediaForFullScreen.value = null
+    }
+    // --- End Functions for FullScreenImageViewer State ---
 
     private fun attemptNickServIdentification() {
         viewModelScope.launch {

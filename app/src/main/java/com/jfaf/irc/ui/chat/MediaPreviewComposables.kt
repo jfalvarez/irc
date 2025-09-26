@@ -13,8 +13,8 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
-import coil.decode.ImageDecoderDecoder // Added import
-import coil.request.ImageRequest     // Added import
+import coil.decode.ImageDecoderDecoder 
+import coil.request.ImageRequest     
 import com.jfaf.irc.ui.viewmodels.MediaTypeEnum
 
 @Composable
@@ -24,24 +24,27 @@ fun MediaPreview(
     mediaType: MediaTypeEnum
 ) {
     if (mediaUrl.isNullOrBlank()) {
-        // No hay URL, no mostrar nada o un placeholder si lo deseas
         return
     }
 
     Box(modifier = modifier) {
         when (mediaType) {
             MediaTypeEnum.IMAGE -> {
-                val context = LocalContext.current // Get context for ImageRequest.Builder
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
+                val context = LocalContext.current 
+                // Remember the ImageRequest, keyed by mediaUrl.
+                // This helps prevent restarting the GIF if the URL hasn't changed.
+                val imageRequest = remember(mediaUrl) {
+                    ImageRequest.Builder(context)
                         .data(mediaUrl)
-                        .decoderFactory(ImageDecoderDecoder.Factory()) // For animated GIFs (API 28+)
-                        .crossfade(true) // Optional: for smooth transition
-                        .build(),
-                    contentDescription = "Image Preview", // Considera descripciones dinámicas
+                        .decoderFactory(ImageDecoderDecoder.Factory()) 
+                        .memoryCacheKey(mediaUrl) // Explicit memory cache key
+                        .crossfade(true) 
+                        .build()
+                }
+                AsyncImage(
+                    model = imageRequest, // Use the remembered request
+                    contentDescription = "Image Preview", 
                     modifier = Modifier.fillMaxSize()
-                    // Aquí puedes añadir más configuraciones de Coil si es necesario
-                    // (placeholder, error, contentScale, etc.)
                 )
             }
             MediaTypeEnum.VIDEO -> {
@@ -51,8 +54,7 @@ fun MediaPreview(
                 )
             }
             MediaTypeEnum.NONE -> {
-                // No es un tipo de medio reconocido, o la URL no es válida
-                // Puedes mostrar un placeholder o nada
+                // Placeholder or nothing
             }
         }
     }
@@ -65,18 +67,18 @@ fun VideoPlayer(
 ) {
     val context = LocalContext.current
 
-    val exoPlayer = remember(videoUrl) { // Keyed remember for ExoPlayer instance recreation on videoUrl change
+    val exoPlayer = remember(videoUrl) { 
         ExoPlayer.Builder(context).build().apply {
             val mediaItem = MediaItem.fromUri(videoUrl)
             setMediaItem(mediaItem)
             prepare()
-            playWhenReady = true       // Autoplay
-            volume = 0f                // Sin sonido para la previsualización
-            repeatMode = Player.REPEAT_MODE_ONE // Reproducir en bucle
+            playWhenReady = true       
+            volume = 0f                
+            repeatMode = Player.REPEAT_MODE_ONE 
         }
     }
 
-    DisposableEffect(exoPlayer) { // Keyed DisposableEffect to manage player lifecycle with instance
+    DisposableEffect(exoPlayer) { 
         onDispose {
             exoPlayer.release()
         }
@@ -87,9 +89,7 @@ fun VideoPlayer(
         factory = { ctx ->
             PlayerView(ctx).apply {
                 player = exoPlayer
-                useController = false // Sin controles para la previsualización
-                // Es importante que PlayerView no interfiera con otros gestos de la UI
-                // this.controllerAutoShow = false
+                useController = false 
             }
         }
     )

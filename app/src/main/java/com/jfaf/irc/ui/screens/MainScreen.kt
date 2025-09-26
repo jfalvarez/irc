@@ -56,13 +56,13 @@ import com.jfaf.irc.R
 import com.jfaf.irc.ui.screens.chat.AppDrawerContent
 import com.jfaf.irc.ui.screens.chat.ChannelUserListView
 import com.jfaf.irc.ui.screens.chat.ChatTopAppBar
-import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer // Will modify this soon
+import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer
 import com.jfaf.irc.ui.screens.chat.MessageInputSection
 import com.jfaf.irc.ui.screens.chat.MessagesList
 import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
-import com.jfaf.irc.ui.viewmodels.MediaTypeEnum // Import MediaTypeEnum
+import com.jfaf.irc.ui.viewmodels.MediaTypeEnum 
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
@@ -74,11 +74,10 @@ fun MainScreen(
     snackbarHostState: SnackbarHostState
 ) {
     val connectionState by viewModel.chatScreenState.connectionState.collectAsState()
-
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    // Changed from selectedImageUrlForFullScreen to selectedMediaForFullScreen
-    var selectedMediaForFullScreen by remember { mutableStateOf<Pair<String, MediaTypeEnum>?>(null) }
+    
+    val selectedMediaForFullScreen by viewModel.selectedMediaForFullScreen.collectAsState()
 
     LaunchedEffect(connectionState) {
         if (connectionState && drawerState.currentValue == DrawerValue.Open) {
@@ -97,7 +96,7 @@ fun MainScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 modifier = modifier.imePadding(),
-                containerColor = Color.Transparent, // Allows gradient to show through
+                containerColor = Color.Transparent, 
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 topBar = {
                     if (connectionState) {
@@ -124,22 +123,21 @@ fun MainScreen(
                     paddingValues = paddingValues,
                     connectionState = connectionState,
                     viewModel = viewModel,
-                    // Updated lambda to pass mediaUrl and mediaType
                     onMediaClick = { mediaUrl, mediaType -> 
-                        selectedMediaForFullScreen = Pair(mediaUrl, mediaType) 
+                        viewModel.userClickedOnMedia(mediaUrl, mediaType)
                     }
                 )
             }
             AnimatedVisibility(
-                visible = selectedMediaForFullScreen != null, // Condition uses new state variable
+                visible = selectedMediaForFullScreen != null, 
                 enter = fadeIn(animationSpec = tween(150)),
                 exit = fadeOut(animationSpec = tween(150))
             ) {
                 selectedMediaForFullScreen?.let { (mediaUrl, mediaType) ->
-                    FullScreenImageViewer( // Will be adapted to handle mediaType
+                    FullScreenImageViewer( 
                         mediaUrl = mediaUrl,
-                        mediaType = mediaType, // Pass mediaType
-                        onClose = { selectedMediaForFullScreen = null }
+                        mediaType = mediaType, 
+                        onClose = { viewModel.clearExpandedMedia() }
                     )
                 }
             }
@@ -234,7 +232,7 @@ private fun MainScreenScaffoldContent(
     paddingValues: PaddingValues,
     connectionState: Boolean,
     viewModel: MainViewModel,
-    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit // Changed from onImageClick
+    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit 
 ) {
     var nicknameInput by remember { mutableStateOf("") }
     var useSslInput by remember { mutableStateOf(false) }
@@ -270,7 +268,6 @@ private fun MainScreenScaffoldContent(
                 }
             )
         } else {
-            // Pass the new onMediaClick lambda
             ConnectedStateView(viewModel = viewModel, onMediaClick = onMediaClick)
         }
     }
@@ -278,50 +275,30 @@ private fun MainScreenScaffoldContent(
 
 @Composable
 private fun ConnectedStateView(
-    viewModel: MainViewModel,
-    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit // Changed from onImageClick
+    viewModel: MainViewModel, 
+    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit 
 ) {
     val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
-    val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
+    val messages by viewModel.chatScreenState.uiMessages.collectAsState()
 
-    val currentTargetIsChannel = activeTarget?.startsWith("#") == true
-    val shouldDisplayUserList = showUserListState && currentTargetIsChannel
-
-    Row(modifier = Modifier
-        .fillMaxSize()
-        .background(IRCTheme.gradientBrush)) {
-        Box(modifier = Modifier.weight(if (shouldDisplayUserList) 0.6f else 1f)) {
-            val messages = viewModel.chatScreenState.uiMessages.collectAsState().value
-            if (activeTarget != null) {
-                MessagesList(
-                    messages = messages,
-                    onMediaClick = onMediaClick // Pass the new lambda
+    Row(modifier = Modifier.fillMaxSize()) {
+        MessagesList(
+            messages = messages,
+            onMediaClick = onMediaClick, 
+            modifier = Modifier.weight(1f)
+        )
+        AnimatedVisibility(visible = showUserListState) {
+            Row {
+                VerticalDivider(
+                    modifier = Modifier.fillMaxHeight(),
+                    thickness = 1.dp,
+                    color = DividerDefaults.color
                 )
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        stringResource(R.string.prompt_select_channel_or_conversation),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimary
+                Box(modifier = Modifier.width(120.dp)) { 
+                    ChannelUserListView(
+                        mainViewModel = viewModel 
                     )
                 }
-            }
-        }
-        if (shouldDisplayUserList) {
-            VerticalDivider(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(DividerDefaults.Thickness),
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-            )
-            Box(modifier = Modifier.weight(0.4f)) {
-                ChannelUserListView(mainViewModel = viewModel)
             }
         }
     }
