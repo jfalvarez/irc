@@ -11,6 +11,7 @@ import com.jfaf.irc.domain.usecase.AttemptNickServIdentificationUseCase
 import com.jfaf.irc.domain.usecase.CloseTargetUseCase
 import com.jfaf.irc.domain.usecase.ConnectUseCase
 import com.jfaf.irc.domain.usecase.DisconnectUseCase
+import com.jfaf.irc.domain.usecase.HandleIncomingMessageUseCase 
 import com.jfaf.irc.domain.usecase.IgnoreUserUseCase
 import com.jfaf.irc.domain.usecase.JoinChannelUseCase
 import com.jfaf.irc.domain.usecase.OpenPrivateMessageUseCase
@@ -76,8 +77,7 @@ data class ChatScreenState(
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val ircRepository: IrcRepository, 
-    private val ircMessageHandler: IrcMessageHandler,
-    private val userPreferencesRepository: UserPreferencesRepository,
+    private val userPreferencesRepository: UserPreferencesRepository, 
     private val chatStateManager: ChatStateManager,
     private val connectUseCase: ConnectUseCase,
     private val attemptNickServIdentificationUseCase: AttemptNickServIdentificationUseCase,
@@ -88,7 +88,8 @@ class MainViewModel @Inject constructor(
     private val openPrivateMessageUseCase: OpenPrivateMessageUseCase,
     private val partChannelUseCase: PartChannelUseCase,
     private val closeTargetUseCase: CloseTargetUseCase,
-    private val sendMessageOrCommandUseCase: SendMessageOrCommandUseCase
+    private val sendMessageOrCommandUseCase: SendMessageOrCommandUseCase,
+    private val handleIncomingMessageUseCase: HandleIncomingMessageUseCase 
 ) : ViewModel(), ChatEventListener {
 
     private var chatEventOrchestrator = ChatEventOrchestrator(
@@ -128,9 +129,7 @@ class MainViewModel @Inject constructor(
         userPreferencesRepository.showNickChangesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     private val showModeChangesPref: StateFlow<Boolean> =
         userPreferencesRepository.showModeChangesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-    private val showPingPongMessagesPref: StateFlow<Boolean> =
-        userPreferencesRepository.showPingPongMessagesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-    private val ignoredUsersPref: StateFlow<Set<String>> =
+    private val ignoredUsersPref: StateFlow<Set<String>> = 
         userPreferencesRepository.ignoredUsersFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     private fun shouldDisplayMessage(message: UiChatMessage, filterContext: UiMessagesFilterContext): Boolean {
@@ -170,7 +169,7 @@ class MainViewModel @Inject constructor(
             showJoinPartQuitMessagesPref,
             showNickChangesPref,
             showModeChangesPref,
-            ignoredUsersPref
+            ignoredUsersPref 
         )
     ) { values ->
         val filterContext = UiMessagesFilterContext(
@@ -219,53 +218,33 @@ class MainViewModel @Inject constructor(
 
     private fun attemptNickServIdentification() {
         viewModelScope.launch {
-            attemptNickServIdentificationUseCase(currentNickname, sessionNickServPasswordForAutoIdentify)
+            attemptNickServIdentificationUseCase(this@MainViewModel.currentNickname, sessionNickServPasswordForAutoIdentify)
             sessionNickServPasswordForAutoIdentify = null 
         }
     }
 
-    override fun processMessageForUi(parsedMessage: ParsedIrcMessage, ignoredUsersLowercase: Set<String>) {
-        if (parsedMessage.command.equals("PING", ignoreCase = true) && !showPingPongMessagesPref.value) {
-            Log.d("MainViewModel.processMessageForUi", "PING message received and ignored for UI based on preference.")
-            return
-        }
+    override fun processMessageForUi(parsedMessage: ParsedIrcMessage) {
+        viewModelScope.launch {
+            val result = handleIncomingMessageUseCase(parsedMessage, this@MainViewModel.currentNickname)
 
-        val snapshot = ChatUiSnapshot(
-            currentNickname = this.currentNickname,
-            activeTarget = chatStateManager.activeTarget.value, 
-            allMessages = chatStateManager.allMessages.value, 
-            chatTargets = chatStateManager.chatTargets.value, 
-            unreadTargets = chatStateManager.unreadTargets.value, 
-            usersInChannel = chatStateManager.usersInChannel.value 
-        )
-        val result = ircMessageHandler.processMessage(snapshot, parsedMessage)
-        
-        result.newCurrentNickname?.let { this.currentNickname = it }
-
-        chatStateManager.updateStateFromHandlerResult(result) { this.currentNickname }
-        
-        result.ownNickChangedTo?.let { 
-            Log.d("MainViewModel", "Own nick change to '${it}' (via result.ownNickChangedTo) confirmed by IrcMessageHandler.")
-        }
-        result.privateMessageEventNick?.let { nick ->
-            if (nick.lowercase() !in ignoredUsersLowercase) { 
-                emitPrivateMessageEvent(nick) 
-            } else {
-                Log.d("MainViewModel", "PM Event for '$nick' from IrcMessageHandler suppressed as user is in ignored list: ${ignoredUsersLowercase.joinToString()}")
+            if (result.messageProcessed) {
+                result.newCurrentNickname?.let {
+                    Log.d("MainViewModel", "Own nick change to '${it}' (via HandleIncomingMessageUseCase) confirmed.")
+                    this@MainViewModel.currentNickname = it
+                }
+                result.privateMessageEventNick?.let {
+                    emitPrivateMessageEvent(it) 
+                }
             }
         }
     }
 
     override fun emitPrivateMessageEvent(nick: String) {
-        val currentIgnoredUsers = ignoredUsersPref.value.map { it.lowercase() }.toSet()
-        if (nick.lowercase() !in currentIgnoredUsers) {
-            _incomingPrivateMessageEvent.tryEmit(nick)
-        } else {
-            Log.d("MainViewModel", "PM Event for '$nick' (from orchestrator) suppressed as user is in current ignored list.")
-        }
+        Log.d("MainViewModel", "PM Event for '$nick' being emitted via _incomingPrivateMessageEvent.")
+        _incomingPrivateMessageEvent.tryEmit(nick)
     }
 
-    override fun isConnected(): Boolean = ircRepository.connectionState.value
+    // isConnected() method removed as it's no longer part of ChatEventListener
 
     fun toggleUserListVisibility() {
         chatStateManager.toggleUserListVisibility()
@@ -303,7 +282,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun connect(nickname: String, ssl: Boolean, sessionNickServPasswordParam: String?, rememberPass: Boolean) {
-        this.currentNickname = nickname
+        this.currentNickname = nickname 
         this.sessionNickServPasswordForAutoIdentify = sessionNickServPasswordParam 
 
         viewModelScope.launch {
@@ -319,12 +298,12 @@ class MainViewModel @Inject constructor(
 
     fun openPrivateMessage(nick: String, initialMessage: String? = null) {
         viewModelScope.launch {
-            openPrivateMessageUseCase(nick, currentNickname, initialMessage)
+            openPrivateMessageUseCase(nick, this@MainViewModel.currentNickname, initialMessage)
         }
     }
 
     fun setActiveTarget(targetName: String) {
-        chatStateManager.setActiveTarget(targetName, this.currentNickname)
+        chatStateManager.setActiveTarget(targetName, this.currentNickname) 
         clearNickSuggestions()
     }
 
@@ -337,7 +316,7 @@ class MainViewModel @Inject constructor(
     fun closeTarget(targetName: String) {
         val oldActiveTarget = chatStateManager.activeTarget.value
         viewModelScope.launch {
-            closeTargetUseCase(targetName, oldActiveTarget, currentNickname)
+            closeTargetUseCase(targetName, oldActiveTarget, this@MainViewModel.currentNickname)
         }
         if (oldActiveTarget == targetName) { 
             clearNickSuggestions()
@@ -349,7 +328,7 @@ class MainViewModel @Inject constructor(
             val status = sendMessageOrCommandUseCase(
                 messageContent = messageContent,
                 currentActiveTargetFromViewModel = chatStateManager.activeTarget.value,
-                currentOwnNickname = currentNickname
+                currentOwnNickname = this@MainViewModel.currentNickname
             )
 
             when (status) {
@@ -361,7 +340,6 @@ class MainViewModel @Inject constructor(
                             partChannel(channelToPart, commandResult.partMessage)
                         }
                         is CommandResult.OpenQuery -> {
-                            // Call openPrivateMessage with the initial message, UseCase now handles sending it.
                             openPrivateMessage(commandResult.nick, commandResult.initialMessage)
                         }
                         is CommandResult.Quit -> disconnectFromServerAndStopService(commandResult.quitMessage)
