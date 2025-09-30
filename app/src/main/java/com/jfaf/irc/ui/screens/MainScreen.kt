@@ -106,7 +106,10 @@ fun MainScreen(
                             onDisconnectClick = { viewModel.disconnectFromServerAndStopService() },
                             onJoinChannelRequest = { viewModel.joinChannel(it) },
                             onOpenPrivateMessageRequest = { viewModel.openPrivateMessage(it) },
-                            onToggleUserList = { viewModel.toggleUserListVisibility() }
+                            onToggleUserList = { viewModel.toggleUserListVisibility() },
+                            onIgnoreUserInPm = { nick -> // Nueva lambda para ignorar
+                                viewModel.ignoreUser(nick)
+                            }
                         )
                     }
                 },
@@ -281,7 +284,7 @@ private fun ConnectedStateView(
     val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
     val messages by viewModel.chatScreenState.uiMessages.collectAsState()
     val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
-    val showMediaPreviews by viewModel.chatScreenState.showMediaPreviews.collectAsState() // Obtener el estado de la preferencia
+    val showMediaPreviews by viewModel.chatScreenState.showMediaPreviews.collectAsState() 
 
     val currentTargetIsChannel = activeTarget?.startsWith("#") == true
     val shouldShowUserListComposite = showUserListState && currentTargetIsChannel
@@ -295,7 +298,7 @@ private fun ConnectedStateView(
             messages = messages,
             onMediaClick = onMediaClick, 
             modifier = Modifier.weight(if (shouldShowUserListComposite) 0.6f else 1f),
-            showMediaPreviews = showMediaPreviews // Pasar el estado a MessagesList
+            showMediaPreviews = showMediaPreviews 
         )
 
         AnimatedVisibility(

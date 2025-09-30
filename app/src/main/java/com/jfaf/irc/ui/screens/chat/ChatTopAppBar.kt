@@ -22,7 +22,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.jfaf.irc.R
-import com.jfaf.irc.ui.screens.chat.InputDialog // Updated import
+
+import com.jfaf.irc.ui.screens.chat.InputDialog 
 import com.jfaf.irc.ui.theme.IRCTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,13 +34,19 @@ fun ChatTopAppBar(
     onDisconnectClick: () -> Unit,
     onJoinChannelRequest: (String) -> Unit,
     onOpenPrivateMessageRequest: (String) -> Unit,
-    onToggleUserList: () -> Unit
+    onToggleUserList: () -> Unit,
+    onIgnoreUserInPm: (nick: String) -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showJoinChannelDialog by remember { mutableStateOf(false) }
     var showOpenPmDialog by remember { mutableStateOf(false) }
 
     val isChannel = activeTarget?.startsWith("#") == true
+    // Exclude SERVER_TARGET_ID (assumed to be "Servidor") from being a PM for the ignore option
+    val isPm = activeTarget != null && 
+               activeTarget.isNotBlank() && 
+               !activeTarget.startsWith("#") && 
+               activeTarget != "Servidor"
 
     TopAppBar(
         title = { Text(activeTarget ?: stringResource(R.string.app_title_default)) },
@@ -54,6 +61,15 @@ fun ChatTopAppBar(
                 onDismissRequest = { showMenu = false }, 
                 modifier = Modifier.background(IRCTheme.dropdownMenuContainerOpaque)
             ) {
+                if (isPm && activeTarget != null) { // activeTarget null check for safety
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_item_ignore_user, activeTarget), color = MaterialTheme.colorScheme.onSurface) },
+                        onClick = {
+                            showMenu = false
+                            onIgnoreUserInPm(activeTarget)
+                        }
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_item_join_channel), color = MaterialTheme.colorScheme.onSurface) }, 
                     onClick = { 

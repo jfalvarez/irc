@@ -102,5 +102,6 @@
     <string name="checkbox_label_remember_nickserv_password">Recordar contraseña de NickServ</string>
     <string name="label_nickserv_password_optional">Contraseña de NickServ (opcional)</string>
     <string name="settings_option_show_media_previews">Mostrar previsualizaciones de medios en el chat</string>
+    <string name="menu_item_ignore_user">Ignorar a %1$s</string>
 
 </resources>

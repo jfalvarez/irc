@@ -79,7 +79,7 @@ data class ChatScreenState(
     val currentChannelUserList: StateFlow<List<String>>,
     val showUserList: StateFlow<Boolean>,
     val nickSuggestions: StateFlow<List<String>>,
-    val showMediaPreviews: StateFlow<Boolean> // Nueva preferencia para UI
+    val showMediaPreviews: StateFlow<Boolean> 
 )
 
 @HiltViewModel
@@ -143,12 +143,12 @@ class MainViewModel @Inject constructor(
         userPreferencesRepository.showModeChangesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     private val ignoredUsersPref: StateFlow<Set<String>> = 
         userPreferencesRepository.ignoredUsersFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
-    // Preferencia para mostrar previsualizaciones de medios
+    
     private val showMediaPreviewsPref: StateFlow<Boolean> =
         userPreferencesRepository.showMediaPreviewsFlow.stateIn(
             viewModelScope, 
             SharingStarted.WhileSubscribed(5000), 
-            true // Coincide con el valor por defecto en el UserPreferencesRepository
+            true 
         )
 
     private fun shouldDisplayMessage(message: UiChatMessage, filterContext: UiMessagesFilterContext): Boolean {
@@ -220,7 +220,7 @@ class MainViewModel @Inject constructor(
         currentChannelUserList = currentChannelUserListState,
         showUserList = chatStateManager.showUserList,
         nickSuggestions = _nickSuggestions.asStateFlow(),
-        showMediaPreviews = showMediaPreviewsPref // Pasar la nueva preferencia
+        showMediaPreviews = showMediaPreviewsPref 
     )
 
     init {
@@ -400,8 +400,12 @@ class MainViewModel @Inject constructor(
 
     fun ignoreUser(userName: String) {
         viewModelScope.launch {
-            ignoreUserUseCase(userName)
+            ignoreUserUseCase(userName) 
             _snackbarEvents.tryEmit("Usuario '$userName' añadido a ignorados.") 
+
+            if (chatStateManager.activeTarget.value?.equals(userName, ignoreCase = true) == true) {
+                closeTarget(userName) 
+            }
         }
     }
 
