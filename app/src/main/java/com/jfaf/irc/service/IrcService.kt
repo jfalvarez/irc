@@ -16,7 +16,7 @@ import com.jfaf.irc.MainActivity
 import com.jfaf.irc.ManualIrcClient
 import com.jfaf.irc.R
 import com.jfaf.irc.data.model.ParsedIrcMessage
-import com.jfaf.irc.data.prefs.UserPreferencesRepository
+import com.jfaf.irc.data.repositories.UserMetadataRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +30,7 @@ import javax.inject.Inject
 class IrcService : Service() {
 
     @Inject
-    lateinit var userPreferencesRepository: UserPreferencesRepository
+    lateinit var userMetadataRepository: UserMetadataRepository
 
     private val TAG = "IrcService"
     private val FOREGROUND_NOTIFICATION_CHANNEL_ID = "IrcServiceChannel"
@@ -188,7 +188,7 @@ class IrcService : Service() {
                     if (parsedMessage.command == "PRIVMSG" && target != null && !target.startsWith("#")) {
                         val senderNick = parsedMessage.senderNickname
                         if (senderNick != null) {
-                            val ignoredUsers = userPreferencesRepository.ignoredUsersFlow.first()
+                            val ignoredUsers = userMetadataRepository.ignoredUsersFlow.first()
                             val ignoredUsersLowercase = ignoredUsers.map { it.lowercase() }.toSet()
                             if (senderNick.lowercase() in ignoredUsersLowercase) {
                                 Log.d(TAG, "App en background. Mensaje PRIVADO de usuario ignorado ($senderNick). No se muestra notificación.")

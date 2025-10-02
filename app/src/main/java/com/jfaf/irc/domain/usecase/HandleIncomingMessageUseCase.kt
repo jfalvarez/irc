@@ -3,6 +3,7 @@ package com.jfaf.irc.domain.usecase
 import android.util.Log
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
+import com.jfaf.irc.data.repositories.UserMetadataRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import com.jfaf.irc.ui.viewmodels.ChatUiSnapshot
 import com.jfaf.irc.ui.viewmodels.IrcMessageHandler
@@ -12,7 +13,8 @@ import javax.inject.Inject
 class HandleIncomingMessageUseCase @Inject constructor(
     private val ircMessageHandler: IrcMessageHandler,
     private val chatStateManager: ChatStateManager,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val userMetadataRepository: UserMetadataRepository
 ) {
     suspend operator fun invoke(
         parsedMessage: ParsedIrcMessage,
@@ -48,7 +50,7 @@ class HandleIncomingMessageUseCase @Inject constructor(
         var pmEventNickForVm: String? = null
 
         if (handlerResult.privateMessageEventNick != null) {
-            val ignoredUsersLowercaseFromPrefs = userPreferencesRepository.ignoredUsersFlow.first()
+            val ignoredUsersLowercaseFromPrefs = userMetadataRepository.ignoredUsersFlow.first()
                 .map { it.lowercase() }.toSet()
             if (handlerResult.privateMessageEventNick.lowercase() !in ignoredUsersLowercaseFromPrefs) {
                 pmEventNickForVm = handlerResult.privateMessageEventNick

@@ -104,6 +104,9 @@ dependencies {
     implementation(libs.firebase.analytics)       // Firebase Analytics KTX
     implementation(libs.firebase.remoteconfig)   // Firebase Remote Config KTX
     implementation(libs.firebase.crashlytics)    // Firebase Crashlytics KTX
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
+    implementation(libs.play.services.auth)
 
     // AdMob
     implementation("com.google.android.gms:play-services-ads:23.0.0") // Versión cambiada a 23.0.0

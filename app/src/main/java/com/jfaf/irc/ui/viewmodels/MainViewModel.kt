@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.data.repositories.UserMetadataRepository // Importar el nuevo repositorio
 import com.jfaf.irc.domain.usecase.AttemptNickServIdentificationUseCase
 import com.jfaf.irc.domain.usecase.CloseTargetUseCase
 import com.jfaf.irc.domain.usecase.ConnectUseCase
@@ -86,6 +87,7 @@ data class ChatScreenState(
 class MainViewModel @Inject constructor(
     private val ircRepository: IrcRepository, 
     private val userPreferencesRepository: UserPreferencesRepository, 
+    private val userMetadataRepository: UserMetadataRepository, // Añadido
     private val chatStateManager: ChatStateManager,
     private val connectUseCase: ConnectUseCase,
     private val attemptNickServIdentificationUseCase: AttemptNickServIdentificationUseCase,
@@ -102,7 +104,7 @@ class MainViewModel @Inject constructor(
 
     private var chatEventOrchestrator = ChatEventOrchestrator(
         ircRepository,
-        userPreferencesRepository,
+        userMetadataRepository,
         this, 
         viewModelScope
     )
@@ -141,8 +143,10 @@ class MainViewModel @Inject constructor(
         userPreferencesRepository.showNickChangesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     private val showModeChangesPref: StateFlow<Boolean> =
         userPreferencesRepository.showModeChangesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    
+    // Cambiado para usar UserMetadataRepository
     private val ignoredUsersPref: StateFlow<Set<String>> = 
-        userPreferencesRepository.ignoredUsersFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        userMetadataRepository.ignoredUsersFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
     
     private val showMediaPreviewsPref: StateFlow<Boolean> =
         userPreferencesRepository.showMediaPreviewsFlow.stateIn(

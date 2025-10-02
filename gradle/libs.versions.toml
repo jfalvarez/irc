@@ -22,13 +22,16 @@ navigationCompose = "2.9.4"
 material3 = "1.3.2"
 
 # Versiones explícitas para Firebase KTX
-firebaseCommonKtxVersion = "21.0.0" # (Ej: Mayo 2024)
-firebaseAnalyticsKtxVersion = "22.0.0" # (Ej: Mayo 2024)
+firebaseCommonKtxVersion = "21.0.0"
+firebaseAnalyticsKtxVersion = "22.0.0"
 firebaseConfigKtxVersion = "22.0.0"
-firebaseConfig = "23.0.1" # (Ej: Mayo 2024)
+firebaseConfig = "23.0.1"
 firebaseCrashlyticsKtx = "19.0.1"
+firebaseAuthKtx = "23.0.0"
+firebaseFirestoreKtx = "25.0.0"
 media3Exoplayer = "1.8.0"
 media3Ui = "1.8.0"
+playServicesAuth = "21.4.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -37,6 +40,8 @@ firebase-commonKtx = { module = "com.google.firebase:firebase-common-ktx", versi
 firebase-analytics = { module = "com.google.firebase:firebase-analytics-ktx", version.ref = "firebaseAnalyticsKtxVersion" }
 firebase-remoteconfig = { module = "com.google.firebase:firebase-config-ktx", version.ref = "firebaseConfigKtxVersion" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics-ktx", version.ref = "firebaseCrashlyticsKtx" }
+firebase-auth = { module = "com.google.firebase:firebase-auth-ktx", version.ref = "firebaseAuthKtx" }
+firebase-firestore = { module = "com.google.firebase:firebase-firestore-ktx", version.ref = "firebaseFirestoreKtx" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -66,7 +71,7 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3",
 firebase-config = { group = "com.google.firebase", name = "firebase-config", version.ref = "firebaseConfig" }
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3Exoplayer" }
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3Ui" }
-
+play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

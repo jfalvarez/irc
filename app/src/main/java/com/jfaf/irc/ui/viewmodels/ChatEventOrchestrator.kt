@@ -2,8 +2,8 @@ package com.jfaf.irc.ui.viewmodels
 
 import android.util.Log
 import com.jfaf.irc.data.model.ParsedIrcMessage
-import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.data.repositories.UserMetadataRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -18,7 +18,7 @@ interface ChatEventListener {
 
 class ChatEventOrchestrator(
     private val ircRepository: IrcRepository,
-    private val userPreferencesRepository: UserPreferencesRepository,
+    private val userMetadataRepository: UserMetadataRepository,
     private val eventListener: ChatEventListener,
     private val scope: CoroutineScope
 ) {
@@ -27,7 +27,7 @@ class ChatEventOrchestrator(
 
     fun startObservingRawMessages() {
         ircRepository.incomingMessages
-            .combine(userPreferencesRepository.ignoredUsersFlow) { parsedMessage, currentIgnoredNicks ->
+            .combine(userMetadataRepository.ignoredUsersFlow) { parsedMessage, currentIgnoredNicks ->
                 Pair(parsedMessage, currentIgnoredNicks.map { it.lowercase() }.toSet())
             }
             .onEach { (parsedMessage, ignoredNicksLowercase) -> 

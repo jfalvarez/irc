@@ -3,6 +3,7 @@ package com.jfaf.irc.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
+import com.jfaf.irc.data.repositories.UserMetadataRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +13,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val userMetadataRepository: UserMetadataRepository
 ) : ViewModel() {
 
     val showJoinPartQuitMessages: StateFlow<Boolean> =
@@ -83,7 +85,7 @@ class SettingsViewModel @Inject constructor(
     // --- Fin Preferencia para Previsualizaciones de Medios ---
 
     val ignoredUsers: StateFlow<Set<String>> =
-        userPreferencesRepository.ignoredUsersFlow.stateIn(
+        userMetadataRepository.ignoredUsersFlow.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptySet() // Default to an empty set
@@ -92,14 +94,14 @@ class SettingsViewModel @Inject constructor(
     fun addIgnoredUser(nick: String) {
         if (nick.isNotBlank()) {
             viewModelScope.launch {
-                userPreferencesRepository.addIgnoredUser(nick)
+                userMetadataRepository.addIgnoredUser(nick)
             }
         }
     }
 
     fun removeIgnoredUser(nick: String) {
         viewModelScope.launch {
-            userPreferencesRepository.removeIgnoredUser(nick)
+            userMetadataRepository.removeIgnoredUser(nick)
         }
     }
 
@@ -107,7 +109,7 @@ class SettingsViewModel @Inject constructor(
     // val nickServPassword: StateFlow<String> =
     //     userPreferencesRepository.nickServPasswordFlow.stateIn(
     //         scope = viewModelScope,
-    //         started = SharingStarted.WhileSubscribed(5000),
+    //         started = SharingStarted.WhileSubribed(5000),
     //         initialValue = "" // Default to empty string
     //     )
 
