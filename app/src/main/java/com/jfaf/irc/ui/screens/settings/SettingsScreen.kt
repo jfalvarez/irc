@@ -122,71 +122,6 @@ fun SettingsScreen(
 
                 item {
                     Text(
-                        text = stringResource(R.string.settings_section_ignored_users),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
-                    )
-                }
-
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = nickToIgnoreInput,
-                            onValueChange = { nickToIgnoreInput = it },
-                            label = { Text(stringResource(R.string.settings_ignore_user_dialog_label)) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        Button(
-                            onClick = {
-                                if (nickToIgnoreInput.isNotBlank()) {
-                                    viewModel.addIgnoredUser(nickToIgnoreInput)
-                                    nickToIgnoreInput = ""
-                                    keyboardController?.hide()
-                                    focusManager.clearFocus()
-                                }
-                            }
-                        ) {
-                            Text(stringResource(R.string.settings_button_add_ignored))
-                        }
-                    }
-                }
-
-                if (ignoredUsers.isEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.settings_no_ignored_users),
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                } else {
-                    items(ignoredUsers.toList().sorted()) { nick ->
-                        IgnoredUserRow(
-                            nick = nick,
-                            onUnignoreClicked = {
-                                viewModel.removeIgnoredUser(nick)
-                            }
-                        )
-                    }
-                }
-
-                item {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
-                }
-
-                item {
-                    Text(
                         text = stringResource(R.string.settings_section_friends),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onBackground,
@@ -238,6 +173,71 @@ fun SettingsScreen(
                             nick = nick,
                             onRemoveClicked = {
                                 viewModel.removeFriend(nick)
+                            }
+                        )
+                    }
+                }
+
+                item {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
+
+                item {
+                    Text(
+                        text = stringResource(R.string.settings_section_ignored_users),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+                    )
+                }
+
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = nickToIgnoreInput,
+                            onValueChange = { nickToIgnoreInput = it },
+                            label = { Text(stringResource(R.string.settings_ignore_user_dialog_label)) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        Button(
+                            onClick = {
+                                if (nickToIgnoreInput.isNotBlank()) {
+                                    viewModel.addIgnoredUser(nickToIgnoreInput)
+                                    nickToIgnoreInput = ""
+                                    keyboardController?.hide()
+                                    focusManager.clearFocus()
+                                }
+                            }
+                        ) {
+                            Text(stringResource(R.string.settings_button_add_ignored))
+                        }
+                    }
+                }
+
+                if (ignoredUsers.isEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.settings_no_ignored_users),
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                } else {
+                    items(ignoredUsers.toList().sorted()) { nick ->
+                        IgnoredUserRow(
+                            nick = nick,
+                            onUnignoreClicked = {
+                                viewModel.removeIgnoredUser(nick)
                             }
                         )
                     }
