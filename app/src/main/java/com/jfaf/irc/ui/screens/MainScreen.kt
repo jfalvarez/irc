@@ -63,6 +63,7 @@ import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.MediaTypeEnum
+import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import kotlinx.coroutines.launch
 
@@ -71,6 +72,7 @@ import kotlinx.coroutines.launch
 fun MainScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = hiltViewModel(),
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
     signInViewModel: SignInViewModel,
     mainActivity: MainActivity,
     navController: NavHostController,
@@ -110,9 +112,8 @@ fun MainScreen(
                             onJoinChannelRequest = { viewModel.joinChannel(it) },
                             onOpenPrivateMessageRequest = { viewModel.openPrivateMessage(it) },
                             onToggleUserList = { viewModel.toggleUserListVisibility() },
-                            onIgnoreUserInPm = { nick -> // Nueva lambda para ignorar
-                                viewModel.ignoreUser(nick)
-                            }
+                            onIgnoreUserInPm = { nick -> viewModel.ignoreUser(nick) },
+                            onAddFriendInPm = { nick -> settingsViewModel.addFriend(nick) }
                         )
                     }
                 },

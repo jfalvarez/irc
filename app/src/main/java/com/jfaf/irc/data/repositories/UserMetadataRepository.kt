@@ -2,6 +2,7 @@ package com.jfaf.irc.data.repositories
 
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -21,7 +22,8 @@ import javax.inject.Singleton
 
 // Data class que representa la estructura de datos en Firestore
 data class UserMetadata(
-    val ignoredNicks: List<String> = emptyList()
+    val ignoredNicks: List<String> = emptyList(),
+    val friends: List<String> = emptyList()
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -36,16 +38,28 @@ class UserMetadataRepository @Inject constructor(
         firestore.collection("users").document(it)
     }
 
-    val ignoredUsersFlow: Flow<Set<String>> = callbackFlow {
+    private val userFlow: Flow<FirebaseUser?> = callbackFlow {
         val authStateListener = FirebaseAuth.AuthStateListener { auth ->
             trySend(auth.currentUser)
         }
         firebaseAuth.addAuthStateListener(authStateListener)
         awaitClose { firebaseAuth.removeAuthStateListener(authStateListener) }
-    }.flatMapLatest { user ->
+    }
+
+    val ignoredUsersFlow: Flow<Set<String>> = userFlow.flatMapLatest { user ->
         if (user != null) {
             firestore.collection("users").document(user.uid).snapshots().map { snapshot ->
                 snapshot.toObject<UserMetadata>()?.ignoredNicks?.toSet() ?: emptySet()
+            }
+        } else {
+            flowOf(emptySet())
+        }
+    }
+
+    val friendsFlow: Flow<Set<String>> = userFlow.flatMapLatest { user ->
+        if (user != null) {
+            firestore.collection("users").document(user.uid).snapshots().map { snapshot ->
+                snapshot.toObject<UserMetadata>()?.friends?.toSet() ?: emptySet()
             }
         } else {
             flowOf(emptySet())
@@ -77,6 +91,35 @@ class UserMetadataRepository @Inject constructor(
                 Log.w(TAG, "Documento no encontrado al intentar eliminar, no se hace nada.")
             } else {
                 Log.e(TAG, "Error al eliminar usuario ignorado de Firestore", e)
+            }
+        }
+    }
+
+    suspend fun addFriend(nick: String) {
+        val document = currentUserDocument() ?: return
+        val nickLowercase = nick.lowercase()
+
+        try {
+            val data = mapOf("friends" to FieldValue.arrayUnion(nickLowercase))
+            document.set(data, SetOptions.merge()).await()
+            Log.d(TAG, "Amigo '$nickLowercase' añadido/actualizado en Firestore.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al añadir amigo a Firestore.", e)
+        }
+    }
+
+    suspend fun removeFriend(nick: String) {
+        val document = currentUserDocument() ?: return
+        val nickLowercase = nick.lowercase()
+
+        try {
+            document.update("friends", FieldValue.arrayRemove(nickLowercase)).await()
+            Log.d(TAG, "Amigo '$nickLowercase' eliminado de Firestore.")
+        } catch (e: Exception) {
+            if (e is FirebaseFirestoreException && e.code == FirebaseFirestoreException.Code.NOT_FOUND) {
+                Log.w(TAG, "Documento no encontrado al intentar eliminar, no se hace nada.")
+            } else {
+                Log.e(TAG, "Error al eliminar amigo de Firestore", e)
             }
         }
     }

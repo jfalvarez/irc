@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">irc</string>
-    <string name="log_notification_pm_shown">Notificación mostrada/actualizada con ID: %1$d. Contenido: \'%2$s\'</string>
+    <string name="log_notification_pm_shown">"Notificación mostrada/actualizada con ID: %1$d. Contenido: '%2$s'"</string>
     <string name="log_no_notification_permission">No se tiene permiso para mostrar notificaciones.</string>
 
     <string name="notification_status_connected_to">Estado: Conectado a %1$s</string>
@@ -68,8 +68,16 @@
     <string name="settings_button_add_ignored">Añadir a Ignorados</string>
     <string name="settings_button_unignore">Dejar de Ignorar</string>
     <string name="settings_no_ignored_users">No hay usuarios ignorados.</string>
-    <string name="settings_ignored_user_added">Usuario \'%1$s\' añadido a ignorados.</string>
-    <string name="settings_ignored_user_removed">Usuario \'%1$s\' eliminado de ignorados.</string>
+    <string name="settings_ignored_user_added">"Usuario '%1$s' añadido a ignorados."</string>
+    <string name="settings_ignored_user_removed">"Usuario '%1$s' eliminado de ignorados."</string>
+
+    <!-- Settings Screen - Friends -->
+    <string name="settings_section_friends">Amigos</string>
+    <string name="settings_friend_user_dialog_label">Nick del amigo</string>
+    <string name="settings_button_add_friend">Añadir</string>
+    <string name="settings_button_remove_friend">Quitar</string>
+    <string name="settings_no_friends">No tienes amigos en tu lista.</string>
+
     <string name="settings_error_nick_empty">El nick no puede estar vacío.</string>
     <string name="cd_toggle_user_list">Mostrar/ocultar lista de usuarios</string>
     <string name="cd_full_screen_image">Imagen a pantalla completa</string>
@@ -103,6 +111,7 @@
     <string name="label_nickserv_password_optional">Contraseña de NickServ (opcional)</string>
     <string name="settings_option_show_media_previews">Mostrar previsualizaciones de medios en el chat</string>
     <string name="menu_item_ignore_user">Ignorar a %1$s</string>
+    <string name="menu_item_add_friend">Añadir a amigos a %1$s</string>
     <string name="label_nickserv_password">Contraseña de NickServ</string>
     <string name="label_use_ssl">Usar SSL</string>
     <string name="label_remember_password">Recordar contraseña</string>

@@ -23,7 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.jfaf.irc.R
 
-import com.jfaf.irc.ui.screens.chat.InputDialog 
+import com.jfaf.irc.ui.screens.chat.InputDialog
 import com.jfaf.irc.ui.theme.IRCTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,7 +35,8 @@ fun ChatTopAppBar(
     onJoinChannelRequest: (String) -> Unit,
     onOpenPrivateMessageRequest: (String) -> Unit,
     onToggleUserList: () -> Unit,
-    onIgnoreUserInPm: (nick: String) -> Unit
+    onIgnoreUserInPm: (nick: String) -> Unit,
+    onAddFriendInPm: (nick: String) -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showJoinChannelDialog by remember { mutableStateOf(false) }
@@ -43,9 +44,9 @@ fun ChatTopAppBar(
 
     val isChannel = activeTarget?.startsWith("#") == true
     // Exclude SERVER_TARGET_ID (assumed to be "Servidor") from being a PM for the ignore option
-    val isPm = activeTarget != null && 
-               activeTarget.isNotBlank() && 
-               !activeTarget.startsWith("#") && 
+    val isPm = activeTarget != null &&
+               activeTarget.isNotBlank() &&
+               !activeTarget.startsWith("#") &&
                activeTarget != "Servidor"
 
     TopAppBar(
@@ -57,11 +58,18 @@ fun ChatTopAppBar(
             }
             IconButton(onClick = { showMenu = !showMenu }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.cd_more_options)) }
             DropdownMenu(
-                expanded = showMenu, 
-                onDismissRequest = { showMenu = false }, 
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
                 modifier = Modifier.background(IRCTheme.dropdownMenuContainerOpaque)
             ) {
                 if (isPm && activeTarget != null) { // activeTarget null check for safety
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_item_add_friend, activeTarget), color = MaterialTheme.colorScheme.onSurface) },
+                        onClick = {
+                            showMenu = false
+                            onAddFriendInPm(activeTarget)
+                        }
+                    )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.menu_item_ignore_user, activeTarget), color = MaterialTheme.colorScheme.onSurface) },
                         onClick = {
@@ -71,24 +79,24 @@ fun ChatTopAppBar(
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_item_join_channel), color = MaterialTheme.colorScheme.onSurface) }, 
-                    onClick = { 
+                    text = { Text(stringResource(R.string.menu_item_join_channel), color = MaterialTheme.colorScheme.onSurface) },
+                    onClick = {
                         showMenu = false
-                        showJoinChannelDialog = true 
+                        showJoinChannelDialog = true
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_item_private_message_to), color = MaterialTheme.colorScheme.onSurface) }, 
-                    onClick = { 
+                    text = { Text(stringResource(R.string.menu_item_private_message_to), color = MaterialTheme.colorScheme.onSurface) },
+                    onClick = {
                         showMenu = false
                         showOpenPmDialog = true
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_item_disconnect), color = MaterialTheme.colorScheme.onSurface) }, 
-                    onClick = { 
+                    text = { Text(stringResource(R.string.menu_item_disconnect), color = MaterialTheme.colorScheme.onSurface) },
+                    onClick = {
                         showMenu = false
-                        onDisconnectClick() 
+                        onDisconnectClick()
                     }
                 )
             }

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-// import androidx.compose.foundation.text.KeyboardOptions // No longer needed for NickServ
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -20,12 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-// import androidx.compose.ui.text.input.KeyboardType // No longer needed for NickServ
-// import androidx.compose.ui.text.input.PasswordVisualTransformation // No longer needed for NickServ
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jfaf.irc.R
-import com.jfaf.irc.ui.theme.IRCTheme // Import IRCTheme for custom properties
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,10 +34,12 @@ fun SettingsScreen(
     val showNickChanges by viewModel.showNickChanges.collectAsState()
     val showModeChanges by viewModel.showModeChanges.collectAsState()
     val showPingPongMessages by viewModel.showPingPongMessages.collectAsState()
-    val showMediaPreviews by viewModel.showMediaPreviews.collectAsState() // Nueva preferencia
+    val showMediaPreviews by viewModel.showMediaPreviews.collectAsState()
     val ignoredUsers by viewModel.ignoredUsers.collectAsState()
+    val friends by viewModel.friends.collectAsState()
 
     var nickToIgnoreInput by remember { mutableStateOf("") }
+    var nickToFriendInput by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
@@ -70,7 +68,7 @@ fun SettingsScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
-            LazyColumn(modifier = Modifier.fillMaxWidth()){
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
                 item {
                     Text(
                         text = stringResource(R.string.settings_section_message_preferences),
@@ -127,7 +125,7 @@ fun SettingsScreen(
                         text = stringResource(R.string.settings_section_ignored_users),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp) 
+                        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
                     )
                 }
 
@@ -153,7 +151,7 @@ fun SettingsScreen(
                                     nickToIgnoreInput = ""
                                     keyboardController?.hide()
                                     focusManager.clearFocus()
-                                } 
+                                }
                             }
                         ) {
                             Text(stringResource(R.string.settings_button_add_ignored))
@@ -179,6 +177,72 @@ fun SettingsScreen(
                         )
                     }
                 }
+
+                item {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
+
+                item {
+                    Text(
+                        text = stringResource(R.string.settings_section_friends),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(bottom = 8.dp, top = 8.dp)
+                    )
+                }
+
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = nickToFriendInput,
+                            onValueChange = { nickToFriendInput = it },
+                            label = { Text(stringResource(R.string.settings_friend_user_dialog_label)) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        Button(
+                            onClick = {
+                                if (nickToFriendInput.isNotBlank()) {
+                                    viewModel.addFriend(nickToFriendInput)
+                                    nickToFriendInput = ""
+                                    keyboardController?.hide()
+                                    focusManager.clearFocus()
+                                }
+                            }
+                        ) {
+                            Text(stringResource(R.string.settings_button_add_friend))
+                        }
+                    }
+                }
+
+                if (friends.isEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.settings_no_friends),
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                } else {
+                    items(friends.toList().sorted()) { nick ->
+                        FriendRow(
+                            nick = nick,
+                            onRemoveClicked = {
+                                viewModel.removeFriend(nick)
+                            }
+                        )
+                    }
+                }
+
                 item { Spacer(modifier = Modifier.height(16.dp)) }
             }
         }
@@ -196,13 +260,13 @@ private fun SettingRowWithCheckbox(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 8.dp), 
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = text,
-            color = MaterialTheme.colorScheme.onBackground, 
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.weight(1f)
         )
         Checkbox(
@@ -221,19 +285,45 @@ private fun IgnoredUserRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp), 
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = nick, 
-            color = MaterialTheme.colorScheme.onBackground, 
+            text = nick,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.weight(1f)
         )
         Button(
             onClick = onUnignoreClicked
         ) {
             Text(stringResource(R.string.settings_button_unignore))
+        }
+    }
+}
+
+@Composable
+private fun FriendRow(
+    nick: String,
+    onRemoveClicked: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = nick,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.weight(1f)
+        )
+        Button(
+            onClick = onRemoveClicked
+        ) {
+            Text(stringResource(R.string.settings_button_remove_friend))
         }
     }
 }

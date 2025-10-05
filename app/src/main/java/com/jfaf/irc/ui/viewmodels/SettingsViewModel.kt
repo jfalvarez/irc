@@ -105,6 +105,27 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    val friends: StateFlow<Set<String>> =
+        userMetadataRepository.friendsFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptySet()
+        )
+
+    fun addFriend(nick: String) {
+        if (nick.isNotBlank()) {
+            viewModelScope.launch {
+                userMetadataRepository.addFriend(nick)
+            }
+        }
+    }
+
+    fun removeFriend(nick: String) {
+        viewModelScope.launch {
+            userMetadataRepository.removeFriend(nick)
+        }
+    }
+
     // --- NickServ Password Preference (REMOVED) ---
     // val nickServPassword: StateFlow<String> =
     //     userPreferencesRepository.nickServPasswordFlow.stateIn(
