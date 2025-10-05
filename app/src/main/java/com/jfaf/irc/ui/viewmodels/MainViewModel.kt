@@ -7,12 +7,12 @@ import androidx.lifecycle.viewModelScope
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
-import com.jfaf.irc.data.repositories.UserMetadataRepository // Importar el nuevo repositorio
+import com.jfaf.irc.data.repositories.UserMetadataRepository
 import com.jfaf.irc.domain.usecase.AttemptNickServIdentificationUseCase
 import com.jfaf.irc.domain.usecase.CloseTargetUseCase
 import com.jfaf.irc.domain.usecase.ConnectUseCase
 import com.jfaf.irc.domain.usecase.DisconnectUseCase
-import com.jfaf.irc.domain.usecase.HandleIncomingMessageUseCase 
+import com.jfaf.irc.domain.usecase.HandleIncomingMessageUseCase
 import com.jfaf.irc.domain.usecase.IgnoreUserUseCase
 import com.jfaf.irc.domain.usecase.JoinChannelUseCase
 import com.jfaf.irc.domain.usecase.OpenPrivateMessageUseCase
@@ -21,7 +21,7 @@ import com.jfaf.irc.domain.usecase.PerformWhoisUseCase
 import com.jfaf.irc.domain.usecase.SendMessageActionStatus
 import com.jfaf.irc.domain.usecase.SendMessageOrCommandUseCase
 import com.jfaf.irc.domain.usecase.WhoisRequestResult
-import com.jfaf.irc.ui.viewmodels.command.CommandResult 
+import com.jfaf.irc.ui.viewmodels.command.CommandResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -45,8 +46,8 @@ enum class MediaTypeEnum {
 }
 
 data class UiChatMessage(
-    val fullText: String, 
-    val annotatedString: AnnotatedString? = null, 
+    val fullText: String,
+    val annotatedString: AnnotatedString? = null,
     val type: UiMessageType,
     val sender: String? = null,
     val isOwnMessage: Boolean = false,
@@ -80,14 +81,15 @@ data class ChatScreenState(
     val currentChannelUserList: StateFlow<List<String>>,
     val showUserList: StateFlow<Boolean>,
     val nickSuggestions: StateFlow<List<String>>,
-    val showMediaPreviews: StateFlow<Boolean> 
+    val showMediaPreviews: StateFlow<Boolean>,
+    val onlineFriends: StateFlow<Set<String>>
 )
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val ircRepository: IrcRepository, 
-    private val userPreferencesRepository: UserPreferencesRepository, 
-    private val userMetadataRepository: UserMetadataRepository, // Añadido
+    private val ircRepository: IrcRepository,
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val userMetadataRepository: UserMetadataRepository,
     private val chatStateManager: ChatStateManager,
     private val connectUseCase: ConnectUseCase,
     private val attemptNickServIdentificationUseCase: AttemptNickServIdentificationUseCase,
@@ -99,23 +101,23 @@ class MainViewModel @Inject constructor(
     private val partChannelUseCase: PartChannelUseCase,
     private val closeTargetUseCase: CloseTargetUseCase,
     private val sendMessageOrCommandUseCase: SendMessageOrCommandUseCase,
-    private val handleIncomingMessageUseCase: HandleIncomingMessageUseCase 
+    private val handleIncomingMessageUseCase: HandleIncomingMessageUseCase
 ) : ViewModel(), ChatEventListener {
 
     private var chatEventOrchestrator = ChatEventOrchestrator(
         ircRepository,
         userMetadataRepository,
-        this, 
+        this,
         viewModelScope
     )
 
     private data class UiMessagesFilterContext(
         val activeTarget: String?,
-        val allMessages: Map<String, List<UiChatMessage>>, 
+        val allMessages: Map<String, List<UiChatMessage>>,
         val showJpq: Boolean,
         val showNick: Boolean,
         val showMode: Boolean,
-        val ignoredUsersLowercase: Set<String> 
+        val ignoredUsersLowercase: Set<String>
     )
 
     var currentNickname = "IrcUser${(100..999).random()}"
@@ -143,56 +145,61 @@ class MainViewModel @Inject constructor(
         userPreferencesRepository.showNickChangesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     private val showModeChangesPref: StateFlow<Boolean> =
         userPreferencesRepository.showModeChangesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-    
-    // Cambiado para usar UserMetadataRepository
-    private val ignoredUsersPref: StateFlow<Set<String>> = 
+
+    private val ignoredUsersPref: StateFlow<Set<String>> =
         userMetadataRepository.ignoredUsersFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
-    
+
     private val showMediaPreviewsPref: StateFlow<Boolean> =
         userPreferencesRepository.showMediaPreviewsFlow.stateIn(
-            viewModelScope, 
-            SharingStarted.WhileSubscribed(5000), 
-            true 
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            true
         )
+
+    private val onlineFriendsState: StateFlow<Set<String>> = userMetadataRepository.friendsFlow
+        .combine(chatStateManager.usersInChannel) { friends, usersInChannel ->
+            val allOnlineUsers = usersInChannel.values.flatten().toSet()
+            friends.filter { friend -> allOnlineUsers.any { onlineUser -> onlineUser.equals(friend, ignoreCase = true) } }.toSet()
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     private fun shouldDisplayMessage(message: UiChatMessage, filterContext: UiMessagesFilterContext): Boolean {
         if (message.sender != null &&
-            (message.type == UiMessageType.CHANNEL_MSG_RECEIVED || 
-             message.type == UiMessageType.PRIVATE_MSG_RECEIVED || 
+            (message.type == UiMessageType.CHANNEL_MSG_RECEIVED ||
+             message.type == UiMessageType.PRIVATE_MSG_RECEIVED ||
              message.type == UiMessageType.ACTION_MSG) &&
             message.sender.lowercase() in filterContext.ignoredUsersLowercase) {
-            return false 
+            return false
         }
 
-        if (!filterContext.showJpq && 
+        if (!filterContext.showJpq &&
             (message.type == UiMessageType.JOIN_PART_QUIT ||
-             message.fullText.contains("signed off", ignoreCase = true) || 
+             message.fullText.contains("signed off", ignoreCase = true) ||
              (message.annotatedString?.text?.contains("signed off", ignoreCase = true) == true) ||
              message.fullText.contains("connection closed", ignoreCase = true) ||
              (message.annotatedString?.text?.contains("connection closed", ignoreCase = true) == true))) {
-            return false 
+            return false
         }
 
         if (!filterContext.showNick && message.type == UiMessageType.NICK_CHANGE) {
-            return false 
+            return false
         }
 
         if (!filterContext.showMode && message.type == UiMessageType.MODE_CHANGE) {
-            return false 
+            return false
         }
 
-        return true 
+        return true
     }
 
     @Suppress("UNCHECKED_CAST")
     private val combinedUiMessagesFlow: StateFlow<List<UiChatMessage>> = combine(
         listOf(
-            chatStateManager.activeTarget, 
-            chatStateManager.allMessages, 
+            chatStateManager.activeTarget,
+            chatStateManager.allMessages,
             showJoinPartQuitMessagesPref,
             showNickChangesPref,
             showModeChangesPref,
-            ignoredUsersPref 
+            ignoredUsersPref
         )
     ) { values ->
         val filterContext = UiMessagesFilterContext(
@@ -224,7 +231,8 @@ class MainViewModel @Inject constructor(
         currentChannelUserList = currentChannelUserListState,
         showUserList = chatStateManager.showUserList,
         nickSuggestions = _nickSuggestions.asStateFlow(),
-        showMediaPreviews = showMediaPreviewsPref 
+        showMediaPreviews = showMediaPreviewsPref,
+        onlineFriends = onlineFriendsState
     )
 
     init {
@@ -235,7 +243,7 @@ class MainViewModel @Inject constructor(
                 handleServiceDisconnected()
             } else {
                 handleServiceConnected()
-                attemptNickServIdentification() 
+                attemptNickServIdentification()
             }
         }.launchIn(viewModelScope)
     }
@@ -253,7 +261,7 @@ class MainViewModel @Inject constructor(
     private fun attemptNickServIdentification() {
         viewModelScope.launch {
             attemptNickServIdentificationUseCase(this@MainViewModel.currentNickname, sessionNickServPasswordForAutoIdentify)
-            sessionNickServPasswordForAutoIdentify = null 
+            sessionNickServPasswordForAutoIdentify = null
         }
     }
 
@@ -267,7 +275,7 @@ class MainViewModel @Inject constructor(
                     this@MainViewModel.currentNickname = it
                 }
                 result.privateMessageEventNick?.let {
-                    emitPrivateMessageEvent(it) 
+                    emitPrivateMessageEvent(it)
                 }
             }
         }
@@ -284,13 +292,13 @@ class MainViewModel @Inject constructor(
 
     private fun handleServiceConnected() {
         chatEventOrchestrator.resetSessionState()
-        chatStateManager.resetStateForConnection() 
-        
+        chatStateManager.resetStateForConnection()
+
         val serverMessages = chatStateManager.allMessages.value[ChatStateManager.SERVER_TARGET_ID] ?: emptyList()
         val lastMessageText = serverMessages.lastOrNull()?.let { it.annotatedString?.text ?: it.fullText } ?: ""
 
-        if (chatStateManager.chatTargets.value.isEmpty() || 
-            chatStateManager.activeTarget.value == null || 
+        if (chatStateManager.chatTargets.value.isEmpty() ||
+            chatStateManager.activeTarget.value == null ||
             !lastMessageText.contains("Conectado al servidor", ignoreCase = true)) {
             chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "Conectado al servidor.")
         }
@@ -309,13 +317,13 @@ class MainViewModel @Inject constructor(
         if (messageText != null) {
             chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, messageText, isError = true)
         }
-        
-        chatStateManager.resetStateForDisconnection() 
+
+        chatStateManager.resetStateForDisconnection()
     }
 
     fun connect(nickname: String, ssl: Boolean, sessionNickServPasswordParam: String?, rememberPass: Boolean) {
-        this.currentNickname = nickname 
-        this.sessionNickServPasswordForAutoIdentify = sessionNickServPasswordParam 
+        this.currentNickname = nickname
+        this.sessionNickServPasswordForAutoIdentify = sessionNickServPasswordParam
 
         viewModelScope.launch {
             connectUseCase(nickname, ssl, sessionNickServPasswordParam, rememberPass)
@@ -335,7 +343,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun setActiveTarget(targetName: String) {
-        chatStateManager.setActiveTarget(targetName, this.currentNickname) 
+        chatStateManager.setActiveTarget(targetName, this.currentNickname)
         clearNickSuggestions()
     }
 
@@ -350,7 +358,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             closeTargetUseCase(targetName, oldActiveTarget, this@MainViewModel.currentNickname)
         }
-        if (oldActiveTarget == targetName) { 
+        if (oldActiveTarget == targetName) {
             clearNickSuggestions()
         }
     }
@@ -375,7 +383,7 @@ class MainViewModel @Inject constructor(
                             openPrivateMessage(commandResult.nick, commandResult.initialMessage)
                         }
                         is CommandResult.Quit -> disconnectFromServerAndStopService(commandResult.quitMessage)
-                        else -> { 
+                        else -> {
                             Log.w("MainViewModel", "Unhandled CommandResult in ViewModelActionNeeded: $commandResult")
                         }
                     }
@@ -385,7 +393,7 @@ class MainViewModel @Inject constructor(
                 SendMessageActionStatus.BlankInput -> { /* Handled by UseCase */ }
                 SendMessageActionStatus.CannotSendToTarget -> { /* Handled by UseCase */ }
             }
-            clearNickSuggestions() 
+            clearNickSuggestions()
         }
     }
 
@@ -397,18 +405,18 @@ class MainViewModel @Inject constructor(
     fun disconnectFromServerAndStopService(quitMessage: String? = null) {
         viewModelScope.launch {
             disconnectUseCase(quitMessage)
-            _userMessageEvents.emit("Desconectado del servidor.") 
+            _userMessageEvents.emit("Desconectado del servidor.")
         }
         clearNickSuggestions()
     }
 
     fun ignoreUser(userName: String) {
         viewModelScope.launch {
-            ignoreUserUseCase(userName) 
-            _snackbarEvents.tryEmit("Usuario '$userName' añadido a ignorados.") 
+            ignoreUserUseCase(userName)
+            _snackbarEvents.tryEmit("Usuario '$userName' añadido a ignorados.")
 
             if (chatStateManager.activeTarget.value?.equals(userName, ignoreCase = true) == true) {
-                closeTarget(userName) 
+                closeTarget(userName)
             }
         }
     }
@@ -421,7 +429,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             when (performWhoisUseCase(nick)) {
                 is WhoisRequestResult.Success -> {
-                    _snackbarEvents.tryEmit("WHOIS para '$nick' solicitado. Ver pestaña 'Servidor'.") 
+                    _snackbarEvents.tryEmit("WHOIS para '$nick' solicitado. Ver pestaña 'Servidor'.")
                 }
                 is WhoisRequestResult.NotConnected -> {
                     _snackbarEvents.tryEmit("Error: No conectado al servidor para enviar WHOIS.")
@@ -445,16 +453,16 @@ class MainViewModel @Inject constructor(
         val lastWordStartIndex = textUpToCursor.lastIndexOf(' ') + 1
         val currentWord = textUpToCursor.substring(lastWordStartIndex)
 
-        if (currentWord.length < 2 && !currentWord.startsWith("/")) { 
+        if (currentWord.length < 2 && !currentWord.startsWith("/")) {
             _nickSuggestions.value = emptyList()
             return
         }
 
         val usersInCurrentChannel = currentChannelUserListState.value
         _nickSuggestions.value = usersInCurrentChannel.filter {
-            it.startsWith(currentWord, ignoreCase = true) && 
-            it.length > currentWord.length 
-        }.take(5) 
+            it.startsWith(currentWord, ignoreCase = true) &&
+            it.length > currentWord.length
+        }.take(5)
     }
 
     fun clearNickSuggestions() {

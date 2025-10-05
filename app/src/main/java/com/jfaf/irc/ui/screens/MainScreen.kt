@@ -161,11 +161,14 @@ private fun AppDrawerMainContent(
     navController: NavHostController,
     closeDrawerAction: () -> Unit
 ) {
+    val onlineFriends by viewModel.chatScreenState.onlineFriends.collectAsState()
+
     if (connectionState) {
         AppDrawerContent(
             chatTargets = viewModel.chatScreenState.chatTargets.collectAsState().value,
             activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value,
             unreadTargets = viewModel.chatScreenState.unreadTargets.collectAsState().value,
+            onlineFriends = onlineFriends,
             currentNick = viewModel.currentNickname,
             onTargetSelected = {
                 viewModel.setActiveTarget(it)

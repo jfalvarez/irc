@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.Person
@@ -80,7 +81,8 @@ private fun DrawerListItem(
     isSelected: Boolean,
     isUnread: Boolean,
     onTargetSelected: (String) -> Unit,
-    onCloseTargetAction: (String) -> Unit
+    onCloseTargetAction: ((String) -> Unit)?,
+    trailingIcon: @Composable (() -> Unit)? = null
 ) {
     val fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal
     val textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
@@ -90,14 +92,17 @@ private fun DrawerListItem(
         selected = isSelected,
         onClick = { onTargetSelected(target) },
         badge = {
-            IconButton(onClick = { onCloseTargetAction(target) }) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ExitToApp,
-                    stringResource(R.string.cd_close_target, target),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
+            if (onCloseTargetAction != null) {
+                IconButton(onClick = { onCloseTargetAction(target) }) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ExitToApp,
+                        stringResource(R.string.cd_close_target, target),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
             }
         },
+        icon = trailingIcon,
         colors = NavigationDrawerItemDefaults.colors(
             selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
             unselectedContainerColor = Color.Transparent,
@@ -111,10 +116,9 @@ fun AppDrawerContent(
     chatTargets: List<String>,
     activeTarget: String?,
     unreadTargets: Set<String>,
+    onlineFriends: Set<String>,
     currentNick: String,
     onTargetSelected: (String) -> Unit,
-    // onJoinChannelRequest: () -> Unit, // Eliminado
-    // onOpenPrivateMessageRequest: () -> Unit, // Eliminado
     onCloseTargetAction: (String) -> Unit,
     onSettingsClick: () -> Unit
 ) {
@@ -127,6 +131,7 @@ fun AppDrawerContent(
 
     var channelsExpanded by remember { mutableStateOf(true) }
     var conversationsExpanded by remember { mutableStateOf(true) }
+    var friendsExpanded by remember { mutableStateOf(true) }
 
     ModalDrawerSheet(drawerContainerColor = IRCTheme.drawerContainerOpaque) {
         Column(modifier = Modifier.padding(bottom = 8.dp)) {
@@ -145,7 +150,6 @@ fun AppDrawerContent(
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
             LazyColumn(modifier = Modifier.weight(1f)) {
-                // Server Target
                 serverTargetItem?.let { target ->
                     item {
                         val isSelected = target == activeTarget
@@ -164,12 +168,37 @@ fun AppDrawerContent(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                                 unselectedContainerColor = Color.Transparent,
                             ),
-                            modifier = Modifier 
+                            modifier = Modifier
                         )
                     }
                 }
 
-                // Channels Section
+                if (onlineFriends.isNotEmpty()) {
+                    item {
+                        SectionHeader(
+                            title = stringResource(R.string.drawer_section_online_friends),
+                            icon = Icons.Filled.People,
+                            isExpanded = friendsExpanded,
+                            onToggleExpand = { friendsExpanded = !friendsExpanded }
+                        )
+                    }
+                    item {
+                        AnimatedVisibility(visible = friendsExpanded) {
+                            Column {
+                                onlineFriends.forEach { friend ->
+                                    DrawerListItem(
+                                        target = friend,
+                                        isSelected = friend == activeTarget,
+                                        isUnread = unreadTargets.contains(friend),
+                                        onTargetSelected = onTargetSelected,
+                                        onCloseTargetAction = null
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (channelItems.isNotEmpty()) {
                     item {
                         SectionHeader(
@@ -196,7 +225,6 @@ fun AppDrawerContent(
                     }
                 }
 
-                // Conversations Section
                 if (conversationItems.isNotEmpty()) {
                     item {
                         SectionHeader(
@@ -225,7 +253,7 @@ fun AppDrawerContent(
             } // Fin LazyColumn
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-            // Settings Item
+
             NavigationDrawerItem(
                 icon = {
                     Icon(

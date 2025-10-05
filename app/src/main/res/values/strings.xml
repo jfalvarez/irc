@@ -104,6 +104,8 @@
     <!-- Nuevas strings para AppDrawerContent -->
     <string name="drawer_section_channels">Canales</string>
     <string name="drawer_section_conversations">Conversaciones</string>
+    <string name="drawer_section_online_friends">Amigos Conectados</string>
+    <string name="drawer_no_online_friends">Ningún amigo conectado.</string>
     <string name="cd_expand">Expandir</string>
     <string name="cd_collapse">Colapsar</string>
 
