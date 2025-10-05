@@ -4,10 +4,18 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.snapshots
 import com.google.firebase.firestore.toObject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,6 +24,7 @@ data class UserMetadata(
     val ignoredNicks: List<String> = emptyList()
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class UserMetadataRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
@@ -23,47 +32,52 @@ class UserMetadataRepository @Inject constructor(
 ) {
     private val TAG = "UserMetadataRepository"
 
-    // Obtiene el documento del usuario actual. Devuelve null si no hay usuario logueado.
     private fun currentUserDocument() = firebaseAuth.currentUser?.uid?.let {
         firestore.collection("users").document(it)
     }
 
-    val ignoredUsersFlow: Flow<Set<String>> = currentUserDocument()?.snapshots()?.map {
-        val metadata = it.toObject<UserMetadata>()
-        metadata?.ignoredNicks?.toSet() ?: emptySet()
-    } ?: kotlinx.coroutines.flow.flowOf(emptySet()) // Si no hay usuario, devuelve un flow vacío.
+    val ignoredUsersFlow: Flow<Set<String>> = callbackFlow {
+        val authStateListener = FirebaseAuth.AuthStateListener { auth ->
+            trySend(auth.currentUser)
+        }
+        firebaseAuth.addAuthStateListener(authStateListener)
+        awaitClose { firebaseAuth.removeAuthStateListener(authStateListener) }
+    }.flatMapLatest { user ->
+        if (user != null) {
+            firestore.collection("users").document(user.uid).snapshots().map { snapshot ->
+                snapshot.toObject<UserMetadata>()?.ignoredNicks?.toSet() ?: emptySet()
+            }
+        } else {
+            flowOf(emptySet())
+        }
+    }
 
     suspend fun addIgnoredUser(nick: String) {
         val document = currentUserDocument() ?: return
         val nickLowercase = nick.lowercase()
 
-        document.update("ignoredNicks", FieldValue.arrayUnion(nickLowercase))
-            .addOnSuccessListener { 
-                Log.d(TAG, "Usuario '$nickLowercase' añadido a ignorados en Firestore.")
-            }
-            .addOnFailureListener { e ->
-                Log.w(TAG, "Error al actualizar los usuarios ignorados, se intentará crear el documento.", e)
-                // Asumimos que el documento no existe, así que lo creamos.
-                document.set(mapOf("ignoredNicks" to listOf(nickLowercase)))
-                    .addOnSuccessListener {
-                        Log.d(TAG, "Documento de usuario creado y usuario '$nickLowercase' añadido a ignorados.")
-                    }
-                    .addOnFailureListener { e2 ->
-                        Log.e(TAG, "Error al crear el documento del usuario.", e2)
-                    }
-            }
+        try {
+            val data = mapOf("ignoredNicks" to FieldValue.arrayUnion(nickLowercase))
+            document.set(data, SetOptions.merge()).await()
+            Log.d(TAG, "Usuario '$nickLowercase' añadido/actualizado en ignorados en Firestore.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al añadir usuario ignorado a Firestore.", e)
+        }
     }
 
     suspend fun removeIgnoredUser(nick: String) {
         val document = currentUserDocument() ?: return
         val nickLowercase = nick.lowercase()
 
-        document.update("ignoredNicks", FieldValue.arrayRemove(nickLowercase))
-            .addOnSuccessListener { 
-                 Log.d(TAG, "Usuario '$nickLowercase' eliminado de ignorados en Firestore.")
-            }
-            .addOnFailureListener { e ->
+        try {
+            document.update("ignoredNicks", FieldValue.arrayRemove(nickLowercase)).await()
+            Log.d(TAG, "Usuario '$nickLowercase' eliminado de ignorados en Firestore.")
+        } catch (e: Exception) {
+            if (e is FirebaseFirestoreException && e.code == FirebaseFirestoreException.Code.NOT_FOUND) {
+                Log.w(TAG, "Documento no encontrado al intentar eliminar, no se hace nada.")
+            } else {
                 Log.e(TAG, "Error al eliminar usuario ignorado de Firestore", e)
             }
+        }
     }
 }

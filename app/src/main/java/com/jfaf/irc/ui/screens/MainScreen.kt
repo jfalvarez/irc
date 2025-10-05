@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-// import androidx.compose.foundation.layout.width // No longer directly used for user list width
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,6 +51,7 @@ import androidx.navigation.NavHostController
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
+import com.jfaf.irc.MainActivity
 import com.jfaf.irc.R
 import com.jfaf.irc.ui.screens.chat.AppDrawerContent
 import com.jfaf.irc.ui.screens.chat.ChannelUserListView
@@ -60,9 +60,10 @@ import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer
 import com.jfaf.irc.ui.screens.chat.MessageInputSection
 import com.jfaf.irc.ui.screens.chat.MessagesList
 import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
-import com.jfaf.irc.ui.theme.IRCTheme 
+import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
-import com.jfaf.irc.ui.viewmodels.MediaTypeEnum 
+import com.jfaf.irc.ui.viewmodels.MediaTypeEnum
+import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
@@ -70,13 +71,15 @@ import kotlinx.coroutines.launch
 fun MainScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = hiltViewModel(),
+    signInViewModel: SignInViewModel,
+    mainActivity: MainActivity,
     navController: NavHostController,
     snackbarHostState: SnackbarHostState
 ) {
     val connectionState by viewModel.chatScreenState.connectionState.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    
+
     val selectedMediaForFullScreen by viewModel.selectedMediaForFullScreen.collectAsState()
 
     LaunchedEffect(connectionState) {
@@ -93,10 +96,10 @@ fun MainScreen(
             }
         }
     ) {
-        Box(modifier = Modifier.fillMaxSize()) { 
+        Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 modifier = modifier.imePadding(),
-                containerColor = Color.Transparent, 
+                containerColor = Color.Transparent,
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 topBar = {
                     if (connectionState) {
@@ -126,20 +129,22 @@ fun MainScreen(
                     paddingValues = paddingValues,
                     connectionState = connectionState,
                     viewModel = viewModel,
-                    onMediaClick = { mediaUrl, mediaType -> 
+                    signInViewModel = signInViewModel,
+                    mainActivity = mainActivity,
+                    onMediaClick = { mediaUrl, mediaType ->
                         viewModel.userClickedOnMedia(mediaUrl, mediaType)
                     }
                 )
             }
             AnimatedVisibility(
-                visible = selectedMediaForFullScreen != null, 
+                visible = selectedMediaForFullScreen != null,
                 enter = fadeIn(animationSpec = tween(150)),
                 exit = fadeOut(animationSpec = tween(150))
             ) {
                 selectedMediaForFullScreen?.let { (mediaUrl, mediaType) ->
-                    FullScreenImageViewer( 
+                    FullScreenImageViewer(
                         mediaUrl = mediaUrl,
-                        mediaType = mediaType, 
+                        mediaType = mediaType,
                         onClose = { viewModel.clearExpandedMedia() }
                     )
                 }
@@ -235,12 +240,14 @@ private fun MainScreenScaffoldContent(
     paddingValues: PaddingValues,
     connectionState: Boolean,
     viewModel: MainViewModel,
-    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit 
+    signInViewModel: SignInViewModel,
+    mainActivity: MainActivity,
+    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
     var nicknameInput by remember { mutableStateOf("") }
     var useSslInput by remember { mutableStateOf(false) }
-    val nickServPasswordInputState = remember { mutableStateOf("") } 
-    val rememberNickServPasswordInputState = remember { mutableStateOf(false) } 
+    val nickServPasswordInputState = remember { mutableStateOf("") }
+    val rememberNickServPasswordInputState = remember { mutableStateOf(false) }
 
     AnimatedContent(
         targetState = connectionState,
@@ -262,9 +269,11 @@ private fun MainScreenScaffoldContent(
                 onNicknameChange = { nicknameInput = it },
                 useSsl = useSslInput,
                 onUseSslChange = { useSslInput = it },
-                nickServPasswordState = nickServPasswordInputState, 
-                rememberNickServPasswordState = rememberNickServPasswordInputState, 
-                onConnect = { nick, ssl, nickServPass, rememberPass -> 
+                nickServPasswordState = nickServPasswordInputState,
+                rememberNickServPasswordState = rememberNickServPasswordInputState,
+                signInViewModel = signInViewModel,
+                mainActivity = mainActivity,
+                onConnect = { nick, ssl, nickServPass, rememberPass ->
                     if (nick.isNotBlank()) {
                         viewModel.connect(nick, ssl, nickServPass, rememberPass)
                     }
@@ -278,13 +287,13 @@ private fun MainScreenScaffoldContent(
 
 @Composable
 private fun ConnectedStateView(
-    viewModel: MainViewModel, 
-    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit 
+    viewModel: MainViewModel,
+    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
     val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
     val messages by viewModel.chatScreenState.uiMessages.collectAsState()
     val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
-    val showMediaPreviews by viewModel.chatScreenState.showMediaPreviews.collectAsState() 
+    val showMediaPreviews by viewModel.chatScreenState.showMediaPreviews.collectAsState()
 
     val currentTargetIsChannel = activeTarget?.startsWith("#") == true
     val shouldShowUserListComposite = showUserListState && currentTargetIsChannel
@@ -292,27 +301,27 @@ private fun ConnectedStateView(
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .background(IRCTheme.gradientBrush) 
+            .background(IRCTheme.gradientBrush)
     ) {
         MessagesList(
             messages = messages,
-            onMediaClick = onMediaClick, 
+            onMediaClick = onMediaClick,
             modifier = Modifier.weight(if (shouldShowUserListComposite) 0.6f else 1f),
-            showMediaPreviews = showMediaPreviews 
+            showMediaPreviews = showMediaPreviews
         )
 
         AnimatedVisibility(
-            visible = shouldShowUserListComposite, 
-            modifier = Modifier.weight(0.4f) 
+            visible = shouldShowUserListComposite,
+            modifier = Modifier.weight(0.4f)
         ) {
             Row {
                 VerticalDivider(
                     modifier = Modifier.fillMaxHeight(),
                     thickness = 1.dp,
-                    color = DividerDefaults.color 
+                    color = DividerDefaults.color
                 )
                 ChannelUserListView(
-                    mainViewModel = viewModel 
+                    mainViewModel = viewModel
                 )
             }
         }
