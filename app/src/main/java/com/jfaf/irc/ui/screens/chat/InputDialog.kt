@@ -5,8 +5,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -17,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.jfaf.irc.R
+import com.jfaf.irc.ui.common.ThemedOutlinedTextField
 import com.jfaf.irc.ui.theme.IRCTheme
 
 @Composable
@@ -26,23 +25,12 @@ fun InputDialog(title: String, label: String, onDismiss: () -> Unit, onConfirm: 
         onDismissRequest = onDismiss,
         title = { Text(title, color = MaterialTheme.colorScheme.onSurface) },
         text = { 
-            OutlinedTextField(
+            ThemedOutlinedTextField(
                 value = textState, 
                 onValueChange = { textState = it }, 
                 label = { Text(label) }, 
                 singleLine = true, 
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    cursorColor = MaterialTheme.colorScheme.primary,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    focusedLabelColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    focusedContainerColor = IRCTheme.outlinedTextFieldContainer,
-                    unfocusedContainerColor = IRCTheme.outlinedTextFieldContainer
-                )
+                modifier = Modifier.fillMaxWidth()
             )
         },
         confirmButton = { 

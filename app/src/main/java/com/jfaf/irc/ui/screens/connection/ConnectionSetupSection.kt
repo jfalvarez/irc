@@ -17,7 +17,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,6 +36,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.jfaf.irc.MainActivity
 import com.jfaf.irc.R
+import com.jfaf.irc.ui.common.ThemedOutlinedTextField
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
 
 @Composable
@@ -62,7 +62,7 @@ fun ConnectionSetupSection(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        OutlinedTextField(
+        ThemedOutlinedTextField(
             value = nickname,
             onValueChange = onNicknameChange,
             label = { Text(stringResource(R.string.label_nickname)) },
@@ -72,7 +72,7 @@ fun ConnectionSetupSection(
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
+        ThemedOutlinedTextField(
             value = nickServPasswordState.value,
             onValueChange = { nickServPasswordState.value = it },
             label = { Text(stringResource(R.string.label_nickserv_password)) },

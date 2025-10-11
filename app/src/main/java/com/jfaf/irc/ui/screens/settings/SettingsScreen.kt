@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jfaf.irc.R
+import com.jfaf.irc.ui.common.ThemedOutlinedTextField
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -199,7 +200,7 @@ private fun CollapsibleUserListSection(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedTextField(
+                    ThemedOutlinedTextField(
                         value = userInput,
                         onValueChange = { userInput = it },
                         label = { Text(addUserInputLabel) },
