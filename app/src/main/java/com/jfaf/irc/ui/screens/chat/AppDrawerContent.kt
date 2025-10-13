@@ -120,6 +120,7 @@ fun AppDrawerContent(
     currentNick: String,
     onTargetSelected: (String) -> Unit,
     onCloseTargetAction: (String) -> Unit,
+    onOpenPrivateMessage: (String) -> Unit,
     onSettingsClick: () -> Unit
 ) {
     val serverString = stringResource(R.string.cd_server)
@@ -128,6 +129,7 @@ fun AppDrawerContent(
     val serverTargetItem = distinctTargets.find { it == serverString }
     val channelItems = distinctTargets.filter { it.startsWith("#") }
     val conversationItems = distinctTargets.filter { !it.startsWith("#") && it != serverString }
+    val friendsToShow = onlineFriends.filter { friend -> conversationItems.none { it.equals(friend, ignoreCase = true) } }
 
     var channelsExpanded by remember { mutableStateOf(true) }
     var conversationsExpanded by remember { mutableStateOf(true) }
@@ -173,7 +175,7 @@ fun AppDrawerContent(
                     }
                 }
 
-                if (onlineFriends.isNotEmpty()) {
+                if (friendsToShow.isNotEmpty()) {
                     item {
                         SectionHeader(
                             title = stringResource(R.string.drawer_section_online_friends),
@@ -185,13 +187,14 @@ fun AppDrawerContent(
                     item {
                         AnimatedVisibility(visible = friendsExpanded) {
                             Column {
-                                onlineFriends.forEach { friend ->
+                                friendsToShow.forEach { friend ->
                                     DrawerListItem(
                                         target = friend,
                                         isSelected = friend == activeTarget,
                                         isUnread = unreadTargets.contains(friend),
-                                        onTargetSelected = onTargetSelected,
-                                        onCloseTargetAction = null
+                                        onTargetSelected = { onOpenPrivateMessage(friend) },
+                                        onCloseTargetAction = null,
+                                        trailingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) }
                                     )
                                 }
                             }

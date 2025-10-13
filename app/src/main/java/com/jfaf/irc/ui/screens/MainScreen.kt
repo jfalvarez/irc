@@ -175,6 +175,10 @@ private fun AppDrawerMainContent(
                 closeDrawerAction()
             },
             onCloseTargetAction = { viewModel.closeTarget(it) },
+            onOpenPrivateMessage = {
+                viewModel.openPrivateMessage(it)
+                closeDrawerAction()
+            },
             onSettingsClick = {
                 closeDrawerAction()
                 navController.navigate("settings")
