@@ -36,7 +36,8 @@ fun ChatTopAppBar(
     onOpenPrivateMessageRequest: (String) -> Unit,
     onToggleUserList: () -> Unit,
     onIgnoreUserInPm: (nick: String) -> Unit,
-    onAddFriendInPm: (nick: String) -> Unit
+    onAddFriendInPm: (nick: String) -> Unit,
+    onWhoisClick: (nick: String) -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showJoinChannelDialog by remember { mutableStateOf(false) }
@@ -64,6 +65,13 @@ fun ChatTopAppBar(
             ) {
                 if (isPm && activeTarget != null) { // activeTarget null check for safety
                     DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_whois_user, activeTarget), color = MaterialTheme.colorScheme.onSurface) },
+                        onClick = {
+                            showMenu = false
+                            onWhoisClick(activeTarget)
+                        }
+                    )
+                    DropdownMenuItem(
                         text = { Text(stringResource(R.string.menu_item_add_friend, activeTarget), color = MaterialTheme.colorScheme.onSurface) },
                         onClick = {
                             showMenu = false
@@ -77,19 +85,20 @@ fun ChatTopAppBar(
                             onIgnoreUserInPm(activeTarget)
                         }
                     )
+                } else {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_item_private_message_to), color = MaterialTheme.colorScheme.onSurface) },
+                        onClick = {
+                            showMenu = false
+                            showOpenPmDialog = true
+                        }
+                    )
                 }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.menu_item_join_channel), color = MaterialTheme.colorScheme.onSurface) },
                     onClick = {
                         showMenu = false
                         showJoinChannelDialog = true
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_item_private_message_to), color = MaterialTheme.colorScheme.onSurface) },
-                    onClick = {
-                        showMenu = false
-                        showOpenPmDialog = true
                     }
                 )
                 DropdownMenuItem(

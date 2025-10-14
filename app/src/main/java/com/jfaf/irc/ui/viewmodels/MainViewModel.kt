@@ -71,6 +71,7 @@ enum class UiMessageType {
     SERVER_INFO,
     SYSTEM_MESSAGE,
     OTHER_COMMAND,
+    KICK,
     UNKNOWN
 }
 
@@ -85,7 +86,8 @@ data class ChatScreenState(
     val showUserList: StateFlow<Boolean>,
     val nickSuggestions: StateFlow<List<String>>,
     val showMediaPreviews: StateFlow<Boolean>,
-    val onlineFriends: StateFlow<Set<String>>
+    val onlineFriends: StateFlow<Set<String>>,
+    val ignoredUsers: StateFlow<Set<String>>
 )
 
 @HiltViewModel
@@ -239,7 +241,8 @@ class MainViewModel @Inject constructor(
         showUserList = chatStateManager.showUserList,
         nickSuggestions = _nickSuggestions.asStateFlow(),
         showMediaPreviews = showMediaPreviewsPref,
-        onlineFriends = onlineFriendsState
+        onlineFriends = onlineFriendsState,
+        ignoredUsers = ignoredUsersPref
     )
 
     init {

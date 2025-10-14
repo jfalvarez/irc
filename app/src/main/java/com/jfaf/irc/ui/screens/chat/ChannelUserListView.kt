@@ -35,10 +35,11 @@ fun ChannelUserListView(
 ) {
     val userList by mainViewModel.chatScreenState.currentChannelUserList.collectAsState()
     val activeTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()
+    val ignoredUsers by mainViewModel.chatScreenState.ignoredUsers.collectAsState()
     var expandedUserMenu by remember { mutableStateOf<String?>(null) }
 
     // Helper function to strip common channel mode prefixes from nicks
-    fun cleanNickForWhois(nick: String): String {
+    fun cleanNick(nick: String): String {
         return if (nick.startsWith("@") || nick.startsWith("+") || nick.startsWith("%") || nick.startsWith("&") || nick.startsWith("~")) {
             nick.substring(1)
         } else {
@@ -46,8 +47,12 @@ fun ChannelUserListView(
         }
     }
 
+    val filteredUserList = userList.filterNot { user ->
+        ignoredUsers.any { ignoredUser -> cleanNick(user).equals(ignoredUser, ignoreCase = true) }
+    }
+
     if (activeTarget?.startsWith("#") == true) {
-        if (userList.isEmpty()) {
+        if (filteredUserList.isEmpty()) {
             Text(
                 text = stringResource(R.string.no_users_in_channel),
                 modifier = Modifier.padding(16.dp),
@@ -59,7 +64,7 @@ fun ChannelUserListView(
                 contentPadding = PaddingValues(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                items(userList) { userName ->
+                items(filteredUserList) { userName ->
                     Box { // Needed for DropdownMenu positioning
                         Row(
                             modifier = Modifier
@@ -89,7 +94,7 @@ fun ChannelUserListView(
                                 },
                                 onClick = {
                                     // For PMs, we might also want to clean the nick if server doesn't handle prefixes
-                                    mainViewModel.openPrivateMessage(cleanNickForWhois(userName)) 
+                                    mainViewModel.openPrivateMessage(cleanNick(userName)) 
                                     expandedUserMenu = null
                                 }
                             )
@@ -101,7 +106,7 @@ fun ChannelUserListView(
                                     )
                                 },
                                 onClick = {
-                                    mainViewModel.ignoreUser(cleanNickForWhois(userName)) // Clean nick for ignore as well
+                                    mainViewModel.ignoreUser(cleanNick(userName)) // Clean nick for ignore as well
                                     expandedUserMenu = null
                                 }
                             )
@@ -113,7 +118,7 @@ fun ChannelUserListView(
                                     )
                                 },
                                 onClick = {
-                                    val cleanedUserName = cleanNickForWhois(userName)
+                                    val cleanedUserName = cleanNick(userName)
                                     mainViewModel.performWhois(cleanedUserName)
                                     expandedUserMenu = null
                                 }

@@ -113,7 +113,8 @@ fun MainScreen(
                             onOpenPrivateMessageRequest = { viewModel.openPrivateMessage(it) },
                             onToggleUserList = { viewModel.toggleUserListVisibility() },
                             onIgnoreUserInPm = { nick -> viewModel.ignoreUser(nick) },
-                            onAddFriendInPm = { nick -> settingsViewModel.addFriend(nick) }
+                            onAddFriendInPm = { nick -> settingsViewModel.addFriend(nick) },
+                            onWhoisClick = { nick -> viewModel.performWhois(nick) }
                         )
                     }
                 },
