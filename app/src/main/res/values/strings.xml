@@ -118,4 +118,6 @@
     <string name="label_use_ssl">Usar SSL</string>
     <string name="label_remember_password">Recordar contraseña</string>
 
+    <string name="friend_online_notification_title">Amigo conectado</string>
+    <string name="friend_online_notification_text">%1$s se ha conectado.</string>
 </resources>

@@ -44,6 +44,7 @@ class IrcService : Service() {
 
     private var manualIrcClient: ManualIrcClient? = null
     private var currentHostForNotification: String = AppConstants.DEFAULT_HOST_PLACEHOLDER
+    private var isFriendObserverStarted = false
 
     companion object {
         const val ACTION_CONNECT = "com.jfaf.irc.service.ACTION_CONNECT"
@@ -78,6 +79,11 @@ class IrcService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action
         Log.d(TAG, "onStartCommand received action: $action")
+
+        if (!isFriendObserverStarted) {
+            observeFriendOnlineStatus()
+            isFriendObserverStarted = true
+        }
 
         if (action != ACTION_DISCONNECT_AND_STOP_SERVICE) {
             val initialNotificationText = when {
@@ -149,6 +155,16 @@ class IrcService : Service() {
             }
         }
         return START_STICKY
+    }
+
+    private fun observeFriendOnlineStatus() {
+        serviceScope.launch {
+            userMetadataRepository.friendCameOnlineEvent.collectLatest { nick ->
+                if (!IrcServiceApi.isAppInForeground.value) {
+                    showFriendOnlineNotification(nick)
+                }
+            }
+        }
     }
 
     private fun connect(nickname: String, serverHost: String, serverPort: Int, useSsl: Boolean) {
@@ -335,6 +351,34 @@ class IrcService : Service() {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(MESSAGE_NOTIFICATION_ID_BASE, notificationBuilder.build())
         Log.d(TAG, "Notificación de mensaje mostrada para target '$target' o sender '$sender'")
+    }
+
+    private fun showFriendOnlineNotification(nick: String) {
+        val notificationIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+
+        val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        val contentPendingIntent = PendingIntent.getActivity(this, MESSAGE_NOTIFICATION_ID_BASE + 1, notificationIntent, pendingIntentFlags)
+
+        val title = getString(R.string.friend_online_notification_title)
+        val text = getString(R.string.friend_online_notification_text, nick)
+
+        val notificationBuilder = NotificationCompat.Builder(this, MESSAGE_NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.app_icon)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(contentPendingIntent)
+            .setAutoCancel(true)
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(MESSAGE_NOTIFICATION_ID_BASE + 1, notificationBuilder.build())
+        Log.d(TAG, "Notificación de amigo online mostrada para '$nick'")
     }
 
     override fun onBind(intent: Intent?): IBinder? {

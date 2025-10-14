@@ -206,6 +206,15 @@ class IrcMessageHandler @Inject constructor() {
                 targetForUiMessage = result.first
                 uiMessageToAdd = result.second
             }
+            "KICK" -> {
+                val result = handleKickInternal(parsedMessage, currentNickname, activeTarget, chatTargets, unreadTargets, usersInChannel)
+                targetForUiMessage = result.targetForUiMessage
+                uiMessageToAdd = result.uiMessageToAdd
+                activeTarget = result.newActiveTarget ?: activeTarget
+                result.newChatTargets?.let { chatTargets = it.toMutableList() }
+                result.newUnreadTargets?.let { unreadTargets = it.toMutableSet() }
+                usersInChannel = result.updatedUsersInChannel.toMutableMap()
+            }
             "353" -> { // RPL_NAMREPLY
                 val result = handleNamesReplyInternal(parsedMessage, usersInChannel)
                 usersInChannel = result.third.toMutableMap()
@@ -393,7 +402,7 @@ class IrcMessageHandler @Inject constructor() {
         )
 
         var updatedUnreadTargets: Set<String>? = null
-        if (determinedTargetKey != null && sender != null && noticeTargetParam?.equals(currentNickname, ignoreCase = true) == true && !determinedTargetKey.equals(activeTarget, ignoreCase = true)) {
+        if (sender != null && noticeTargetParam?.equals(currentNickname, ignoreCase = true) == true && !determinedTargetKey.equals(activeTarget, ignoreCase = true)) {
             updatedUnreadTargets = currentUnreadTargets + determinedTargetKey
         }
         return Triple(determinedTargetKey, newUiMsg, updatedUnreadTargets)
@@ -727,7 +736,7 @@ class IrcMessageHandler @Inject constructor() {
 
         val namesList = namesString.trim().split(" ")
             .map { nickWithPrefix ->
-                var cleanNick = nickWithPrefix
+                val cleanNick = nickWithPrefix
                 cleanNick
             }
             .filter { it.isNotBlank() }
@@ -750,5 +759,57 @@ class IrcMessageHandler @Inject constructor() {
             }.thenBy { it.lowercase(Locale.getDefault()) })
         
         return Triple(null, null, updatedUsersMap.toMap())
+    }
+
+    private fun handleKickInternal(
+        parsedMessage: ParsedIrcMessage,
+        currentNickname: String,
+        currentActiveTarget: String?,
+        currentChatTargets: List<String>,
+        currentUnreadTargets: Set<String>,
+        currentUsersInChannel: Map<String, List<String>>
+    ): ChannelEventResult {
+        val kicker = parsedMessage.senderNickname
+        val params = parsedMessage.params
+        val channel = params.getOrNull(0)
+        val kickedUser = params.getOrNull(1)
+        val reason = parsedMessage.trailing
+
+        var newActiveTarget: String? = null
+        var updatedChatTargets: List<String>? = null
+        var updatedUnreadTargets: Set<String>? = null
+        val mutableUsersMap = currentUsersInChannel.toMutableMap()
+
+        if (channel == null || kickedUser == null) {
+            return ChannelEventResult(null, null, null, null, null, currentUsersInChannel)
+        }
+
+        // Remove user from the channel list
+        val currentChannelUsers = mutableUsersMap[channel]?.toMutableList()
+        if (currentChannelUsers != null) {
+            if (currentChannelUsers.removeIf { it.equals(kickedUser, ignoreCase = false) }) {
+                mutableUsersMap[channel] = currentChannelUsers.sortedWith(String.CASE_INSENSITIVE_ORDER)
+            }
+        }
+
+        // Create UI message
+        val reasonMsg = if (!reason.isNullOrBlank()) " ($reason)" else ""
+        val messageText = "* $kickedUser ha sido expulsado de $channel por ${kicker ?: "alguien"}$reasonMsg"
+        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.JOIN_PART_QUIT, sender = kicker)
+
+        // If the current user was kicked
+        if (kickedUser.equals(currentNickname, ignoreCase = true)) {
+            if (currentChatTargets.any { it.equals(channel, ignoreCase = true) }) {
+                updatedChatTargets = currentChatTargets.filterNot { it.equals(channel, ignoreCase = true) }
+                if (currentUnreadTargets.contains(channel)) {
+                    updatedUnreadTargets = currentUnreadTargets - channel
+                }
+                if (currentActiveTarget?.equals(channel, ignoreCase = true) == true) {
+                    newActiveTarget = updatedChatTargets.firstOrNull() ?: SERVER_TARGET_ID
+                }
+            }
+        }
+
+        return ChannelEventResult(channel, newUiMsg, newActiveTarget, updatedChatTargets, updatedUnreadTargets, mutableUsersMap.toMap())
     }
 }

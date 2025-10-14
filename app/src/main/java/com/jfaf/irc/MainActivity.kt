@@ -189,6 +189,25 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            LaunchedEffect(mainViewModel.friendCameOnlineEvent) {
+                mainViewModel.friendCameOnlineEvent.collectLatest { nick ->
+                    val isAppCurrentlyInForegroundByProcess = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+                    if (isAppCurrentlyInForegroundByProcess) {
+                        try {
+                            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                vibrator.vibrate(VibrationEffect.createOneShot(VIBRATION_DURATION_MS, VibrationEffect.DEFAULT_AMPLITUDE))
+                            } else {
+                                @Suppress("DEPRECATION")
+                                vibrator.vibrate(VIBRATION_DURATION_MS)
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG_ACTIVITY, "Error al activar vibración", e)
+                        }
+                    }
+                }
+            }
+
             IRCAppTheme {
                 BackHandler(enabled = connectionState && navController.previousBackStackEntry == null) {
                     showExitConfirmationDialog = true

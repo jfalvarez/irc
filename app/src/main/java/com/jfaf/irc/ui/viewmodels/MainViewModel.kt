@@ -131,6 +131,9 @@ class MainViewModel @Inject constructor(
     private val _isRegistered = MutableStateFlow(false)
     private var friendCheckJob: Job? = null
 
+    private val _friendCameOnlineEvent = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val friendCameOnlineEvent = _friendCameOnlineEvent.asSharedFlow()
+
     private val _incomingPrivateMessageEvent = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
     val incomingPrivateMessageEvent: SharedFlow<String> = _incomingPrivateMessageEvent.asSharedFlow()
 
@@ -259,6 +262,11 @@ class MainViewModel @Inject constructor(
             } else {
                 friendCheckJob?.cancel()
             }
+        }.launchIn(viewModelScope)
+
+        userMetadataRepository.friendCameOnlineEvent.onEach { nick ->
+            _friendCameOnlineEvent.emit(nick)
+            _snackbarEvents.emit("Tu amigo $nick se ha conectado.")
         }.launchIn(viewModelScope)
     }
 

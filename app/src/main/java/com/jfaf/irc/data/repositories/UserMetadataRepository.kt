@@ -10,11 +10,15 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.snapshots
 import com.google.firebase.firestore.toObject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -38,12 +42,15 @@ class UserMetadataRepository @Inject constructor(
 
     private val _onlineFriendsTimestamps = MutableStateFlow<Map<String, Long>>(emptyMap())
 
+    private val _friendCameOnlineEvent = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    val friendCameOnlineEvent = _friendCameOnlineEvent.asSharedFlow()
+
     val onlineFriendsFlow: Flow<Set<String>> = _onlineFriendsTimestamps.map { timestamps ->
         val now = System.currentTimeMillis()
         timestamps.filterValues {
             (now - it) < 70000
         }.keys
-    }
+    }.distinctUntilChanged()
 
     private fun currentUserDocument() = firebaseAuth.currentUser?.uid?.let {
         firestore.collection("users").document(it)
@@ -79,7 +86,11 @@ class UserMetadataRepository @Inject constructor(
 
     fun friendSeen(nick: String) {
         val now = System.currentTimeMillis()
+        val previouslyOnline = _onlineFriendsTimestamps.value.containsKey(nick)
         _onlineFriendsTimestamps.value = _onlineFriendsTimestamps.value + (nick to now)
+        if (!previouslyOnline) {
+            _friendCameOnlineEvent.tryEmit(nick)
+        }
     }
 
     suspend fun addIgnoredUser(nick: String) {
