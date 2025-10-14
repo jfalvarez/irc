@@ -20,10 +20,13 @@ import com.jfaf.irc.domain.usecase.PartChannelUseCase
 import com.jfaf.irc.domain.usecase.PerformWhoisUseCase
 import com.jfaf.irc.domain.usecase.SendMessageActionStatus
 import com.jfaf.irc.domain.usecase.SendMessageOrCommandUseCase
+import com.jfaf.irc.domain.usecase.UpdateFriendMonitoringUseCase
 import com.jfaf.irc.domain.usecase.WhoisRequestResult
 import com.jfaf.irc.ui.viewmodels.command.CommandResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -32,8 +35,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -101,7 +104,8 @@ class MainViewModel @Inject constructor(
     private val partChannelUseCase: PartChannelUseCase,
     private val closeTargetUseCase: CloseTargetUseCase,
     private val sendMessageOrCommandUseCase: SendMessageOrCommandUseCase,
-    private val handleIncomingMessageUseCase: HandleIncomingMessageUseCase
+    private val handleIncomingMessageUseCase: HandleIncomingMessageUseCase,
+    private val updateFriendMonitoringUseCase: UpdateFriendMonitoringUseCase
 ) : ViewModel(), ChatEventListener {
 
     private var chatEventOrchestrator = ChatEventOrchestrator(
@@ -123,6 +127,9 @@ class MainViewModel @Inject constructor(
     var currentNickname = "IrcUser${(100..999).random()}"
         private set
     private var sessionNickServPasswordForAutoIdentify: String? = null
+
+    private val _isRegistered = MutableStateFlow(false)
+    private var friendCheckJob: Job? = null
 
     private val _incomingPrivateMessageEvent = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
     val incomingPrivateMessageEvent: SharedFlow<String> = _incomingPrivateMessageEvent.asSharedFlow()
@@ -156,27 +163,24 @@ class MainViewModel @Inject constructor(
             true
         )
 
-    private val onlineFriendsState: StateFlow<Set<String>> = userMetadataRepository.friendsFlow
-        .combine(chatStateManager.usersInChannel) { friends, usersInChannel ->
-            val allOnlineUsers = usersInChannel.values.flatten().toSet()
-            friends.filter { friend -> allOnlineUsers.any { onlineUser -> onlineUser.equals(friend, ignoreCase = true) } }.toSet()
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+    private val onlineFriendsState: StateFlow<Set<String>> = userMetadataRepository.onlineFriendsFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     private fun shouldDisplayMessage(message: UiChatMessage, filterContext: UiMessagesFilterContext): Boolean {
         if (message.sender != null &&
             (message.type == UiMessageType.CHANNEL_MSG_RECEIVED ||
-             message.type == UiMessageType.PRIVATE_MSG_RECEIVED ||
-             message.type == UiMessageType.ACTION_MSG) &&
+                message.type == UiMessageType.PRIVATE_MSG_RECEIVED ||
+                message.type == UiMessageType.ACTION_MSG) &&
             message.sender.lowercase() in filterContext.ignoredUsersLowercase) {
             return false
         }
 
         if (!filterContext.showJpq &&
             (message.type == UiMessageType.JOIN_PART_QUIT ||
-             message.fullText.contains("signed off", ignoreCase = true) ||
-             (message.annotatedString?.text?.contains("signed off", ignoreCase = true) == true) ||
-             message.fullText.contains("connection closed", ignoreCase = true) ||
-             (message.annotatedString?.text?.contains("connection closed", ignoreCase = true) == true))) {
+                message.fullText.contains("signed off", ignoreCase = true) ||
+                (message.annotatedString?.text?.contains("signed off", ignoreCase = true) == true) ||
+                message.fullText.contains("connection closed", ignoreCase = true) ||
+                (message.annotatedString?.text?.contains("connection closed", ignoreCase = true) == true))) {
             return false
         }
 
@@ -240,12 +244,35 @@ class MainViewModel @Inject constructor(
         ircRepository.connectionState.onEach { isConnected ->
             Log.i("MainViewModel", "Connection State Observer: ${if (isConnected) "CONNECTED" else "DISCONNECTED"}")
             if (!isConnected) {
+                _isRegistered.value = false // Reset registration state
+                friendCheckJob?.cancel() // Cancel the job when disconnected
                 handleServiceDisconnected()
             } else {
                 handleServiceConnected()
                 attemptNickServIdentification()
             }
         }.launchIn(viewModelScope)
+
+        _isRegistered.onEach { isRegistered ->
+            if (isRegistered) {
+                startFriendChecker()
+            } else {
+                friendCheckJob?.cancel()
+            }
+        }.launchIn(viewModelScope)
+    }
+
+    private fun startFriendChecker() {
+        friendCheckJob?.cancel()
+        friendCheckJob = viewModelScope.launch {
+            while (true) {
+                val friends = userMetadataRepository.friendsFlow.first()
+                if (friends.isNotEmpty()) {
+                    updateFriendMonitoringUseCase(friends)
+                }
+                delay(60000) // Check every 60 seconds
+            }
+        }
     }
 
     // --- Functions for FullScreenImageViewer State ---
@@ -266,6 +293,11 @@ class MainViewModel @Inject constructor(
     }
 
     override fun processMessageForUi(parsedMessage: ParsedIrcMessage) {
+        if (parsedMessage.command == "001") {
+            Log.d("MainViewModel", "Registration complete (RPL_WELCOME received).")
+            _isRegistered.value = true
+        }
+
         viewModelScope.launch {
             val result = handleIncomingMessageUseCase(parsedMessage, this@MainViewModel.currentNickname)
 
@@ -461,7 +493,7 @@ class MainViewModel @Inject constructor(
         val usersInCurrentChannel = currentChannelUserListState.value
         _nickSuggestions.value = usersInCurrentChannel.filter {
             it.startsWith(currentWord, ignoreCase = true) &&
-            it.length > currentWord.length
+                it.length > currentWord.length
         }.take(5)
     }
 

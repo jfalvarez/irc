@@ -21,6 +21,24 @@ class HandleIncomingMessageUseCase @Inject constructor(
         currentOwnNickname: String // The VM still holds the most up-to-date version of this
     ): HandleIncomingMessageResult {
 
+        // Handle WHOIS replies for friends silently
+        val whoisNickParam = parsedMessage.params.getOrNull(1)
+        if (whoisNickParam is String) {
+            val friends = userMetadataRepository.friendsFlow.first().map { it.lowercase() }
+            val isWhoisReplyForFriend = when (parsedMessage.command) {
+                "311", "312", "317", "318", "319", "401" -> whoisNickParam.lowercase() in friends
+                else -> false
+            }
+
+            if (isWhoisReplyForFriend) {
+                if (parsedMessage.command == "311") { // RPL_WHOISUSER
+                    userMetadataRepository.friendSeen(whoisNickParam)
+                }
+                // Message is handled, but should not be displayed in UI.
+                return HandleIncomingMessageResult(messageProcessed = true)
+            }
+        }
+
         val showPingPongMessages = userPreferencesRepository.showPingPongMessagesFlow.first()
         if (parsedMessage.command.equals("PING", ignoreCase = true) && !showPingPongMessages) {
             Log.d("HandleIncomingMsgUC", "PING message received and ignored for UI based on preference.")

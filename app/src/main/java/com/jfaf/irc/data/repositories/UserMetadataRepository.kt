@@ -12,6 +12,8 @@ import com.google.firebase.firestore.toObject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -33,6 +35,15 @@ class UserMetadataRepository @Inject constructor(
     private val firebaseAuth: FirebaseAuth
 ) {
     private val TAG = "UserMetadataRepository"
+
+    private val _onlineFriendsTimestamps = MutableStateFlow<Map<String, Long>>(emptyMap())
+
+    val onlineFriendsFlow: Flow<Set<String>> = _onlineFriendsTimestamps.map { timestamps ->
+        val now = System.currentTimeMillis()
+        timestamps.filterValues {
+            (now - it) < 70000
+        }.keys
+    }
 
     private fun currentUserDocument() = firebaseAuth.currentUser?.uid?.let {
         firestore.collection("users").document(it)
@@ -64,6 +75,11 @@ class UserMetadataRepository @Inject constructor(
         } else {
             flowOf(emptySet())
         }
+    }
+
+    fun friendSeen(nick: String) {
+        val now = System.currentTimeMillis()
+        _onlineFriendsTimestamps.value = _onlineFriendsTimestamps.value + (nick to now)
     }
 
     suspend fun addIgnoredUser(nick: String) {
