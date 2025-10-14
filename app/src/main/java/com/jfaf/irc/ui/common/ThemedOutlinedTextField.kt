@@ -22,7 +22,7 @@ fun ThemedOutlinedTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     colors: TextFieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = MaterialTheme.colorScheme.onPrimary,
-        unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground,
         focusedTextColor = MaterialTheme.colorScheme.onPrimary,
         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
         focusedLabelColor = MaterialTheme.colorScheme.onPrimary,

@@ -17,6 +17,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -90,19 +91,22 @@ fun ConnectionSetupSection(
                 checked = useSsl,
                 onCheckedChange = onUseSslChange
             )
-            Text(stringResource(R.string.label_use_ssl))
+            Text(stringResource(R.string.label_use_ssl), color = MaterialTheme.colorScheme.onBackground)
             Checkbox(
                 checked = rememberNickServPasswordState.value,
                 onCheckedChange = { rememberNickServPasswordState.value = it }
             )
-            Text(stringResource(R.string.label_remember_password))
+            Text(stringResource(R.string.label_remember_password), color = MaterialTheme.colorScheme.onBackground)
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Button(
+        OutlinedButton(
             onClick = {
                 onConnect(nickname, useSsl, nickServPasswordState.value, rememberNickServPasswordState.value)
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         ) {
             Text(stringResource(R.string.button_connect))
         }

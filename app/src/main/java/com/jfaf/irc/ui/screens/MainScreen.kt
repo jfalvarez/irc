@@ -98,7 +98,7 @@ fun MainScreen(
             }
         }
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().background(IRCTheme.gradientBrush)) {
             Scaffold(
                 modifier = modifier.imePadding(),
                 containerColor = Color.Transparent,
@@ -310,7 +310,6 @@ private fun ConnectedStateView(
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .background(IRCTheme.gradientBrush)
     ) {
         MessagesList(
             messages = messages,
