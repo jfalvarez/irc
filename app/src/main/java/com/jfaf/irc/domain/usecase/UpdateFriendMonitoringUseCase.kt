@@ -9,7 +9,7 @@ class UpdateFriendMonitoringUseCase @Inject constructor(
     suspend operator fun invoke(friends: Set<String>) {
         if (friends.isNotEmpty() && ircRepository.connectionState.value) {
             friends.forEach { friend ->
-                ircRepository.sendRawCommand("WHOIS $friend")
+                ircRepository.sendRawCommand("WHOIS $friend", isSilent = true)
             }
         }
     }

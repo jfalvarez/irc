@@ -3,6 +3,8 @@ package com.jfaf.irc.domain.usecase
 import android.util.Log
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
+import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
 import com.jfaf.irc.data.repositories.UserMetadataRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import com.jfaf.irc.ui.viewmodels.ChatUiSnapshot
@@ -14,29 +16,33 @@ class HandleIncomingMessageUseCase @Inject constructor(
     private val ircMessageHandler: IrcMessageHandler,
     private val chatStateManager: ChatStateManager,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val userMetadataRepository: UserMetadataRepository
+    private val userMetadataRepository: UserMetadataRepository,
+    private val ircRepository: IrcRepository,
+    private val silentWhoisCompletionSignal: SilentWhoisCompletionSignal
 ) {
     suspend operator fun invoke(
         parsedMessage: ParsedIrcMessage,
-        currentOwnNickname: String // The VM still holds the most up-to-date version of this
+        currentOwnNickname: String
     ): HandleIncomingMessageResult {
-
-        // Handle WHOIS replies for friends silently
         val whoisNickParam = parsedMessage.params.getOrNull(1)
-        if (whoisNickParam is String) {
-            val friends = userMetadataRepository.friendsFlow.first().map { it.lowercase() }
-            val isWhoisReplyForFriend = when (parsedMessage.command) {
-                "311", "312", "317", "318", "319", "401" -> whoisNickParam.lowercase() in friends
-                else -> false
-            }
+        val silentWhoisCommands = setOf("311", "312", "317", "318", "319", "401")
 
-            if (isWhoisReplyForFriend) {
-                if (parsedMessage.command == "311") { // RPL_WHOISUSER
-                    userMetadataRepository.friendSeen(whoisNickParam)
+        if (whoisNickParam != null &&
+            parsedMessage.command in silentWhoisCommands &&
+            ircRepository.isWhoisSilent(whoisNickParam)
+        ) {
+            var isEndOfSilentWhois = false
+            when (parsedMessage.command) {
+                "311" -> userMetadataRepository.friendSeen(whoisNickParam)
+                "318", "401" -> {
+                    ircRepository.completeSilentWhois(whoisNickParam)
+                    isEndOfSilentWhois = true
                 }
-                // Message is handled, but should not be displayed in UI.
-                return HandleIncomingMessageResult(messageProcessed = true)
             }
+            if (isEndOfSilentWhois) {
+                silentWhoisCompletionSignal.signalCompletion()
+            }
+            return HandleIncomingMessageResult(messageProcessed = true)
         }
 
         val showPingPongMessages = userPreferencesRepository.showPingPongMessagesFlow.first()
@@ -45,7 +51,6 @@ class HandleIncomingMessageUseCase @Inject constructor(
             return HandleIncomingMessageResult(messageProcessed = false)
         }
 
-        // Create a snapshot of the current UI state needed by the message handler
         val snapshot = ChatUiSnapshot(
             currentNickname = currentOwnNickname,
             activeTarget = chatStateManager.activeTarget.value,
@@ -56,11 +61,6 @@ class HandleIncomingMessageUseCase @Inject constructor(
         )
 
         val handlerResult = ircMessageHandler.processMessage(snapshot, parsedMessage)
-
-        // The ChatStateManager needs to know the current nickname *after* potential NICK changes
-        // from the message, so we pass a lambda that can provide it. 
-        // If handlerResult.newCurrentNickname is not null, that's the new one.
-        // Otherwise, it's the one passed into the use case.
         val updatedNicknameProvider = { handlerResult.newCurrentNickname ?: currentOwnNickname }
         chatStateManager.updateStateFromHandlerResult(handlerResult, updatedNicknameProvider)
 
@@ -74,7 +74,7 @@ class HandleIncomingMessageUseCase @Inject constructor(
                 pmEventNickForVm = handlerResult.privateMessageEventNick
             } else {
                 Log.d(
-                    "HandleIncomingMsgUC", 
+                    "HandleIncomingMsgUC",
                     "PM Event for '${handlerResult.privateMessageEventNick}' from IrcMessageHandler suppressed as user is in ignored list: ${ignoredUsersLowercaseFromPrefs.joinToString()}"
                 )
             }

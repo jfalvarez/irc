@@ -1,12 +1,15 @@
 package com.jfaf.irc.ui.viewmodels
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.ui.text.AnnotatedString
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jfaf.irc.ads.NativeAdManager
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
 import com.jfaf.irc.data.repositories.UserMetadataRepository
 import com.jfaf.irc.domain.usecase.AttemptNickServIdentificationUseCase
 import com.jfaf.irc.domain.usecase.CloseTargetUseCase
@@ -40,6 +43,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 enum class MediaTypeEnum {
@@ -72,7 +76,8 @@ enum class UiMessageType {
     SYSTEM_MESSAGE,
     OTHER_COMMAND,
     KICK,
-    UNKNOWN
+    UNKNOWN,
+    AD_MESSAGE
 }
 
 data class ChatScreenState(
@@ -107,7 +112,8 @@ class MainViewModel @Inject constructor(
     private val closeTargetUseCase: CloseTargetUseCase,
     private val sendMessageOrCommandUseCase: SendMessageOrCommandUseCase,
     private val handleIncomingMessageUseCase: HandleIncomingMessageUseCase,
-    private val updateFriendMonitoringUseCase: UpdateFriendMonitoringUseCase
+    private val silentWhoisCompletionSignal: SilentWhoisCompletionSignal,
+    val nativeAdManager: NativeAdManager
 ) : ViewModel(), ChatEventListener {
 
     private var chatEventOrchestrator = ChatEventOrchestrator(
@@ -132,6 +138,7 @@ class MainViewModel @Inject constructor(
 
     private val _isRegistered = MutableStateFlow(false)
     private var friendCheckJob: Job? = null
+    private val isFriendCheckPaused = AtomicBoolean(false)
 
     private val _friendCameOnlineEvent = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val friendCameOnlineEvent = _friendCameOnlineEvent.asSharedFlow()
@@ -171,6 +178,10 @@ class MainViewModel @Inject constructor(
     private val onlineFriendsState: StateFlow<Set<String>> = userMetadataRepository.onlineFriendsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
+    fun loadNativeAd(context: Context) {
+        nativeAdManager.loadAd(context)
+    }
+
     private fun shouldDisplayMessage(message: UiChatMessage, filterContext: UiMessagesFilterContext): Boolean {
         if (message.sender != null &&
             (message.type == UiMessageType.CHANNEL_MSG_RECEIVED ||
@@ -208,7 +219,8 @@ class MainViewModel @Inject constructor(
             showJoinPartQuitMessagesPref,
             showNickChangesPref,
             showModeChangesPref,
-            ignoredUsersPref
+            ignoredUsersPref,
+            nativeAdManager.nativeAd
         )
     ) { values ->
         val filterContext = UiMessagesFilterContext(
@@ -220,7 +232,21 @@ class MainViewModel @Inject constructor(
             ignoredUsersLowercase = (values[5] as Set<String>).map { it.lowercase() }.toSet()
         )
         val messagesForTarget = filterContext.allMessages[filterContext.activeTarget] ?: emptyList()
-        messagesForTarget.filter { message -> shouldDisplayMessage(message, filterContext) }
+        val ad = values[6] as? com.google.android.gms.ads.nativead.NativeAd
+
+        val messagesWithAds = if (ad != null && messagesForTarget.size > 5) {
+            val adMessage = UiChatMessage(
+                fullText = "",
+                type = UiMessageType.AD_MESSAGE
+            )
+            messagesForTarget.toMutableList().apply {
+                add(5, adMessage)
+            }
+        } else {
+            messagesForTarget
+        }
+
+        messagesWithAds.filter { message -> shouldDisplayMessage(message, filterContext) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
     private val currentChannelUserListState: StateFlow<List<String>> =
@@ -277,9 +303,16 @@ class MainViewModel @Inject constructor(
         friendCheckJob?.cancel()
         friendCheckJob = viewModelScope.launch {
             while (true) {
-                val friends = userMetadataRepository.friendsFlow.first()
-                if (friends.isNotEmpty()) {
-                    updateFriendMonitoringUseCase(friends)
+                if (!isFriendCheckPaused.get()) {
+                    val friends = userMetadataRepository.friendsFlow.first()
+                    if (friends.isNotEmpty()) {
+                        for (friend in friends) {
+                            if (!isFriendCheckPaused.get()) {
+                                ircRepository.sendRawCommand("WHOIS $friend", isSilent = true)
+                                silentWhoisCompletionSignal.awaitCompletion()
+                            }
+                        }
+                    }
                 }
                 delay(60000) // Check every 60 seconds
             }
@@ -470,6 +503,7 @@ class MainViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
+            isFriendCheckPaused.set(true)
             when (performWhoisUseCase(nick)) {
                 is WhoisRequestResult.Success -> {
                     _snackbarEvents.tryEmit("WHOIS para '$nick' solicitado. Ver pestaña 'Servidor'.")
@@ -481,6 +515,8 @@ class MainViewModel @Inject constructor(
                     Log.w("MainViewModel", "performWhoisUseCase reported InvalidNickInput for: $nick")
                 }
             }
+            delay(5000) // 5 seconds
+            isFriendCheckPaused.set(false)
         }
     }
 

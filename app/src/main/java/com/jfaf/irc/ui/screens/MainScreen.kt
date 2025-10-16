@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -78,6 +79,7 @@ fun MainScreen(
     navController: NavHostController,
     snackbarHostState: SnackbarHostState
 ) {
+    val context = LocalContext.current
     val connectionState by viewModel.chatScreenState.connectionState.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -85,8 +87,11 @@ fun MainScreen(
     val selectedMediaForFullScreen by viewModel.selectedMediaForFullScreen.collectAsState()
 
     LaunchedEffect(connectionState) {
-        if (connectionState && drawerState.currentValue == DrawerValue.Open) {
-            scope.launch { drawerState.close() }
+        if (connectionState) {
+            viewModel.loadNativeAd(context)
+            if (drawerState.currentValue == DrawerValue.Open) {
+                scope.launch { drawerState.close() }
+            }
         }
     }
 
@@ -212,20 +217,6 @@ private fun MainScreenBottomBar(
     Column {
         val showInputSection = connectionState && activeTargetValue != null
 
-        if (connectionState) {
-            AndroidView(
-                factory = { context ->
-                    AdView(context).apply {
-                        setAdSize(AdSize.BANNER)
-                        adUnitId = "ca-app-pub-3940256099942544/6300978111" // TEST BANNER ID
-                        Log.d("AdViewConfig", "AdView adUnitId set to: $adUnitId")
-                        loadAd(AdRequest.Builder().build())
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
         if (showInputSection) {
             MessageInputSection(
                 modifier = Modifier.fillMaxWidth(),
@@ -289,7 +280,11 @@ private fun MainScreenScaffoldContent(
                 }
             )
         } else {
-            ConnectedStateView(viewModel = viewModel, onMediaClick = onMediaClick)
+            ConnectedStateView(
+                viewModel = viewModel,
+                onMediaClick = onMediaClick,
+                nativeAdManager = viewModel.nativeAdManager
+            )
         }
     }
 }
@@ -297,7 +292,8 @@ private fun MainScreenScaffoldContent(
 @Composable
 private fun ConnectedStateView(
     viewModel: MainViewModel,
-    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
+    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit,
+    nativeAdManager: com.jfaf.irc.ads.NativeAdManager
 ) {
     val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
     val messages by viewModel.chatScreenState.uiMessages.collectAsState()
@@ -315,7 +311,8 @@ private fun ConnectedStateView(
             messages = messages,
             onMediaClick = onMediaClick,
             modifier = Modifier.weight(if (shouldShowUserListComposite) 0.6f else 1f),
-            showMediaPreviews = showMediaPreviews
+            showMediaPreviews = showMediaPreviews,
+            nativeAdManager = nativeAdManager
         )
 
         AnimatedVisibility(

@@ -9,6 +9,7 @@ import com.jfaf.irc.service.IrcServiceApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,6 +18,8 @@ class IrcRepository @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val TAG = "IrcRepository"
+
+    private val silentWhoisNicks = ConcurrentHashMap.newKeySet<String>()
 
     val connectionState: StateFlow<Boolean> = IrcServiceApi.connectionState
     val incomingMessages: SharedFlow<ParsedIrcMessage> = IrcServiceApi.incomingMessages
@@ -81,12 +84,26 @@ class IrcRepository @Inject constructor(
         context.startService(intent)
     }
 
-    fun sendRawCommand(command: String) {
+    fun sendRawCommand(command: String, isSilent: Boolean = false) {
+        if (isSilent && command.startsWith("WHOIS", ignoreCase = true)) {
+            val nick = command.split(" ").getOrNull(1)
+            if (nick != null) {
+                silentWhoisNicks.add(nick.lowercase())
+            }
+        }
         Log.d(TAG, "Solicitando enviar comando crudo: '$command' vía servicio")
         val intent = Intent(context, IrcService::class.java).apply {
             action = IrcService.ACTION_SEND_RAW_COMMAND
             putExtra(IrcService.EXTRA_RAW_COMMAND, command)
         }
         context.startService(intent)
+    }
+
+    fun isWhoisSilent(nick: String): Boolean {
+        return silentWhoisNicks.contains(nick.lowercase())
+    }
+
+    fun completeSilentWhois(nick: String) {
+        silentWhoisNicks.remove(nick.lowercase())
     }
 }

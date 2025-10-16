@@ -44,7 +44,7 @@ class PerformWhoisUseCase @Inject constructor(
             ChatStateManager.SERVER_TARGET_ID, 
             "[WHOIS] Solicitando información para $nick..."
         )
-        ircRepository.sendRawCommand("WHOIS $nick")
+        ircRepository.sendRawCommand("WHOIS $nick", isSilent = false)
         return WhoisRequestResult.Success
     }
 }

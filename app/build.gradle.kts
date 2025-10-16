@@ -109,7 +109,7 @@ dependencies {
     implementation(libs.play.services.auth)
 
     // AdMob
-    implementation("com.google.android.gms:play-services-ads:23.0.0") // Versión cambiada a 23.0.0
+    implementation("com.google.android.gms:play-services-ads:23.0.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
