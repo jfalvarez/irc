@@ -105,7 +105,9 @@ class IrcService : Service() {
             }
             ACTION_DISCONNECT -> {
                 Log.i(TAG, "Acción DISCONNECT recibida. Desconectando socket, servicio permanece en foreground.")
-                manualIrcClient?.disconnectAndCleanup() // Podríamos considerar enviar QUIT aquí también si es un disconnect manual sin mensaje
+                serviceScope.launch {
+                    manualIrcClient?.disconnectAndCleanup()
+                }
                 if (IrcServiceApi.connectionState.value) {
                     IrcServiceApi.updateConnectionState(false)
                 }
@@ -176,7 +178,9 @@ class IrcService : Service() {
             return
         }
         Log.i(TAG, "Conectando a $serverHost:$serverPort como $nickname (SSL: $useSsl)")
-        manualIrcClient?.disconnectAndCleanup()
+        serviceScope.launch {
+            manualIrcClient?.disconnectAndCleanup()
+        }
         currentHostForNotification = serverHost
 
         manualIrcClient = ManualIrcClient(
@@ -229,20 +233,19 @@ class IrcService : Service() {
 
     private fun disconnect(quitMessage: String? = null) {
         Log.i(TAG, "Función disconnect(quitMessage: $quitMessage) llamada. Limpiando cliente, quitando foreground y deteniendo servicio.")
-        val wasConnected = IrcServiceApi.connectionState.value
-        if (wasConnected && !quitMessage.isNullOrBlank()) {
-            manualIrcClient?.sendRaw("QUIT :$quitMessage")
-            // Dar un pequeño margen para que el mensaje QUIT se envíe antes de cerrar el socket
-            // Esto es una simplificación; una solución más robusta podría esperar un acknowledge o usar un delay.
-            // Thread.sleep(100) // Considerar alternativas a Thread.sleep en un service scope
+        serviceScope.launch {
+            val wasConnected = IrcServiceApi.connectionState.value
+            if (wasConnected && !quitMessage.isNullOrBlank()) {
+                manualIrcClient?.sendRaw("QUIT :$quitMessage")
+            }
+            manualIrcClient?.disconnectAndCleanup()
+            if (wasConnected) {
+                IrcServiceApi.updateConnectionState(false)
+            }
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            Log.i(TAG, "Servicio detenido y limpiado.")
         }
-        manualIrcClient?.disconnectAndCleanup()
-        if (wasConnected) {
-            IrcServiceApi.updateConnectionState(false)
-        }
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-        Log.i(TAG, "Servicio detenido y limpiado.")
     }
 
     private fun sendMessage(target: String, message: String) {
@@ -388,7 +391,9 @@ class IrcService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "IrcService onDestroy")
-        manualIrcClient?.disconnectAndCleanup()
+        serviceScope.launch{
+            manualIrcClient?.disconnectAndCleanup()
+        }
         serviceJob.cancel()
         if (IrcServiceApi.connectionState.value) {
             IrcServiceApi.updateConnectionState(false)
