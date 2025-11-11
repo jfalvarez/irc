@@ -19,3 +19,6 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep UserMetadata data class for Firestore
+-keep class com.jfaf.irc.data.repositories.UserMetadata { *; }

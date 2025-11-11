@@ -48,14 +48,22 @@ android {
     }
 
     buildTypes {
-        release {
-            isMinifyEnabled = false // Considera habilitar ProGuard/R8 para release
+        getByName("release") {
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
-        debug {}
+        getByName("debug") {}
+        create("debugWithMinify") {
+            initWith(getByName("debug"))
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
     }
 
     compileOptions {
