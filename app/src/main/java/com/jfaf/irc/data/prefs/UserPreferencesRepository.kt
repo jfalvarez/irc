@@ -9,10 +9,13 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+
+data class UserPreferences(val nickname: String, val nickServPassword: String)
 
 @Singleton
 class UserPreferencesRepository @Inject constructor(
@@ -25,6 +28,7 @@ class UserPreferencesRepository @Inject constructor(
         private const val SHOW_PING_PONG_KEY_NAME = "show_ping_pong_messages"
         private const val NICKSERV_PASSWORD_KEY_NAME = "nickserv_password"
         private const val SHOW_MEDIA_PREVIEWS_KEY_NAME = "show_media_previews"
+        private const val NICKNAME_KEY_NAME = "nickname"
 
         val SHOW_JOIN_PART_QUIT = booleanPreferencesKey(SHOW_JOIN_PART_QUIT_KEY_NAME)
         val SHOW_NICK_CHANGES = booleanPreferencesKey(SHOW_NICK_CHANGES_KEY_NAME)
@@ -32,8 +36,22 @@ class UserPreferencesRepository @Inject constructor(
         val SHOW_PING_PONG_MESSAGES = booleanPreferencesKey(SHOW_PING_PONG_KEY_NAME)
         val NICKSERV_PASSWORD = stringPreferencesKey(NICKSERV_PASSWORD_KEY_NAME)
         val SHOW_MEDIA_PREVIEWS = booleanPreferencesKey(SHOW_MEDIA_PREVIEWS_KEY_NAME)
+        val NICKNAME = stringPreferencesKey(NICKNAME_KEY_NAME)
 
         const val TAG = "UserPrefsRepository"
+    }
+
+    val userPreferencesFlow: Flow<UserPreferences> = combine(
+        dataStore.data.catch { emit(emptyPreferences()) }.map { it[NICKNAME] ?: "" },
+        dataStore.data.catch { emit(emptyPreferences()) }.map { it[NICKSERV_PASSWORD] ?: "" }
+    ) { nickname, password ->
+        UserPreferences(nickname, password)
+    }
+
+    suspend fun updateNickname(nickname: String) {
+        dataStore.edit { preferences ->
+            preferences[NICKNAME] = nickname
+        }
     }
 
     val showMediaPreviewsFlow: Flow<Boolean> = dataStore.data
@@ -131,22 +149,15 @@ class UserPreferencesRepository @Inject constructor(
         }
     }
 
-    val nickServPasswordFlow: Flow<String> = dataStore.data
-        .catch { exception ->
-            if (exception is IOException) {
-                Log.e(TAG, "Error reading NICKSERV_PASSWORD preferences.", exception)
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }
-        .map { preferences ->
-            preferences[NICKSERV_PASSWORD] ?: ""
-        }
-
     suspend fun updateNickServPassword(password: String) {
         dataStore.edit { preferences ->
             preferences[NICKSERV_PASSWORD] = password
+        }
+    }
+
+    suspend fun clearNickServPassword() {
+        dataStore.edit { preferences ->
+            preferences.remove(NICKSERV_PASSWORD)
         }
     }
 }

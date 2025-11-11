@@ -25,7 +25,7 @@ class AttemptNickServIdentificationUseCase @Inject constructor(
             if (!passwordToUse.isNullOrBlank()) {
                 Log.i("AttemptNickServUseCase", "Using session NickServ password for identification.")
             } else {
-                val savedPassword = userPreferencesRepository.nickServPasswordFlow.first()
+                val savedPassword = userPreferencesRepository.userPreferencesFlow.first().nickServPassword
                 if (savedPassword.isNotBlank()) {
                     Log.i("AttemptNickServUseCase", "Using saved NickServ password for identification.")
                     passwordToUse = savedPassword

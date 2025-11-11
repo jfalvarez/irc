@@ -244,9 +244,24 @@ private fun MainScreenScaffoldContent(
     mainActivity: MainActivity,
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
-    var nicknameInput by remember { mutableStateOf("") }
-    val nickServPasswordInputState = remember { mutableStateOf("") }
-    val rememberNickServPasswordInputState = remember { mutableStateOf(false) }
+    val userPreferences by viewModel.userPreferences.collectAsState()
+
+    var nicknameInput by remember { mutableStateOf(userPreferences.nickname) }
+    val nickServPasswordInputState = remember { mutableStateOf(userPreferences.nickServPassword) }
+    val rememberNickServPasswordInputState = remember { mutableStateOf(userPreferences.nickServPassword.isNotEmpty()) }
+
+    LaunchedEffect(userPreferences) {
+        if (nicknameInput != userPreferences.nickname) {
+            nicknameInput = userPreferences.nickname
+        }
+        if (nickServPasswordInputState.value != userPreferences.nickServPassword) {
+            nickServPasswordInputState.value = userPreferences.nickServPassword
+        }
+        val shouldRemember = userPreferences.nickServPassword.isNotEmpty()
+        if (rememberNickServPasswordInputState.value != shouldRemember) {
+            rememberNickServPasswordInputState.value = shouldRemember
+        }
+    }
 
     AnimatedContent(
         targetState = connectionState,

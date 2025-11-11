@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jfaf.irc.ads.NativeAdManager
 import com.jfaf.irc.data.model.ParsedIrcMessage
+import com.jfaf.irc.data.prefs.UserPreferences
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
@@ -132,9 +133,16 @@ class MainViewModel @Inject constructor(
         val ignoredUsersLowercase: Set<String>
     )
 
-    var currentNickname = "IrcUser${(100..999).random()}"
+    var currentNickname: String = ""
         private set
     private var sessionNickServPasswordForAutoIdentify: String? = null
+
+    val userPreferences: StateFlow<UserPreferences> = 
+        userPreferencesRepository.userPreferencesFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000L),
+            initialValue = UserPreferences("", "")
+        )
 
     private val _isRegistered = MutableStateFlow(false)
     private var friendCheckJob: Job? = null
@@ -402,6 +410,12 @@ class MainViewModel @Inject constructor(
         this.sessionNickServPasswordForAutoIdentify = sessionNickServPasswordParam
 
         viewModelScope.launch {
+            userPreferencesRepository.updateNickname(nickname)
+            if (rememberPass && sessionNickServPasswordParam != null) {
+                userPreferencesRepository.updateNickServPassword(sessionNickServPasswordParam)
+            } else if (!rememberPass) {
+                userPreferencesRepository.clearNickServPassword()
+            }
             connectUseCase(nickname, ssl, sessionNickServPasswordParam, rememberPass)
         }
     }
