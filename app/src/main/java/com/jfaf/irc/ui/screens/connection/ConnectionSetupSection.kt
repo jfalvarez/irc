@@ -45,13 +45,11 @@ import com.jfaf.irc.ui.viewmodels.SignInViewModel
 fun ConnectionSetupSection(
     nickname: String,
     onNicknameChange: (String) -> Unit,
-    useSsl: Boolean,
-    onUseSslChange: (Boolean) -> Unit,
     nickServPasswordState: MutableState<String>,
     rememberNickServPasswordState: MutableState<Boolean>,
     signInViewModel: SignInViewModel,
     mainActivity: MainActivity,
-    onConnect: (String, Boolean, String, Boolean) -> Unit
+    onConnect: (String, String, Boolean) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
     val isUserAuthenticated by signInViewModel.isUserAuthenticated.collectAsState()
@@ -89,11 +87,6 @@ fun ConnectionSetupSection(
             modifier = Modifier.fillMaxWidth()
         ) {
             Checkbox(
-                checked = useSsl,
-                onCheckedChange = onUseSslChange
-            )
-            Text(stringResource(R.string.label_use_ssl), color = MaterialTheme.colorScheme.onBackground)
-            Checkbox(
                 checked = rememberNickServPasswordState.value,
                 onCheckedChange = { rememberNickServPasswordState.value = it }
             )
@@ -102,7 +95,7 @@ fun ConnectionSetupSection(
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedButton(
             onClick = {
-                onConnect(nickname, useSsl, nickServPasswordState.value, rememberNickServPasswordState.value)
+                onConnect(nickname, nickServPasswordState.value, rememberNickServPasswordState.value)
             },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.outlinedButtonColors(

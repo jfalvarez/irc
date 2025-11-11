@@ -245,7 +245,6 @@ private fun MainScreenScaffoldContent(
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
     var nicknameInput by remember { mutableStateOf("") }
-    var useSslInput by remember { mutableStateOf(false) }
     val nickServPasswordInputState = remember { mutableStateOf("") }
     val rememberNickServPasswordInputState = remember { mutableStateOf(false) }
 
@@ -267,15 +266,13 @@ private fun MainScreenScaffoldContent(
             ConnectionSetupSection(
                 nickname = nicknameInput,
                 onNicknameChange = { nicknameInput = it },
-                useSsl = useSslInput,
-                onUseSslChange = { useSslInput = it },
                 nickServPasswordState = nickServPasswordInputState,
                 rememberNickServPasswordState = rememberNickServPasswordInputState,
                 signInViewModel = signInViewModel,
                 mainActivity = mainActivity,
-                onConnect = { nick, ssl, nickServPass, rememberPass ->
+                onConnect = { nick, nickServPass, rememberPass ->
                     if (nick.isNotBlank()) {
-                        viewModel.connect(nick, ssl, nickServPass, rememberPass)
+                        viewModel.connect(nick, true, nickServPass, rememberPass)
                     }
                 }
             )
