@@ -27,6 +27,8 @@ println("ADMOB APP ID FROM GRADLE: '$admobAppIdFromLocalProps'") // Para depurac
 val imageFilterKeywords = localProperties.getProperty("IMAGE_FILTER_KEYWORDS", "")
 println("IMAGE FILTER KEYWORDS FROM GRADLE: '$imageFilterKeywords'") // Para depuración
 
+val googleSignInClientId = localProperties.getProperty("google.signin.clientId")
+
 android {
     namespace = "com.jfaf.irc"
     compileSdk = 36
@@ -42,6 +44,7 @@ android {
 
         // Exponer IMAGE_FILTER_KEYWORDS como un campo en BuildConfig
         buildConfigField("String", "IMAGE_FILTER_KEYWORDS", "\"$imageFilterKeywords\"")
+        buildConfigField("String", "GOOGLE_SIGN_IN_CLIENT_ID", "\"$googleSignInClientId\"")
     }
 
     buildTypes {
