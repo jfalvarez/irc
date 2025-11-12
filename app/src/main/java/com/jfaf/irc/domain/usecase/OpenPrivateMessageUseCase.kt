@@ -2,9 +2,11 @@ package com.jfaf.irc.domain.usecase
 
 import androidx.compose.ui.text.AnnotatedString
 import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.data.repositories.MessageHistoryRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import com.jfaf.irc.ui.viewmodels.UiChatMessage
 import com.jfaf.irc.ui.viewmodels.UiMessageType
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 sealed interface OpenPrivateMessageResult {
@@ -14,7 +16,8 @@ sealed interface OpenPrivateMessageResult {
 
 class OpenPrivateMessageUseCase @Inject constructor(
     private val chatStateManager: ChatStateManager,
-    private val ircRepository: IrcRepository // Added IrcRepository
+    private val ircRepository: IrcRepository,
+    private val messageHistoryRepository: MessageHistoryRepository
 ) {
     suspend operator fun invoke(
         nick: String, 
@@ -30,6 +33,12 @@ class OpenPrivateMessageUseCase @Inject constructor(
         }
         
         chatStateManager.openPrivateMessageTarget(nick, currentOwnNickname)
+
+        // Load and prepend history
+        val history = messageHistoryRepository.getHistoryForTarget(nick).first()
+        if (history.isNotEmpty()) {
+            chatStateManager.prependHistoryMessages(nick, history)
+        }
         
         if (chatStateManager.activeTarget.value?.equals(nick, ignoreCase = true) == true) { 
             chatStateManager.addSystemMessageToTarget(nick, "Chat privado con $nick iniciado.")

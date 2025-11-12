@@ -60,7 +60,8 @@ data class UiChatMessage(
     val sender: String? = null,
     val isOwnMessage: Boolean = false,
     val mediaUrl: String? = null, // Replaced imageUrl
-    val mediaType: MediaTypeEnum = MediaTypeEnum.NONE // Added mediaType
+    val mediaType: MediaTypeEnum = MediaTypeEnum.NONE, // Added mediaType
+    val timestamp: Long = System.currentTimeMillis()
 )
 
 enum class UiMessageType {

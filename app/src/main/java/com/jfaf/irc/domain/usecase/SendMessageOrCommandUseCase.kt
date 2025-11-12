@@ -1,6 +1,8 @@
 package com.jfaf.irc.domain.usecase
 
 import androidx.compose.ui.text.AnnotatedString
+import com.jfaf.irc.data.database.MessageDao
+import com.jfaf.irc.data.database.MessageEntity
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import com.jfaf.irc.ui.viewmodels.UiChatMessage
@@ -20,7 +22,8 @@ sealed interface SendMessageActionStatus {
 class SendMessageOrCommandUseCase @Inject constructor(
     private val ircRepository: IrcRepository,
     private val chatStateManager: ChatStateManager,
-    private val commandProcessor: CommandProcessor
+    private val commandProcessor: CommandProcessor,
+    private val messageDao: MessageDao
 ) {
     suspend operator fun invoke(
         messageContent: String,
@@ -115,6 +118,18 @@ class SendMessageOrCommandUseCase @Inject constructor(
             )
             chatStateManager.addLocalUiMessageToTarget(currentActiveTargetFromViewModel, uiMessage)
             ircRepository.sendMessage(currentActiveTargetFromViewModel, messageContent)
+
+            if (!isChannelMessage) {
+                val messageEntity = MessageEntity(
+                    target = currentActiveTargetFromViewModel,
+                    sender = currentOwnNickname,
+                    content = messageContent,
+                    timestamp = System.currentTimeMillis(),
+                    isOwnMessage = true
+                )
+                messageDao.insertMessage(messageEntity)
+            }
+
             return SendMessageActionStatus.Success
         }
     }

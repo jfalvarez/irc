@@ -5,8 +5,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.hilt.android)
     kotlin("kapt")
+    alias(libs.plugins.hilt.android)
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics") // Plugin de Crashlytics
 }
@@ -95,7 +95,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.material.icons.extended) 
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.guava)
     implementation(libs.coil.compose)
     implementation("io.coil-kt:coil-gif:2.7.0")
@@ -104,6 +104,11 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
+
+    // Room
+    implementation("androidx.room:room-runtime:2.8.3")
+    implementation("androidx.room:room-ktx:2.8.3")
+    kapt("androidx.room:room-compiler:2.8.3")
 
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)

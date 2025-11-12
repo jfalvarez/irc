@@ -96,6 +96,14 @@ class ChatStateManager @Inject constructor() {
             }
         }
     }
+    
+    fun prependHistoryMessages(target: String, history: List<UiChatMessage>) {
+        _allMessages.update { currentAllMessages ->
+            val currentMessages = currentAllMessages[target] ?: emptyList()
+            val updatedMessages = (history + currentMessages).distinctBy { it.timestamp }.takeLast(MAX_MESSAGES_PER_TARGET)
+            currentAllMessages + (target to updatedMessages)
+        }
+    }
 
     // --- Funciones de gestión de estado existentes ---
     fun toggleUserListVisibility() {

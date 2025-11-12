@@ -22,3 +22,6 @@
 
 # Keep UserMetadata data class for Firestore
 -keep class com.jfaf.irc.data.repositories.UserMetadata { *; }
+
+# Keep MessageEntity data class for Room
+-keep class com.jfaf.irc.data.database.MessageEntity { *; }

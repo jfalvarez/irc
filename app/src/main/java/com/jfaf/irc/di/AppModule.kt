@@ -15,9 +15,21 @@ import javax.inject.Singleton
 @Qualifier
 annotation class ApplicationScope
 
+@Retention(AnnotationRetention.BINARY)
+@Qualifier
+annotation class DefaultDispatcher
+
+@Retention(AnnotationRetention.BINARY)
+@Qualifier
+annotation class IoDispatcher
+
+@Retention(AnnotationRetention.BINARY)
+@Qualifier
+annotation class MainDispatcher
+
 @Module
 @InstallIn(SingletonComponent::class)
-object CoroutineScopesModule {
+object AppModule {
 
     @Singleton
     @ApplicationScope
@@ -25,11 +37,6 @@ object CoroutineScopesModule {
     fun provideApplicationCoroutineScope(
         @DefaultDispatcher defaultDispatcher: CoroutineDispatcher
     ): CoroutineScope = CoroutineScope(SupervisorJob() + defaultDispatcher)
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-object DispatchersModule {
 
     @Provides
     @Singleton
@@ -46,15 +53,3 @@ object DispatchersModule {
     @MainDispatcher
     fun provideMainDispatcher(): CoroutineDispatcher = Dispatchers.Main
 }
-
-@Retention(AnnotationRetention.BINARY)
-@Qualifier
-annotation class DefaultDispatcher
-
-@Retention(AnnotationRetention.BINARY)
-@Qualifier
-annotation class IoDispatcher
-
-@Retention(AnnotationRetention.BINARY)
-@Qualifier
-annotation class MainDispatcher
