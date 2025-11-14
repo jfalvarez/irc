@@ -294,6 +294,10 @@ class MainViewModel @Inject constructor(
             }
         }.launchIn(viewModelScope)
 
+        ircRepository.connectionError.onEach { error ->
+            chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, error, isError = true)
+        }.launchIn(viewModelScope)
+
         _isRegistered.onEach { isRegistered ->
             if (isRegistered) {
                 startFriendChecker()
@@ -494,6 +498,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun disconnectFromServerAndStopService(quitMessage: String? = null) {
+        chatStateManager.clearHistoryLoadedTargets()
         viewModelScope.launch {
             disconnectUseCase(quitMessage)
             _userMessageEvents.emit("Desconectado del servidor.")

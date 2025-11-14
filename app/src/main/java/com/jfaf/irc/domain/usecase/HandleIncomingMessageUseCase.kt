@@ -73,8 +73,8 @@ class HandleIncomingMessageUseCase @Inject constructor(
             val senderNick = handlerResult.uiMessageToAdd.sender
             if (senderNick != null) {
                 val entity = MessageEntity(
-                    target = senderNick, // For a received PM, the target of the conversation is the sender
-                    sender = senderNick,
+                    conversationPartnerNick = senderNick, // For a received PM, the target of the conversation is the sender
+                    senderNick = senderNick,
                     content = parsedMessage.trailing ?: "",
                     timestamp = System.currentTimeMillis(),
                     isOwnMessage = false

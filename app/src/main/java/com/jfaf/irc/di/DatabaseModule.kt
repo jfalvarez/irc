@@ -22,7 +22,7 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "irc_app_database"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides

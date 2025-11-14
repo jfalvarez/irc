@@ -11,6 +11,6 @@ interface MessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMessage(message: MessageEntity)
 
-    @Query("SELECT * FROM private_messages WHERE target = :target ORDER BY timestamp ASC")
-    fun getMessagesForTarget(target: String): Flow<List<MessageEntity>>
+    @Query("SELECT * FROM private_messages WHERE conversationPartnerNick = :partnerNick ORDER BY timestamp ASC")
+    fun getMessagesForTarget(partnerNick: String): Flow<List<MessageEntity>>
 }

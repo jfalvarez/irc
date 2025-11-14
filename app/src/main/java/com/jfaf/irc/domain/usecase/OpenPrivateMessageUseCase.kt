@@ -31,13 +31,16 @@ class OpenPrivateMessageUseCase @Inject constructor(
             chatStateManager.addSystemMessageToTarget(targetForErrorMessage, errorMessage, isError = true)
             return OpenPrivateMessageResult.Failure(errorMessage)
         }
-        
+
+        val historyAlreadyLoaded = chatStateManager.checkAndMarkHistoryAsLoaded(nick)
+
         chatStateManager.openPrivateMessageTarget(nick, currentOwnNickname)
 
-        // Load and prepend history
-        val history = messageHistoryRepository.getHistoryForTarget(nick).first()
-        if (history.isNotEmpty()) {
-            chatStateManager.prependHistoryMessages(nick, history)
+        if (!historyAlreadyLoaded) {
+            val history = messageHistoryRepository.getHistoryForTarget(nick).first()
+            if (history.isNotEmpty()) {
+                chatStateManager.prependHistoryMessages(nick, history)
+            }
         }
         
         if (chatStateManager.activeTarget.value?.equals(nick, ignoreCase = true) == true) { 

@@ -108,13 +108,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        IrcServiceApi.appEnteredForeground()
+        IrcServiceApi.setAppInForeground(true)
         Log.d(TAG_ACTIVITY, "App en primer plano.")
     }
 
     override fun onStop() {
         super.onStop()
-        IrcServiceApi.appEnteredBackground()
+        IrcServiceApi.setAppInForeground(false)
         Log.d(TAG_ACTIVITY, "App en segundo plano.")
     }
 

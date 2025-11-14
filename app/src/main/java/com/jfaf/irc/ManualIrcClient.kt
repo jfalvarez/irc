@@ -36,6 +36,9 @@ class ManualIrcClient(
     private val _connectionState = MutableStateFlow<Boolean>(false)
     val connectionState: StateFlow<Boolean> = _connectionState.asStateFlow()
 
+    private val _connectionError = MutableSharedFlow<String>()
+    val connectionError: SharedFlow<String> = _connectionError.asSharedFlow()
+
     private val _isRegistered = MutableStateFlow(false)
     val isRegistered: StateFlow<Boolean> = _isRegistered.asStateFlow()
 
@@ -81,7 +84,9 @@ class ManualIrcClient(
                     throw Exception(AppConstants.ERROR_MSG_SOCKET_CONNECT_FAILED)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error de conexión: ${e.message}", e)
+                val errorMessage = "Error de conexión: ${e.message}"
+                Log.e(TAG, errorMessage, e)
+                _connectionError.emit(errorMessage)
                 cleanupConnection()
             }
         }

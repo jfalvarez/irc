@@ -121,8 +121,8 @@ class SendMessageOrCommandUseCase @Inject constructor(
 
             if (!isChannelMessage) {
                 val messageEntity = MessageEntity(
-                    target = currentActiveTargetFromViewModel,
-                    sender = currentOwnNickname,
+                    conversationPartnerNick = currentActiveTargetFromViewModel,
+                    senderNick = currentOwnNickname,
                     content = messageContent,
                     timestamp = System.currentTimeMillis(),
                     isOwnMessage = true

@@ -37,6 +37,8 @@ class ChatStateManager @Inject constructor() {
     private val _allMessages = MutableStateFlow<Map<String, List<UiChatMessage>>>(emptyMap())
     val allMessages: StateFlow<Map<String, List<UiChatMessage>>> = _allMessages.asStateFlow()
 
+    private val historyLoadedTargets = mutableSetOf<String>()
+
     val currentChannelUserListFlow: Flow<List<String>> = combine(
         _activeTarget,
         _usersInChannel
@@ -100,9 +102,22 @@ class ChatStateManager @Inject constructor() {
     fun prependHistoryMessages(target: String, history: List<UiChatMessage>) {
         _allMessages.update { currentAllMessages ->
             val currentMessages = currentAllMessages[target] ?: emptyList()
-            val updatedMessages = (history + currentMessages).distinctBy { it.timestamp }.takeLast(MAX_MESSAGES_PER_TARGET)
+            val updatedMessages = (history + currentMessages).distinctBy { it.fullText + it.timestamp }.takeLast(MAX_MESSAGES_PER_TARGET)
             currentAllMessages + (target to updatedMessages)
         }
+    }
+    
+    fun checkAndMarkHistoryAsLoaded(target:String): Boolean {
+        return if (historyLoadedTargets.contains(target)) {
+            true // Ya cargado
+        } else {
+            historyLoadedTargets.add(target)
+            false // No estaba cargado, pero ahora lo está
+        }
+    }
+
+    fun clearHistoryLoadedTargets() {
+        historyLoadedTargets.clear()
     }
 
     // --- Funciones de gestión de estado existentes ---
@@ -196,8 +211,7 @@ class ChatStateManager @Inject constructor() {
         if (!targetName.startsWith("#")) { // Es un PM
             _chatTargets.update { ensureServerTargetIsFirstLocal(it.filterNot { t -> t.equals(targetName, ignoreCase = true) }) }
             _unreadTargets.update { it - targetName }
-            _usersInChannel.update { it - targetName }
-            _allMessages.update { it - targetName }
+            historyLoadedTargets.remove(targetName)
 
             if (currentActiveTargetFromVM?.equals(targetName, ignoreCase = true) == true) {
                 val nextTarget = _chatTargets.value.firstOrNull() ?: SERVER_TARGET_ID
@@ -241,6 +255,7 @@ class ChatStateManager @Inject constructor() {
     }
 
     fun resetStateForDisconnection() {
+        clearHistoryLoadedTargets()
         _chatTargets.value = ensureServerTargetIsFirstLocal(listOf(SERVER_TARGET_ID))
         _activeTarget.value = SERVER_TARGET_ID
         _unreadTargets.value = emptySet()

@@ -228,6 +228,13 @@ class IrcService : Service() {
                 }
             }
         }
+
+        serviceScope.launch {
+            manualIrcClient!!.connectionError.collectLatest { 
+                IrcServiceApi.postConnectionError(it)
+            }
+        }
+
         manualIrcClient?.connect(nickname)
     }
 

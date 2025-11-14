@@ -23,6 +23,7 @@ class IrcRepository @Inject constructor(
 
     val connectionState: StateFlow<Boolean> = IrcServiceApi.connectionState
     val incomingMessages: SharedFlow<ParsedIrcMessage> = IrcServiceApi.incomingMessages
+    val connectionError: SharedFlow<String> = IrcServiceApi.connectionError
 
     fun connect(serverHost: String, serverPort: Int, useSsl: Boolean, nickname: String) {
         Log.d(TAG, "Solicitando conexión al servicio para: $nickname@$serverHost:$serverPort")

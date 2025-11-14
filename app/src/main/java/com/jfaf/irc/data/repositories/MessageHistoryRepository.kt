@@ -21,10 +21,10 @@ class MessageHistoryRepository @Inject constructor(
 }
 
 private fun MessageEntity.toUiChatMessage(): UiChatMessage {
-    val fullText = if (isOwnMessage) "<You> $content" else "<$sender> $content"
+    val fullText = if (isOwnMessage) "<You> $content" else "<${senderNick}> $content"
     return UiChatMessage(
         fullText = fullText,
-        sender = sender,
+        sender = senderNick,
         type = if (isOwnMessage) UiMessageType.PRIVATE_MSG_SENT else UiMessageType.PRIVATE_MSG_RECEIVED,
         isOwnMessage = isOwnMessage,
         timestamp = timestamp
