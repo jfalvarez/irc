@@ -228,7 +228,7 @@ class IrcService : Service() {
                 }
             }
         }
-        manualIrcClient?.connect(nickname)
+        manualIrcClient?.connect(nickname, user = "ircandroid", real = "Android IRC User")
     }
 
     private fun disconnect(quitMessage: String? = null) {
