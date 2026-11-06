@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.ads.nativead.NativeAd
 import com.jfaf.irc.ads.NativeAdManager
+import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.MediaTypeEnum
 import com.jfaf.irc.ui.viewmodels.UiChatMessage
 import com.jfaf.irc.ui.viewmodels.UiMessageType
@@ -21,7 +22,8 @@ fun MessagesList(
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit,
     modifier: Modifier = Modifier,
     showMediaPreviews: Boolean,
-    nativeAdManager: NativeAdManager
+    nativeAdManager: NativeAdManager,
+    mainViewModel: MainViewModel
 ) {
     val nativeAd by nativeAdManager.nativeAd.collectAsState()
 
@@ -39,7 +41,8 @@ fun MessagesList(
                 MessageRow(
                     message = msg,
                     onMediaClick = onMediaClick,
-                    showMediaPreviews = showMediaPreviews
+                    showMediaPreviews = showMediaPreviews,
+                    mainViewModel = mainViewModel
                 )
             }
         }

@@ -1,6 +1,5 @@
 package com.jfaf.irc.ui.screens.chat
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.jfaf.irc.R
-import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 
 @Composable
@@ -37,15 +33,6 @@ fun ChannelUserListView(
     val activeTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()
     val ignoredUsers by mainViewModel.chatScreenState.ignoredUsers.collectAsState()
     var expandedUserMenu by remember { mutableStateOf<String?>(null) }
-
-    // Helper function to strip common channel mode prefixes from nicks
-    fun cleanNick(nick: String): String {
-        return if (nick.startsWith("@") || nick.startsWith("+") || nick.startsWith("%") || nick.startsWith("&") || nick.startsWith("~")) {
-            nick.substring(1)
-        } else {
-            nick
-        }
-    }
 
     val filteredUserList = userList.filterNot { user ->
         ignoredUsers.any { ignoredUser -> cleanNick(user).equals(ignoredUser, ignoreCase = true) }
@@ -80,50 +67,12 @@ fun ChannelUserListView(
                             )
                         }
 
-                        DropdownMenu(
+                        UserActionsMenu(
+                            userName = userName,
                             expanded = expandedUserMenu == userName,
-                            onDismissRequest = { expandedUserMenu = null },
-                            modifier = Modifier.background(IRCTheme.dropdownMenuContainerOpaque) // Fondo aplicado directamente
-                        ) {
-                            DropdownMenuItem(
-                                text = { 
-                                    Text(
-                                        stringResource(R.string.action_send_private_message),
-                                        color = MaterialTheme.colorScheme.onPrimary // Color de texto explícito
-                                    )
-                                },
-                                onClick = {
-                                    // For PMs, we might also want to clean the nick if server doesn't handle prefixes
-                                    mainViewModel.openPrivateMessage(cleanNick(userName)) 
-                                    expandedUserMenu = null
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { 
-                                    Text(
-                                        stringResource(R.string.action_ignore_user),
-                                        color = MaterialTheme.colorScheme.onPrimary // Color de texto explícito
-                                    )
-                                },
-                                onClick = {
-                                    mainViewModel.ignoreUser(cleanNick(userName)) // Clean nick for ignore as well
-                                    expandedUserMenu = null
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { 
-                                    Text(
-                                        stringResource(R.string.action_whois),
-                                        color = MaterialTheme.colorScheme.onPrimary // Color de texto explícito
-                                    )
-                                },
-                                onClick = {
-                                    val cleanedUserName = cleanNick(userName)
-                                    mainViewModel.performWhois(cleanedUserName)
-                                    expandedUserMenu = null
-                                }
-                            )
-                        }
+                            onDismiss = { expandedUserMenu = null },
+                            mainViewModel = mainViewModel
+                        )
                     }
                 }
             }

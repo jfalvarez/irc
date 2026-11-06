@@ -3,6 +3,7 @@ package com.jfaf.irc.ui.screens.chat
 import android.util.Log
 import android.util.Patterns
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,6 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
@@ -28,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 // import com.jfaf.irc.R // No longer needed for string resources of placeholder
 import com.jfaf.irc.ui.chat.MediaPreview 
+import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.MediaTypeEnum
 import com.jfaf.irc.ui.viewmodels.UiChatMessage
 import com.jfaf.irc.ui.viewmodels.UiMessageType
@@ -36,8 +42,10 @@ import com.jfaf.irc.ui.viewmodels.UiMessageType
 fun MessageRow(
     message: UiChatMessage, 
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit,
-    showMediaPreviews: Boolean 
+    showMediaPreviews: Boolean,
+    mainViewModel: MainViewModel
 ) {
+    var nickMenuExpanded by remember { mutableStateOf(false) }
     val baseTextColor = when (message.type) {
         UiMessageType.SYSTEM_MESSAGE, UiMessageType.JOIN_PART_QUIT, UiMessageType.NICK_CHANGE, UiMessageType.MODE_CHANGE -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
         UiMessageType.SERVER_INFO -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
@@ -62,6 +70,23 @@ fun MessageRow(
         append(baseString)
 
         addStyle(SpanStyle(color = baseTextColor, fontStyle = fontStyle, fontWeight = fontWeight), 0, length)
+
+        // Solo el "<nick>" de mensajes de canal recibidos abre el menú contextual.
+        val nickSender = message.sender
+        if (message.type == UiMessageType.CHANNEL_MSG_RECEIVED && !nickSender.isNullOrBlank()) {
+            val nickPrefix = "<$nickSender>"
+            if (baseString.text.startsWith(nickPrefix)) {
+                addLink(
+                    clickable = LinkAnnotation.Clickable(
+                        tag = "nick",
+                        styles = null,
+                        linkInteractionListener = { nickMenuExpanded = true }
+                    ),
+                    start = 0,
+                    end = nickPrefix.length
+                )
+            }
+        }
 
         val matcher = Patterns.WEB_URL.matcher(baseString.text)
         while (matcher.find()) {
@@ -103,11 +128,21 @@ fun MessageRow(
     }
 
     Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth()) {
-        Text(
-            text = clickableText,
-            style = TextStyle(fontSize = 14.sp)
-        )
-        
+        Box {
+            Text(
+                text = clickableText,
+                style = TextStyle(fontSize = 14.sp)
+            )
+            message.sender?.let { nick ->
+                UserActionsMenu(
+                    userName = nick,
+                    expanded = nickMenuExpanded,
+                    onDismiss = { nickMenuExpanded = false },
+                    mainViewModel = mainViewModel
+                )
+            }
+        }
+
         if (!message.mediaUrl.isNullOrBlank() && showMediaPreviews) {
             Spacer(modifier = Modifier.height(4.dp))
             MediaPreview(

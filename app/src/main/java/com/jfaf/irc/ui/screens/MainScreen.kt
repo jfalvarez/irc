@@ -1,9 +1,7 @@
 package com.jfaf.irc.ui.screens
 
-import android.util.Log
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -23,7 +21,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
@@ -46,12 +43,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.AdSize
-import com.google.android.gms.ads.AdView
 import com.jfaf.irc.MainActivity
 import com.jfaf.irc.R
 import com.jfaf.irc.ui.screens.chat.AppDrawerContent
@@ -68,7 +61,6 @@ import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun MainScreen(
     modifier: Modifier = Modifier,
@@ -234,7 +226,6 @@ private fun MainScreenBottomBar(
     }
 }
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun MainScreenScaffoldContent(
     paddingValues: PaddingValues,
@@ -324,7 +315,8 @@ private fun ConnectedStateView(
             onMediaClick = onMediaClick,
             modifier = Modifier.weight(if (shouldShowUserListComposite) 0.6f else 1f),
             showMediaPreviews = showMediaPreviews,
-            nativeAdManager = nativeAdManager
+            nativeAdManager = nativeAdManager,
+            mainViewModel = viewModel
         )
 
         AnimatedVisibility(
