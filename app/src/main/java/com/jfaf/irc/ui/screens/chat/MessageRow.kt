@@ -8,16 +8,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.MaterialTheme
-// import androidx.compose.material3.Text // No longer needed for placeholder
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 // import androidx.compose.ui.res.stringResource // No longer needed for placeholder text
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -74,17 +75,25 @@ fun MessageRow(
                     message.mediaUrl.removePrefix("https://").removePrefix("http://") ==
                         url.removePrefix("https://").removePrefix("http://")
                 if (!isMediaLink || !showMediaPreviews) {
-                    addStyle(
-                        style = SpanStyle(
-                            color = Color.White, // Consider MaterialTheme.colorScheme.primary for theming
-                            textDecoration = TextDecoration.Underline
+                    val target = if (Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(url))
+                        url else "https://$url"
+                    addLink(
+                        url = LinkAnnotation.Url(
+                            url = target,
+                            styles = TextLinkStyles(
+                                style = SpanStyle(
+                                    color = Color.White, // Consider MaterialTheme.colorScheme.primary for theming
+                                    textDecoration = TextDecoration.Underline
+                                )
+                            ),
+                            linkInteractionListener = {
+                                try {
+                                    uriHandler.openUri(target)
+                                } catch (e: Exception) {
+                                    Log.e("MessageRow", "Could not open URL $target", e)
+                                }
+                            }
                         ),
-                        start = startIndex,
-                        end = endIndex
-                    )
-                    addStringAnnotation(
-                        tag = "URL",
-                        annotation = url,
                         start = startIndex,
                         end = endIndex
                     )
@@ -94,21 +103,9 @@ fun MessageRow(
     }
 
     Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth()) {
-        ClickableText(
+        Text(
             text = clickableText,
-            style = TextStyle(fontSize = 14.sp), 
-            onClick = { offset ->
-                clickableText.getStringAnnotations(tag = "URL", start = offset, end = offset)
-                    .firstOrNull()?.let { annotation ->
-                        try {
-                            val target = if (Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(annotation.item))
-                                annotation.item else "https://${annotation.item}"
-                            uriHandler.openUri(target)
-                        } catch (e: Exception) {
-                            Log.e("MessageRow", "Could not open URL ${annotation.item}", e)
-                        }
-                    }
-            }
+            style = TextStyle(fontSize = 14.sp)
         )
         
         if (!message.mediaUrl.isNullOrBlank() && showMediaPreviews) {
@@ -117,10 +114,8 @@ fun MessageRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp) 
-                    .clickable { 
-                        message.mediaUrl?.let { mediaUrl -> 
-                            onMediaClick(mediaUrl, message.mediaType) 
-                        } 
+                    .clickable {
+                        onMediaClick(message.mediaUrl, message.mediaType)
                     },
                 mediaUrl = message.mediaUrl,
                 mediaType = message.mediaType
