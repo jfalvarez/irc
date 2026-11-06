@@ -32,7 +32,8 @@ class ManualIrcClient(
     private var writer: BufferedWriter? = null
     private var reader: BufferedReader? = null
 
-    private val _incomingMessages = MutableSharedFlow<ParsedIrcMessage>()
+    // Buffer para que un colector lento no bloquee el bucle de lectura (ni retrase los PONG).
+    private val _incomingMessages = MutableSharedFlow<ParsedIrcMessage>(extraBufferCapacity = 256)
     val incomingMessages: SharedFlow<ParsedIrcMessage> = _incomingMessages.asSharedFlow()
 
     private val _connectionState = MutableStateFlow<Boolean>(false)

@@ -53,6 +53,7 @@ class IrcService : Service() {
     private data class ConnectParams(val nickname: String, val host: String, val port: Int, val useSsl: Boolean)
     private var lastConnectParams: ConnectParams? = null
     private var reconnectJob: Job? = null
+    private var clientCollectorsJob: Job? = null
     private var reconnectAttempt = 0
 
     companion object {
@@ -200,7 +201,7 @@ class IrcService : Service() {
         }
         currentHostForNotification = serverHost
 
-        manualIrcClient = ManualIrcClient(
+        val client = ManualIrcClient(
             host = serverHost,
             port = serverPort,
             useSsl = useSsl,
@@ -208,19 +209,23 @@ class IrcService : Service() {
             ioDispatcher = Dispatchers.IO,
             onConnectionLost = { scheduleReconnect() }
         )
+        manualIrcClient = client
 
-        serviceScope.launch {
-            manualIrcClient!!.connectionState.collectLatest { isConnected ->
+        // Cancela los colectores del cliente anterior para que no se acumulen
+        clientCollectorsJob?.cancel()
+        clientCollectorsJob = serviceScope.launch {
+          launch {
+            client.connectionState.collectLatest { isConnected ->
                 IrcServiceApi.updateConnectionState(isConnected)
                 val statusText = if (isConnected) getString(R.string.status_connected_to_host, currentHostForNotification) else getString(R.string.status_disconnected_short)
                 if (isConnected || reconnectJob?.isActive != true) {
                     updateForegroundServiceNotification(statusText)
                 }
             }
-        }
+          }
 
-        serviceScope.launch {
-            manualIrcClient!!.incomingMessages.collectLatest { parsedMessage ->
+          launch {
+            client.incomingMessages.collect { parsedMessage ->
                 IrcServiceApi.postMessage(parsedMessage)
 
                 if (!IrcServiceApi.isAppInForeground.value) { // App is in background
@@ -247,8 +252,9 @@ class IrcService : Service() {
                     Log.d(TAG, "App en foreground, no se muestra notificación emergente para: ${parsedMessage.rawLine}")
                 }
             }
+          }
         }
-        manualIrcClient?.connect(nickname, user = "ircandroid", real = "Android IRC User")
+        client.connect(nickname, user = "ircandroid", real = "Android IRC User")
     }
 
     private fun disconnect(quitMessage: String? = null) {
