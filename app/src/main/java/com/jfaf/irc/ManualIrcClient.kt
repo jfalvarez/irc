@@ -22,7 +22,9 @@ class ManualIrcClient(
     private val port: Int,
     private val useSsl: Boolean,
     private val coroutineScope: CoroutineScope,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    /** Se invoca cuando la conexión se cierra sin que el usuario lo haya pedido. */
+    private val onConnectionLost: () -> Unit = {}
 ) {
     private val TAG = "ManualIrcClient"
 
@@ -41,6 +43,10 @@ class ManualIrcClient(
 
     private var currentNickname: String = AppConstants.DEFAULT_BOT_NICKNAME
 
+    @Volatile private var closedByUser = false
+    // canal (en minúsculas) -> clave ("" si no tiene). Sobrevive a las reconexiones.
+    private val channelsToRejoin = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     val isConnected: Boolean
         get() = _connectionState.value && socket?.isConnected == true
 
@@ -53,6 +59,7 @@ class ManualIrcClient(
             return
         }
         this.currentNickname = nick
+        closedByUser = false
         val username = user
         val realname = real
 
@@ -83,6 +90,7 @@ class ManualIrcClient(
             } catch (e: Exception) {
                 Log.e(TAG, "Error de conexión: ${e.message}", e)
                 cleanupConnection()
+                notifyConnectionLost()
             }
         }
     }
@@ -138,6 +146,7 @@ class ManualIrcClient(
                 } else {
                     Log.w(TAG, "readLine devolvió null. Conexión cerrada por el servidor.")
                     cleanupConnection()
+                    notifyConnectionLost()
                     break
                 }
             }
@@ -146,6 +155,7 @@ class ManualIrcClient(
                 Log.e(TAG, "Error leyendo del socket: ${e.message}", e)
             }
             cleanupConnection()
+            notifyConnectionLost()
         } finally {
             Log.d(TAG, "Bucle de escucha finalizado.")
         }
@@ -163,6 +173,9 @@ class ManualIrcClient(
             _isRegistered.value = true
             val confirmedNick = message.params.firstOrNull() ?: currentNickname
             Log.i(TAG, "Cliente registrado con el servidor (RPL_WELCOME recibido). Nick confirmado: $confirmedNick")
+            channelsToRejoin.forEach { (channel, key) ->
+                sendRaw("JOIN $channel${if (key.isEmpty()) "" else " $key"}")
+            }
         }
     }
 
@@ -188,12 +201,14 @@ class ManualIrcClient(
         } catch (e: Exception) {
             Log.e(TAG, "Error enviando mensaje: ${e.message}", e)
             cleanupConnection()
+            notifyConnectionLost()
         }
     }
 
     fun joinChannel(channelName: String, key: String? = null) {
         if (_isRegistered.value) {
             sendRaw("JOIN $channelName${key?.let { " $it" } ?: ""}")
+            channelsToRejoin[channelName.lowercase()] = key.orEmpty()
         } else {
             Log.w(TAG, "Aún no registrado con el servidor. Comando JOIN para '$channelName' no enviado.")
         }
@@ -202,6 +217,7 @@ class ManualIrcClient(
     fun partFromChannel(channelName: String, partMessage: String? = null) {
         if (_isRegistered.value) {
             sendRaw("PART $channelName${partMessage?.let { " :$it" } ?: ""}")
+            channelsToRejoin.remove(channelName.lowercase())
             Log.i(TAG, "Enviando PART para el canal: $channelName${partMessage?.let { " con mensaje: $it"} ?: ""}")
         } else {
             Log.w(TAG, "Aún no registrado con el servidor. Comando PART para '$channelName' no enviado.")
@@ -230,7 +246,13 @@ class ManualIrcClient(
         socket = null
     }
 
+    private fun notifyConnectionLost() {
+        if (!closedByUser && isActive) onConnectionLost()
+    }
+
     fun disconnectAndCleanup() {
+        closedByUser = true
+        channelsToRejoin.clear()
         if (_connectionState.value) {
             if (writer != null) { 
                 quitServer(AppConstants.QUIT_MSG_CLIENT_SHUTDOWN)

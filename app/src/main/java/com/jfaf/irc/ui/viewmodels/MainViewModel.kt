@@ -39,6 +39,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -86,7 +88,9 @@ data class ChatScreenState(
     val chatTargets: StateFlow<List<String>>,
     val unreadTargets: StateFlow<Set<String>>,
     val uiMessages: StateFlow<List<UiChatMessage>>,
+    /** true si está conectado O reconectando (la UI mantiene el chat visible mientras reconecta). */
     val connectionState: StateFlow<Boolean>,
+    val isReconnecting: StateFlow<Boolean>,
     val usersInChannel: StateFlow<Map<String, List<String>>>,
     val currentChannelUserList: StateFlow<List<String>>,
     val showUserList: StateFlow<Boolean>,
@@ -96,6 +100,7 @@ data class ChatScreenState(
     val ignoredUsers: StateFlow<Set<String>>
 )
 
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val ircRepository: IrcRepository,
@@ -264,12 +269,26 @@ class MainViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    private enum class LinkState { CONNECTED, RECONNECTING, DISCONNECTED }
+
+    private var wasReconnecting = false
+
+    private val uiConnectionState: StateFlow<Boolean> =
+        combine(ircRepository.connectionState, ircRepository.isReconnecting) { connected, reconnecting ->
+            connected || reconnecting
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            ircRepository.connectionState.value || ircRepository.isReconnecting.value
+        )
+
     val chatScreenState: ChatScreenState = ChatScreenState(
         activeTarget = chatStateManager.activeTarget,
         chatTargets = chatStateManager.chatTargets,
         unreadTargets = chatStateManager.unreadTargets,
         uiMessages = combinedUiMessagesFlow,
-        connectionState = ircRepository.connectionState,
+        connectionState = uiConnectionState,
+        isReconnecting = ircRepository.isReconnecting,
         usersInChannel = chatStateManager.usersInChannel,
         currentChannelUserList = currentChannelUserListState,
         showUserList = chatStateManager.showUserList,
@@ -281,15 +300,42 @@ class MainViewModel @Inject constructor(
 
     init {
         chatEventOrchestrator.startObservingRawMessages()
-        ircRepository.connectionState.onEach { isConnected ->
-            Log.i("MainViewModel", "Connection State Observer: ${if (isConnected) "CONNECTED" else "DISCONNECTED"}")
-            if (!isConnected) {
-                _isRegistered.value = false // Reset registration state
-                friendCheckJob?.cancel() // Cancel the job when disconnected
-                handleServiceDisconnected()
-            } else {
-                handleServiceConnected()
-                attemptNickServIdentification()
+        // El debounce evita ver el "desconectado" transitorio que ocurre justo antes de que
+        // el servicio marque isReconnecting = true.
+        combine(ircRepository.connectionState, ircRepository.isReconnecting) { connected, reconnecting ->
+            when {
+                connected -> LinkState.CONNECTED
+                reconnecting -> LinkState.RECONNECTING
+                else -> LinkState.DISCONNECTED
+            }
+        }.distinctUntilChanged().debounce(300).onEach { state ->
+            Log.i("MainViewModel", "Connection State Observer: $state")
+            when (state) {
+                LinkState.CONNECTED -> {
+                    if (wasReconnecting) {
+                        wasReconnecting = false
+                        chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "Reconectado.")
+                    } else {
+                        handleServiceConnected()
+                    }
+                    attemptNickServIdentification()
+                }
+                LinkState.RECONNECTING -> {
+                    wasReconnecting = true
+                    _isRegistered.value = false
+                    friendCheckJob?.cancel()
+                    chatStateManager.addSystemMessageToTarget(
+                        ChatStateManager.SERVER_TARGET_ID,
+                        "Conexión perdida. Reconectando…",
+                        isError = true
+                    )
+                }
+                LinkState.DISCONNECTED -> {
+                    wasReconnecting = false
+                    _isRegistered.value = false // Reset registration state
+                    friendCheckJob?.cancel() // Cancel the job when disconnected
+                    handleServiceDisconnected()
+                }
             }
         }.launchIn(viewModelScope)
 
@@ -339,8 +385,8 @@ class MainViewModel @Inject constructor(
 
     private fun attemptNickServIdentification() {
         viewModelScope.launch {
+            // La contraseña de sesión se conserva en memoria para re-identificar tras una reconexión.
             attemptNickServIdentificationUseCase(this@MainViewModel.currentNickname, sessionNickServPasswordForAutoIdentify)
-            sessionNickServPasswordForAutoIdentify = null
         }
     }
 

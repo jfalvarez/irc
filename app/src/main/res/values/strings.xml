@@ -6,6 +6,8 @@
     <string name="notification_status_connected_to">Estado: Conectado a %1$s</string>
     <string name="notification_status_connecting">Iniciando conexión IRC...</string>
     <string name="notification_status_disconnected">Estado: Desconectado</string>
+    <string name="status_reconnecting">Reconectando…</string>
+    <string name="notification_status_reconnecting">Estado: Reconectando (intento %1$d de %2$d)…</string>
     <string name="notification_channel_name_irc_service">IRC Service Channel</string>
     <string name="notification_title_irc_client">Cliente IRC</string>
     <string name="status_connected_to_host">Conectado a %1$s</string>

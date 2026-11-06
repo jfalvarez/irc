@@ -22,6 +22,7 @@ class IrcRepository @Inject constructor(
     private val silentWhoisNicks = ConcurrentHashMap.newKeySet<String>()
 
     val connectionState: StateFlow<Boolean> = IrcServiceApi.connectionState
+    val isReconnecting: StateFlow<Boolean> = IrcServiceApi.isReconnecting
     val incomingMessages: SharedFlow<ParsedIrcMessage> = IrcServiceApi.incomingMessages
 
     fun connect(serverHost: String, serverPort: Int, useSsl: Boolean, nickname: String) {

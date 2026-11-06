@@ -20,11 +20,15 @@ import com.jfaf.irc.data.repositories.UserMetadataRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
+import kotlin.math.min
 
 @AndroidEntryPoint
 class IrcService : Service() {
@@ -46,7 +50,17 @@ class IrcService : Service() {
     private var currentHostForNotification: String = AppConstants.DEFAULT_HOST_PLACEHOLDER
     private var isFriendObserverStarted = false
 
+    private data class ConnectParams(val nickname: String, val host: String, val port: Int, val useSsl: Boolean)
+    private var lastConnectParams: ConnectParams? = null
+    private var reconnectJob: Job? = null
+    private var reconnectAttempt = 0
+
     companion object {
+        private const val RECONNECT_BASE_DELAY_MS = 2_000L
+        private const val RECONNECT_MAX_DELAY_MS = 60_000L
+        private const val RECONNECT_MAX_ATTEMPTS = 8
+        private const val RECONNECT_REGISTER_TIMEOUT_MS = 15_000L
+
         const val ACTION_CONNECT = "com.jfaf.irc.service.ACTION_CONNECT"
         const val ACTION_DISCONNECT = "com.jfaf.irc.service.ACTION_DISCONNECT"
         const val ACTION_SEND_MESSAGE = "com.jfaf.irc.service.ACTION_SEND_MESSAGE"
@@ -105,6 +119,7 @@ class IrcService : Service() {
             }
             ACTION_DISCONNECT -> {
                 Log.i(TAG, "Acción DISCONNECT recibida. Desconectando socket, servicio permanece en foreground.")
+                cancelReconnect()
                 serviceScope.launch {
                     manualIrcClient?.disconnectAndCleanup()
                 }
@@ -170,6 +185,8 @@ class IrcService : Service() {
     }
 
     private fun connect(nickname: String, serverHost: String, serverPort: Int, useSsl: Boolean) {
+        cancelReconnect()
+        lastConnectParams = ConnectParams(nickname, serverHost, serverPort, useSsl)
         if (manualIrcClient != null && manualIrcClient!!.isConnected) {
             Log.w(TAG, "Ya conectado o conectando.")
             currentHostForNotification = manualIrcClient?.host ?: serverHost
@@ -188,14 +205,17 @@ class IrcService : Service() {
             port = serverPort,
             useSsl = useSsl,
             coroutineScope = serviceScope,
-            ioDispatcher = Dispatchers.IO
+            ioDispatcher = Dispatchers.IO,
+            onConnectionLost = { scheduleReconnect() }
         )
 
         serviceScope.launch {
             manualIrcClient!!.connectionState.collectLatest { isConnected ->
                 IrcServiceApi.updateConnectionState(isConnected)
                 val statusText = if (isConnected) getString(R.string.status_connected_to_host, currentHostForNotification) else getString(R.string.status_disconnected_short)
-                updateForegroundServiceNotification(statusText)
+                if (isConnected || reconnectJob?.isActive != true) {
+                    updateForegroundServiceNotification(statusText)
+                }
             }
         }
 
@@ -233,6 +253,7 @@ class IrcService : Service() {
 
     private fun disconnect(quitMessage: String? = null) {
         Log.i(TAG, "Función disconnect(quitMessage: $quitMessage) llamada. Limpiando cliente, quitando foreground y deteniendo servicio.")
+        cancelReconnect()
         serviceScope.launch {
             val wasConnected = IrcServiceApi.connectionState.value
             if (wasConnected && !quitMessage.isNullOrBlank()) {
@@ -246,6 +267,46 @@ class IrcService : Service() {
             stopSelf()
             Log.i(TAG, "Servicio detenido y limpiado.")
         }
+    }
+
+    private fun scheduleReconnect() {
+        val params = lastConnectParams ?: return
+        if (reconnectJob?.isActive == true) return
+        IrcServiceApi.updateReconnecting(true)
+        reconnectJob = serviceScope.launch {
+            try {
+                while (reconnectAttempt < RECONNECT_MAX_ATTEMPTS) {
+                    reconnectAttempt++
+                    val delayMs = min(RECONNECT_BASE_DELAY_MS shl (reconnectAttempt - 1), RECONNECT_MAX_DELAY_MS)
+                    updateForegroundServiceNotification(
+                        getString(R.string.notification_status_reconnecting, reconnectAttempt, RECONNECT_MAX_ATTEMPTS)
+                    )
+                    Log.i(TAG, "Reconexión $reconnectAttempt/$RECONNECT_MAX_ATTEMPTS en ${delayMs}ms")
+                    delay(delayMs)
+                    val client = manualIrcClient ?: return@launch
+                    client.connect(params.nickname, user = "ircandroid", real = "Android IRC User")
+                    val registered = withTimeoutOrNull(RECONNECT_REGISTER_TIMEOUT_MS) {
+                        client.isRegistered.first { it }
+                    } != null
+                    if (registered) {
+                        reconnectAttempt = 0
+                        return@launch
+                    }
+                    client.disconnectAndCleanup()
+                }
+                Log.w(TAG, "Reconexión abandonada tras $RECONNECT_MAX_ATTEMPTS intentos")
+                updateForegroundServiceNotification(getString(R.string.notification_status_disconnected))
+            } finally {
+                // Éxito, abandono o cancelación
+                IrcServiceApi.updateReconnecting(false)
+            }
+        }
+    }
+
+    private fun cancelReconnect() {
+        reconnectJob?.cancel()
+        reconnectJob = null
+        reconnectAttempt = 0
     }
 
     private fun sendMessage(target: String, message: String) {

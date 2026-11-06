@@ -17,6 +17,9 @@ object IrcServiceApi {
     private val _connectionState = MutableStateFlow(false)
     val connectionState: StateFlow<Boolean> = _connectionState.asStateFlow()
 
+    private val _isReconnecting = MutableStateFlow(false)
+    val isReconnecting: StateFlow<Boolean> = _isReconnecting.asStateFlow()
+
     // Using a larger buffer for messages that might arrive while UI is not actively collecting
     private val _incomingMessages = MutableSharedFlow<ParsedIrcMessage>(
         replay = 50, // Keep last 50 messages for new collectors
@@ -32,6 +35,10 @@ object IrcServiceApi {
     // --- Internal methods to be called by IrcService only ---
     internal fun updateConnectionState(isConnected: Boolean) {
         _connectionState.value = isConnected
+    }
+
+    internal fun updateReconnecting(value: Boolean) {
+        _isReconnecting.value = value
     }
 
     internal suspend fun postMessage(message: ParsedIrcMessage) {

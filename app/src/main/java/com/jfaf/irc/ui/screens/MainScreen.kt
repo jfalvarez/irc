@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
@@ -73,6 +74,7 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     val connectionState by viewModel.chatScreenState.connectionState.collectAsState()
+    val isReconnecting by viewModel.chatScreenState.isReconnecting.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -119,6 +121,7 @@ fun MainScreen(
                     MainScreenBottomBar(
                         viewModel = viewModel,
                         connectionState = connectionState,
+                        isReconnecting = isReconnecting,
                         activeTargetValue = viewModel.chatScreenState.activeTarget.collectAsState().value,
                         nickSuggestionsState = viewModel.chatScreenState.nickSuggestions.collectAsState().value
                     )
@@ -203,11 +206,12 @@ private fun AppDrawerMainContent(
 private fun MainScreenBottomBar(
     viewModel: MainViewModel,
     connectionState: Boolean,
+    isReconnecting: Boolean,
     activeTargetValue: String?,
     nickSuggestionsState: List<String>
 ) {
     Column {
-        val showInputSection = connectionState && activeTargetValue != null
+        val showInputSection = connectionState && !isReconnecting && activeTargetValue != null
 
         if (showInputSection) {
             MessageInputSection(
@@ -302,13 +306,27 @@ private fun ConnectedStateView(
     val messages by viewModel.chatScreenState.uiMessages.collectAsState()
     val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
     val showMediaPreviews by viewModel.chatScreenState.showMediaPreviews.collectAsState()
+    val isReconnecting by viewModel.chatScreenState.isReconnecting.collectAsState()
 
     val currentTargetIsChannel = activeTarget?.startsWith("#") == true
     val shouldShowUserListComposite = showUserListState && currentTargetIsChannel
 
+    Column(modifier = Modifier.fillMaxSize()) {
+    if (isReconnecting) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = stringResource(R.string.status_reconnecting),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+    }
     Row(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
+            .weight(1f)
     ) {
         MessagesList(
             messages = messages,
@@ -334,5 +352,6 @@ private fun ConnectedStateView(
                 )
             }
         }
+    }
     }
 }
