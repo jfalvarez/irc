@@ -176,21 +176,23 @@ class ManualIrcClient(
     }
 
     fun joinChannel(channelName: String, key: String? = null) {
+        // La intención se guarda siempre: si aún no hay registro, se enviará al llegar el 001
+        channelsToRejoin[channelName.lowercase()] = key.orEmpty()
         if (_isRegistered.value) {
             sendRaw("JOIN $channelName${key?.let { " $it" } ?: ""}")
-            channelsToRejoin[channelName.lowercase()] = key.orEmpty()
         } else {
-            Log.w(TAG, "Aún no registrado con el servidor. Comando JOIN para '$channelName' no enviado.")
+            Log.i(TAG, "Aún no registrado. JOIN a '$channelName' en cola hasta recibir el 001.")
         }
     }
 
     fun partFromChannel(channelName: String, partMessage: String? = null) {
+        // Quitar la intención cancela también un JOIN pendiente
+        channelsToRejoin.remove(channelName.lowercase())
         if (_isRegistered.value) {
             sendRaw("PART $channelName${partMessage?.let { " :$it" } ?: ""}")
-            channelsToRejoin.remove(channelName.lowercase())
             Log.i(TAG, "Enviando PART para el canal: $channelName${partMessage?.let { " con mensaje: $it"} ?: ""}")
         } else {
-            Log.w(TAG, "Aún no registrado con el servidor. Comando PART para '$channelName' no enviado.")
+            Log.i(TAG, "Aún no registrado. PART de '$channelName' cancela el JOIN pendiente.")
         }
     }
 
