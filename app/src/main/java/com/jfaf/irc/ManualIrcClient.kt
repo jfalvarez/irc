@@ -1,6 +1,7 @@
 package com.jfaf.irc
 
 import android.util.Log
+import com.jfaf.irc.data.model.IrcLineParser
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -36,7 +37,7 @@ class ManualIrcClient(
     private val _incomingMessages = MutableSharedFlow<ParsedIrcMessage>(extraBufferCapacity = 256)
     val incomingMessages: SharedFlow<ParsedIrcMessage> = _incomingMessages.asSharedFlow()
 
-    private val _connectionState = MutableStateFlow<Boolean>(false)
+    private val _connectionState = MutableStateFlow(false)
     val connectionState: StateFlow<Boolean> = _connectionState.asStateFlow()
 
     private val _isRegistered = MutableStateFlow(false)
@@ -61,8 +62,6 @@ class ManualIrcClient(
         }
         this.currentNickname = nick
         closedByUser = false
-        val username = user
-        val realname = real
 
         coroutineScope.launch(ioDispatcher) {
             _isRegistered.value = false
@@ -82,7 +81,7 @@ class ManualIrcClient(
                     Log.i(TAG, "Socket conectado a $host:$port.")
 
                     sendRawInternal("NICK $currentNickname")
-                    sendRawInternal("USER $username 0 * :$realname")
+                    sendRawInternal("USER $user 0 * :$real")
 
                     listenForMessages()
                 } else {
@@ -96,52 +95,19 @@ class ManualIrcClient(
         }
     }
 
-    private fun parseRawLineToIrcMessage(rawLine: String): ParsedIrcMessage {
-        var mutableLine = rawLine
-        val prefix: String?
-
-        if (mutableLine.startsWith(":")) {
-            val prefixEnd = mutableLine.indexOf(' ')
-            prefix = mutableLine.substring(1, prefixEnd)
-            mutableLine = mutableLine.substring(prefixEnd + 1)
-        } else {
-            prefix = null
-        }
-
-        val trailing: String?
-        val paramsList = mutableListOf<String>()
-
-        val trailingStart = mutableLine.indexOf(" :")
-        if (trailingStart != -1) {
-            trailing = mutableLine.substring(trailingStart + 2)
-            mutableLine = mutableLine.substring(0, trailingStart)
-        } else {
-            trailing = null
-        }
-
-        val commandAndParams = mutableLine.split(' ')
-        val command = commandAndParams.firstOrNull() ?: "UNKNOWN"
-        
-        if (commandAndParams.size > 1) {
-            paramsList.addAll(commandAndParams.subList(1, commandAndParams.size).filter { it.isNotEmpty() })
-        }
-
-        return ParsedIrcMessage(
-            rawLine = rawLine,
-            prefix = prefix,
-            command = command,
-            params = paramsList,
-            trailing = trailing
-        )
-    }
-
     private suspend fun listenForMessages() {
         try {
-            while (isActive && _connectionState.value && reader != null) {
-                val line = reader?.readLine()
+            while (isActive && _connectionState.value) {
+                val currentReader = reader ?: break
+                // readLine() bloquea: se ejecuta explícitamente en el dispatcher de IO
+                val line = withContext(ioDispatcher) { currentReader.readLine() }
                 if (line != null) {
                     Log.d(TAG, "<<< $line")
-                    val parsedMessage = parseRawLineToIrcMessage(line)
+                    val parsedMessage = IrcLineParser.parse(line)
+                    if (parsedMessage == null) {
+                        Log.w(TAG, "Línea IRC inválida descartada: $line")
+                        continue
+                    }
                     _incomingMessages.emit(parsedMessage)
                     handleInternalMessages(parsedMessage)
                 } else {
@@ -196,8 +162,11 @@ class ManualIrcClient(
             return
         }
         try {
-            writer?.write("$message\r\n")
-            writer?.flush()
+            // write/flush bloquean: se ejecutan explícitamente en el dispatcher de IO
+            withContext(ioDispatcher) {
+                writer?.write("$message\r\n")
+                writer?.flush()
+            }
             Log.d(TAG, ">>> $message")
         } catch (e: Exception) {
             Log.e(TAG, "Error enviando mensaje: ${e.message}", e)
