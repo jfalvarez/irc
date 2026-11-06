@@ -68,11 +68,16 @@ class IrcMessageHandler @Inject constructor() {
 
     private val supportedImageExtensions = setOf("png", "jpg", "jpeg", "gif", "webp")
     private val supportedVideoExtensions = setOf("webm") // Can add "mp4" etc. later
-    private val generalUrlRegex = "(https?://[^\\s]+)".toRegex() // Corrected regex
+    // Esquema opcional: muchos usuarios pegan enlaces tipo "host.com/img.gif" sin https://
+    private val generalUrlRegex = "((?:https?://)?(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(?:/[^\\s]*)?)".toRegex()
 
     private fun extractAndClassifyMediaUrl(text: String): Pair<String?, MediaTypeEnum> {
-        val matchResult = generalUrlRegex.find(text)
-        val url = matchResult?.value
+        // Primer enlace con extensión de media soportada (no solo el primer enlace del texto)
+        val rawUrl = generalUrlRegex.findAll(text).map { it.value }.firstOrNull { candidate ->
+            val ext = candidate.substringBefore('?').substringAfterLast('.', "").lowercase(Locale.getDefault())
+            supportedImageExtensions.contains(ext) || supportedVideoExtensions.contains(ext)
+        } ?: generalUrlRegex.find(text)?.value
+        val url = rawUrl?.let { if (it.contains("://")) it else "https://$it" }
         if (url != null) {
             try {
                 val uri = android.net.Uri.parse(url)

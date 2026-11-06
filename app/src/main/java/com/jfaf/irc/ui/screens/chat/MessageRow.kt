@@ -64,13 +64,16 @@ fun MessageRow(
 
         val matcher = Patterns.WEB_URL.matcher(baseString.text)
         while (matcher.find()) {
-            val url = matcher.group()
-            if (url != null) {
+            val rawUrl = matcher.group()
+            if (rawUrl != null) {
+                val url = rawUrl.trimEnd('.', ',', ';', ':', '!', '?', ')', ']', '"', '\'')
+                if (url.isEmpty()) continue
                 val startIndex = matcher.start()
-                val endIndex = matcher.end()
-                // Ensure we don't underline the mediaUrl if it's also a general web URL
-                // (MediaPreview itself handles the click for the media URL)
-                if (url != message.mediaUrl || !showMediaPreviews) { 
+                val endIndex = startIndex + url.length
+                val isMediaLink = message.mediaUrl != null &&
+                    message.mediaUrl.removePrefix("https://").removePrefix("http://") ==
+                        url.removePrefix("https://").removePrefix("http://")
+                if (!isMediaLink || !showMediaPreviews) {
                     addStyle(
                         style = SpanStyle(
                             color = Color.White, // Consider MaterialTheme.colorScheme.primary for theming
@@ -98,7 +101,9 @@ fun MessageRow(
                 clickableText.getStringAnnotations(tag = "URL", start = offset, end = offset)
                     .firstOrNull()?.let { annotation ->
                         try {
-                            uriHandler.openUri(annotation.item)
+                            val target = if (Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(annotation.item))
+                                annotation.item else "https://${annotation.item}"
+                            uriHandler.openUri(target)
                         } catch (e: Exception) {
                             Log.e("MessageRow", "Could not open URL ${annotation.item}", e)
                         }
