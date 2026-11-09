@@ -12,9 +12,9 @@ import androidx.compose.ui.unit.dp
 import com.google.android.gms.ads.nativead.NativeAd
 import com.jfaf.irc.ads.NativeAdManager
 import com.jfaf.irc.ui.viewmodels.MainViewModel
-import com.jfaf.irc.ui.viewmodels.MediaTypeEnum
-import com.jfaf.irc.ui.viewmodels.UiChatMessage
-import com.jfaf.irc.ui.viewmodels.UiMessageType
+import com.jfaf.irc.ui.model.MediaTypeEnum
+import com.jfaf.irc.ui.model.UiChatMessage
+import com.jfaf.irc.ui.model.UiMessageType
 
 @Composable
 fun MessagesList(

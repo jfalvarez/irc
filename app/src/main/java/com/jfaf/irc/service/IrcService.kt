@@ -13,7 +13,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.jfaf.irc.AppConstants
 import com.jfaf.irc.MainActivity
-import com.jfaf.irc.ManualIrcClient
+import com.jfaf.irc.data.remote.ManualIrcClient
 import com.jfaf.irc.R
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.repositories.UserMetadataRepository

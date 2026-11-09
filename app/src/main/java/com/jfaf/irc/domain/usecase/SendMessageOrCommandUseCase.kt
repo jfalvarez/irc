@@ -3,8 +3,8 @@ package com.jfaf.irc.domain.usecase
 import androidx.compose.ui.text.AnnotatedString
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
-import com.jfaf.irc.ui.viewmodels.UiChatMessage
-import com.jfaf.irc.ui.viewmodels.UiMessageType
+import com.jfaf.irc.ui.model.UiChatMessage
+import com.jfaf.irc.ui.model.UiMessageType
 import com.jfaf.irc.ui.viewmodels.command.CommandProcessor
 import com.jfaf.irc.ui.viewmodels.command.CommandResult
 import javax.inject.Inject

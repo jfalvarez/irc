@@ -34,9 +34,9 @@ import androidx.compose.ui.unit.sp
 // import com.jfaf.irc.R // No longer needed for string resources of placeholder
 import com.jfaf.irc.ui.chat.MediaPreview 
 import com.jfaf.irc.ui.viewmodels.MainViewModel
-import com.jfaf.irc.ui.viewmodels.MediaTypeEnum
-import com.jfaf.irc.ui.viewmodels.UiChatMessage
-import com.jfaf.irc.ui.viewmodels.UiMessageType
+import com.jfaf.irc.ui.model.MediaTypeEnum
+import com.jfaf.irc.ui.model.UiChatMessage
+import com.jfaf.irc.ui.model.UiMessageType
 
 @Composable
 fun MessageRow(

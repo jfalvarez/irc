@@ -1,5 +1,8 @@
 package com.jfaf.irc.ui.viewmodels
 
+import com.jfaf.irc.ui.model.MediaTypeEnum
+import com.jfaf.irc.ui.model.UiChatMessage
+import com.jfaf.irc.ui.model.UiMessageType
 import android.util.Log
 import androidx.compose.ui.text.* 
 import androidx.compose.ui.text.font.FontWeight

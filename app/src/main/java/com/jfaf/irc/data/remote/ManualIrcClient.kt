@@ -1,5 +1,6 @@
-package com.jfaf.irc
+package com.jfaf.irc.data.remote
 
+import com.jfaf.irc.AppConstants
 import android.util.Log
 import com.jfaf.irc.data.model.IrcLineParser
 import com.jfaf.irc.data.model.ParsedIrcMessage

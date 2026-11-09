@@ -1,8 +1,10 @@
 package com.jfaf.irc.ui.viewmodels
 
+import com.jfaf.irc.ui.model.MediaTypeEnum
+import com.jfaf.irc.ui.model.UiChatMessage
+import com.jfaf.irc.ui.model.UiMessageType
 import android.content.Context
 import android.util.Log
-import androidx.compose.ui.text.AnnotatedString
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jfaf.irc.ads.NativeAdManager
@@ -48,40 +50,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
-
-enum class MediaTypeEnum {
-    IMAGE,
-    VIDEO,
-    NONE
-}
-
-data class UiChatMessage(
-    val fullText: String,
-    val annotatedString: AnnotatedString? = null,
-    val type: UiMessageType,
-    val sender: String? = null,
-    val isOwnMessage: Boolean = false,
-    val mediaUrl: String? = null, // Replaced imageUrl
-    val mediaType: MediaTypeEnum = MediaTypeEnum.NONE // Added mediaType
-)
-
-enum class UiMessageType {
-    CHANNEL_MSG_RECEIVED,
-    CHANNEL_MSG_SENT,
-    PRIVATE_MSG_RECEIVED,
-    PRIVATE_MSG_SENT,
-    ACTION_MSG, // Para /me
-    JOIN_PART_QUIT,
-    NICK_CHANGE,
-    MODE_CHANGE,
-    NOTICE,
-    SERVER_INFO,
-    SYSTEM_MESSAGE,
-    OTHER_COMMAND,
-    KICK,
-    UNKNOWN,
-    AD_MESSAGE
-}
 
 data class ChatScreenState(
     val activeTarget: StateFlow<String?>,
