@@ -4,6 +4,7 @@ import android.util.Log
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 class ConnectUseCase @Inject constructor(
@@ -11,9 +12,6 @@ class ConnectUseCase @Inject constructor(
     private val ircRepository: IrcRepository,
     private val chatStateManager: ChatStateManager
 ) {
-    // Consider making defaultHost configurable or part of UserPreferencesRepository if needed
-    private val defaultHost = "irc.irc-hispano.org" 
-
     suspend operator fun invoke(
         nickname: String,
         ssl: Boolean,
@@ -33,8 +31,9 @@ class ConnectUseCase @Inject constructor(
         // If rememberPass is true but sessionNickServPasswordParam is blank, the above logic correctly clears the saved password.
         // If rememberPass is false, the saved password is also cleared.
 
-        val hostToConnect = defaultHost
-        val portToConnect = if (ssl) 6697 else 6667
+        val server = userPreferencesRepository.serverConfigFlow.first()
+        val hostToConnect = server.host
+        val portToConnect = server.portFor(ssl)
         
         chatStateManager.resetStateForConnection()
         // Note: MainViewModel will still set its own currentNickname and sessionNickServPasswordForAutoIdentify properties

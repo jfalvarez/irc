@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -21,9 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.jfaf.irc.R
+import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 
@@ -40,6 +43,7 @@ fun SettingsScreen(
     val showMediaPreviews by viewModel.showMediaPreviews.collectAsState()
     val ignoredUsers by viewModel.ignoredUsers.collectAsState()
     val friends by viewModel.friends.collectAsState()
+    val serverConfig by viewModel.serverConfig.collectAsState()
 
     Scaffold(
         topBar = {
@@ -66,6 +70,20 @@ fun SettingsScreen(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
         ) {
+            item {
+                ServerConfigSection(
+                    config = serverConfig,
+                    onSave = { host, plain, ssl -> viewModel.saveServerConfig(host, plain, ssl) },
+                    onReset = { viewModel.resetServerConfig() }
+                )
+            }
+            item {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+            }
+
             item {
                 Text(
                     text = stringResource(R.string.settings_section_message_preferences),
@@ -290,5 +308,76 @@ private fun SettingRowWithCheckbox(
             checked = checked,
             onCheckedChange = onCheckedChange
         )
+    }
+}
+
+@Composable
+private fun ServerConfigSection(
+    config: ServerConfig,
+    onSave: (host: String, plainPort: String, sslPort: String) -> Boolean,
+    onReset: () -> Unit
+) {
+    // Se reinician los campos cuando cambia la configuración guardada (p. ej. tras "Restaurar").
+    var host by remember(config) { mutableStateOf(config.host) }
+    var plainPort by remember(config) { mutableStateOf(config.plainPort.toString()) }
+    var sslPort by remember(config) { mutableStateOf(config.sslPort.toString()) }
+    var feedback by remember { mutableStateOf<Int?>(null) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.settings_section_server),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(top = 16.dp)
+        )
+        ThemedOutlinedTextField(
+            value = host,
+            onValueChange = { host = it; feedback = null },
+            label = { Text(stringResource(R.string.settings_server_host_label)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ThemedOutlinedTextField(
+                value = plainPort,
+                onValueChange = { plainPort = it; feedback = null },
+                label = { Text(stringResource(R.string.settings_server_plain_port_label)) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+            ThemedOutlinedTextField(
+                value = sslPort,
+                onValueChange = { sslPort = it; feedback = null },
+                label = { Text(stringResource(R.string.settings_server_ssl_port_label)) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+        }
+        feedback?.let {
+            Text(
+                text = stringResource(it),
+                color = if (it == R.string.settings_server_invalid) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onBackground
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = {
+                val ok = onSave(host, plainPort, sslPort)
+                feedback = if (ok) R.string.settings_server_saved else R.string.settings_server_invalid
+                if (ok) {
+                    keyboardController?.hide()
+                    focusManager.clearFocus()
+                }
+            }) { Text(stringResource(R.string.settings_server_save)) }
+            OutlinedButton(onClick = {
+                onReset()
+                feedback = null
+            }) { Text(stringResource(R.string.settings_server_reset)) }
+        }
     }
 }

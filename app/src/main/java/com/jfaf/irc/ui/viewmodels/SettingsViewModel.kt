@@ -2,6 +2,7 @@ package com.jfaf.irc.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.UserMetadataRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -124,6 +125,25 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userMetadataRepository.removeFriend(nick)
         }
+    }
+
+    // --- Servidor IRC ---
+    val serverConfig: StateFlow<ServerConfig> =
+        userPreferencesRepository.serverConfigFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ServerConfig()
+        )
+
+    /** Valida y guarda el servidor; devuelve false (sin guardar) si los datos no son válidos. */
+    fun saveServerConfig(host: String, plainPort: String, sslPort: String): Boolean {
+        val config = ServerConfig.parse(host, plainPort, sslPort) ?: return false
+        viewModelScope.launch { userPreferencesRepository.updateServerConfig(config) }
+        return true
+    }
+
+    fun resetServerConfig() {
+        viewModelScope.launch { userPreferencesRepository.resetServerConfig() }
     }
 
     // --- NickServ Password Preference (REMOVED) ---

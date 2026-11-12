@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
@@ -38,6 +39,10 @@ class UserPreferencesRepository @Inject constructor(
         val SHOW_MEDIA_PREVIEWS = booleanPreferencesKey(SHOW_MEDIA_PREVIEWS_KEY_NAME)
         val NICKNAME = stringPreferencesKey(NICKNAME_KEY_NAME)
 
+        val SERVER_HOST = stringPreferencesKey("server_host")
+        val SERVER_PLAIN_PORT = intPreferencesKey("server_plain_port")
+        val SERVER_SSL_PORT = intPreferencesKey("server_ssl_port")
+
         const val TAG = "UserPrefsRepository"
     }
 
@@ -46,6 +51,32 @@ class UserPreferencesRepository @Inject constructor(
         dataStore.data.catch { emit(emptyPreferences()) }.map { it[NICKSERV_PASSWORD] ?: "" }
     ) { nickname, password ->
         UserPreferences(nickname, password)
+    }
+
+    val serverConfigFlow: Flow<ServerConfig> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { p ->
+            ServerConfig(
+                host = p[SERVER_HOST] ?: ServerConfig.DEFAULT_HOST,
+                plainPort = p[SERVER_PLAIN_PORT] ?: ServerConfig.DEFAULT_PLAIN_PORT,
+                sslPort = p[SERVER_SSL_PORT] ?: ServerConfig.DEFAULT_SSL_PORT
+            )
+        }
+
+    suspend fun updateServerConfig(config: ServerConfig) {
+        dataStore.edit { p ->
+            p[SERVER_HOST] = config.host
+            p[SERVER_PLAIN_PORT] = config.plainPort
+            p[SERVER_SSL_PORT] = config.sslPort
+        }
+    }
+
+    suspend fun resetServerConfig() {
+        dataStore.edit { p ->
+            p.remove(SERVER_HOST)
+            p.remove(SERVER_PLAIN_PORT)
+            p.remove(SERVER_SSL_PORT)
+        }
     }
 
     suspend fun updateNickname(nickname: String) {

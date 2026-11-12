@@ -57,6 +57,14 @@
 
     <!-- Settings Screen -->
     <string name="cd_navigate_up">Volver</string>
+    <string name="settings_section_server">Servidor</string>
+    <string name="settings_server_host_label">Servidor (host)</string>
+    <string name="settings_server_plain_port_label">Puerto sin SSL</string>
+    <string name="settings_server_ssl_port_label">Puerto SSL</string>
+    <string name="settings_server_save">Guardar</string>
+    <string name="settings_server_reset">Restaurar</string>
+    <string name="settings_server_saved">Servidor guardado. Se usará en la próxima conexión.</string>
+    <string name="settings_server_invalid">Servidor o puertos no válidos (puertos: 1-65535).</string>
     <string name="settings_section_message_preferences">Preferencias de Mensajes</string>
     <string name="settings_option_show_join_part_quit">Mostrar mensajes de JOIN/PART/QUIT</string>
     <string name="settings_option_show_nick_changes">Mostrar cambios de Nick</string>
