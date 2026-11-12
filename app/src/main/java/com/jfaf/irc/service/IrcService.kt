@@ -18,6 +18,7 @@ import com.jfaf.irc.MainActivity
 import com.jfaf.irc.data.remote.ManualIrcClient
 import com.jfaf.irc.R
 import com.jfaf.irc.data.model.ParsedIrcMessage
+import com.jfaf.irc.util.NotificationHelper
 import com.jfaf.irc.data.repositories.UserMetadataRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -290,6 +291,8 @@ class IrcService : Service() {
                 ircServiceApi.updateConnectionState(false)
             }
             stopForeground(STOP_FOREGROUND_REMOVE)
+            // Después de parar el foreground para que ninguna notificación (conexión, mensajes, amigos) quede huérfana.
+            NotificationHelper.clearAllNotifications(this@IrcService)
             stopSelf()
             Log.i(TAG, "Servicio detenido y limpiado.")
         }
@@ -475,6 +478,16 @@ class IrcService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
+    }
+
+    /**
+     * El usuario cierra la app desde la lista de recientes: se desconecta, se detiene el servicio
+     * y se retiran todas las notificaciones (también la de "conectado").
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.i(TAG, "Tarea eliminada por el usuario: desconectando y deteniendo el servicio.")
+        disconnect(AppConstants.DEFAULT_QUIT_MESSAGE)
+        super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {

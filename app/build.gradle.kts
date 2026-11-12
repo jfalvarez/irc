@@ -96,9 +96,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.material.icons.extended) 
-    implementation(libs.guava)
     implementation(libs.coil.compose)
-    implementation("io.coil-kt:coil-gif:2.7.0")
+    implementation(libs.coil.gif)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.hilt.android)
@@ -120,7 +119,7 @@ dependencies {
     implementation(libs.play.services.auth)
 
     // AdMob
-    implementation("com.google.android.gms:play-services-ads:23.0.0")
+    implementation(libs.play.services.ads)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
