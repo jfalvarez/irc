@@ -77,6 +77,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var remoteConfigManager: RemoteConfigManager
 
+    @Inject
+    lateinit var ircServiceApi: IrcServiceApi
+
     private lateinit var mainViewModel: MainViewModel
     private lateinit var signInViewModel: SignInViewModel
 
@@ -105,13 +108,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        IrcServiceApi.appEnteredForeground()
+        ircServiceApi.appEnteredForeground()
         Log.d(TAG_ACTIVITY, "App en primer plano.")
     }
 
     override fun onStop() {
         super.onStop()
-        IrcServiceApi.appEnteredBackground()
+        ircServiceApi.appEnteredBackground()
         Log.d(TAG_ACTIVITY, "App en segundo plano.")
     }
 
@@ -132,7 +135,7 @@ class MainActivity : ComponentActivity() {
 
             val context = LocalContext.current
             val navController = rememberNavController()
-            val connectionState by IrcServiceApi.connectionState.collectAsState()
+            val connectionState by ircServiceApi.connectionState.collectAsState()
             var showExitConfirmationDialog by remember { mutableStateOf(false) }
 
             val currentActiveTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()

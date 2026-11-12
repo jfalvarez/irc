@@ -16,15 +16,16 @@ import javax.inject.Singleton
 
 @Singleton
 class IrcRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val ircServiceApi: IrcServiceApi
 ) {
     private val TAG = "IrcRepository"
 
     private val silentWhoisNicks = ConcurrentHashMap.newKeySet<String>()
 
-    val connectionState: StateFlow<Boolean> = IrcServiceApi.connectionState
-    val isReconnecting: StateFlow<Boolean> = IrcServiceApi.isReconnecting
-    val incomingMessages: SharedFlow<ParsedIrcMessage> = IrcServiceApi.incomingMessages
+    val connectionState: StateFlow<Boolean> = ircServiceApi.connectionState
+    val isReconnecting: StateFlow<Boolean> = ircServiceApi.isReconnecting
+    val incomingMessages: SharedFlow<ParsedIrcMessage> = ircServiceApi.incomingMessages
 
     fun connect(serverHost: String, serverPort: Int, useSsl: Boolean, nickname: String) {
         Log.d(TAG, "Solicitando conexión al servicio para: $nickname@$serverHost:$serverPort")

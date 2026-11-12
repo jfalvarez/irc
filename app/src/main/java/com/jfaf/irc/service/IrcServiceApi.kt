@@ -8,12 +8,15 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
- * Singleton object to expose reactive streams from IrcService.
+ * Singleton (inyectado con Hilt) que expone reactive streams from IrcService.
  * The ViewModel will observe these flows.
  */
-object IrcServiceApi {
+@Singleton
+class IrcServiceApi @Inject constructor() {
     private val _connectionState = MutableStateFlow(false)
     val connectionState: StateFlow<Boolean> = _connectionState.asStateFlow()
 
