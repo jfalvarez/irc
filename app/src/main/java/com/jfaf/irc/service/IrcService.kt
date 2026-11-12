@@ -216,6 +216,11 @@ class IrcService : Service() {
         clientCollectorsJob = serviceScope.launch {
           launch {
             client.connectionState.collectLatest { isConnected ->
+                // Durante una reconexión el socket abierto aún no es "conectado": se espera al 001
+                // (lo publica el bucle de reconexión). Evita el parpadeo Reconectado/Conexión perdida.
+                if (isConnected && reconnectJob?.isActive == true && !client.isRegistered.value) {
+                    return@collectLatest
+                }
                 IrcServiceApi.updateConnectionState(isConnected)
                 val statusText = if (isConnected) getString(R.string.status_connected_to_host, currentHostForNotification) else getString(R.string.status_disconnected_short)
                 if (isConnected || reconnectJob?.isActive != true) {
@@ -296,6 +301,8 @@ class IrcService : Service() {
                     } != null
                     if (registered) {
                         reconnectAttempt = 0
+                        IrcServiceApi.updateConnectionState(true)
+                        updateForegroundServiceNotification(getString(R.string.status_connected_to_host, currentHostForNotification))
                         return@launch
                     }
                     client.disconnectAndCleanup()

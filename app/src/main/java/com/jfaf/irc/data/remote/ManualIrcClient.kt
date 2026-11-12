@@ -3,6 +3,7 @@ package com.jfaf.irc.data.remote
 import com.jfaf.irc.AppConstants
 import android.util.Log
 import com.jfaf.irc.data.model.IrcLineParser
+import com.jfaf.irc.data.model.NickFallback
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -45,6 +46,8 @@ class ManualIrcClient(
     val isRegistered: StateFlow<Boolean> = _isRegistered.asStateFlow()
 
     private var currentNickname: String = AppConstants.DEFAULT_BOT_NICKNAME
+    private var desiredNickname: String = currentNickname
+    private var nickFallbackAttempts = 0
 
     @Volatile private var closedByUser = false
     // canal (en minúsculas) -> clave ("" si no tiene). Sobrevive a las reconexiones.
@@ -62,6 +65,8 @@ class ManualIrcClient(
             return
         }
         this.currentNickname = nick
+        this.desiredNickname = nick
+        nickFallbackAttempts = 0
         closedByUser = false
 
         coroutineScope.launch(ioDispatcher) {
@@ -135,6 +140,16 @@ class ManualIrcClient(
             if (cookie != null) {
                 sendRaw("PONG :$cookie")
                 Log.i(TAG, "PING? PONG! ($cookie)")
+            }
+        }
+        if (message.command == "433" && !_isRegistered.value) { // ERR_NICKNAMEINUSE durante el registro
+            val alternative = NickFallback.alternative(desiredNickname, ++nickFallbackAttempts)
+            if (alternative != null) {
+                Log.w(TAG, "Nick '$currentNickname' en uso; probando '$alternative'")
+                currentNickname = alternative
+                sendRaw("NICK $alternative")
+            } else {
+                Log.e(TAG, "Sin nicks alternativos para '$desiredNickname'.")
             }
         }
         if (message.command == "001") { // RPL_WELCOME
