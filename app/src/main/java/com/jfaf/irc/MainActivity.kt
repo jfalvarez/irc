@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -160,51 +161,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(mainViewModel.chatScreenState.connectionState) {
-                mainViewModel.chatScreenState.connectionState.collectLatest { isConnected ->
-                    logToUi("Estado Conexión VM (MainActivity): ${if (isConnected) "CONECTADO" else "DESCONECTADO"}")
-                }
-            }
+            // El efecto no se reinicia al cambiar de pestaña: sin esto leería siempre la pestaña inicial.
+            val latestActiveTarget by rememberUpdatedState(currentActiveTarget)
 
+            // En segundo plano las notificaciones las genera IrcService; aquí sólo se vibra con la app visible.
             LaunchedEffect(mainViewModel.incomingPrivateMessageEvent) {
                 mainViewModel.incomingPrivateMessageEvent.collectLatest { pmSourceNick ->
-                    val isAppCurrentlyInForegroundByProcess = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
-                    if (!isAppCurrentlyInForegroundByProcess) {
-                        Log.d(TAG_ACTIVITY, "App en BG. PM Event recibido de '$pmSourceNick'.")
-                    } else {
-                        if (!pmSourceNick.equals(currentActiveTarget, ignoreCase = true)) {
-                            try {
-                                val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                    vibrator.vibrate(VibrationEffect.createOneShot(VIBRATION_DURATION_MS, VibrationEffect.DEFAULT_AMPLITUDE))
-                                } else {
-                                    @Suppress("DEPRECATION")
-                                    vibrator.vibrate(VIBRATION_DURATION_MS)
-                                }
-                            } catch (e: Exception) {
-                                Log.e(TAG_ACTIVITY, "Error al activar vibración", e)
-                            }
-                        }
+                    if (isAppResumed() && !pmSourceNick.equals(latestActiveTarget, ignoreCase = true)) {
+                        vibrate(context)
                     }
                 }
             }
 
             LaunchedEffect(mainViewModel.friendCameOnlineEvent) {
-                mainViewModel.friendCameOnlineEvent.collectLatest { nick ->
-                    val isAppCurrentlyInForegroundByProcess = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
-                    if (isAppCurrentlyInForegroundByProcess) {
-                        try {
-                            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                vibrator.vibrate(VibrationEffect.createOneShot(VIBRATION_DURATION_MS, VibrationEffect.DEFAULT_AMPLITUDE))
-                            } else {
-                                @Suppress("DEPRECATION")
-                                vibrator.vibrate(VIBRATION_DURATION_MS)
-                            }
-                        } catch (e: Exception) {
-                            Log.e(TAG_ACTIVITY, "Error al activar vibración", e)
-                        }
-                    }
+                mainViewModel.friendCameOnlineEvent.collectLatest {
+                    if (isAppResumed()) vibrate(context)
                 }
             }
 
@@ -329,7 +300,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun logToUi(message: String) {
-        Log.i(TAG_ACTIVITY, message)
+    private fun isAppResumed(): Boolean =
+        ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+
+    private fun vibrate(context: Context) {
+        try {
+            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            vibrator.vibrate(VibrationEffect.createOneShot(VIBRATION_DURATION_MS, VibrationEffect.DEFAULT_AMPLITUDE))
+        } catch (e: Exception) {
+            Log.e(TAG_ACTIVITY, "Error al activar vibración", e)
+        }
     }
 }
