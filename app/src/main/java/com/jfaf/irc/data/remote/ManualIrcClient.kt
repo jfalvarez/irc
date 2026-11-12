@@ -18,6 +18,9 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.InetSocketAddress
 import java.net.Socket
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLPeerUnverifiedException
+import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
 
 class ManualIrcClient(
@@ -30,6 +33,10 @@ class ManualIrcClient(
     private val onConnectionLost: () -> Unit = {}
 ) {
     private val TAG = "ManualIrcClient"
+
+    private companion object {
+        const val CONNECT_TIMEOUT_MS = 10_000
+    }
 
     private var socket: Socket? = null
     private var writer: BufferedWriter? = null
@@ -73,12 +80,7 @@ class ManualIrcClient(
             _isRegistered.value = false
             try {
                 Log.d(TAG, "Intentando conectar a $host:$port (SSL: $useSsl), Nick: $currentNickname")
-                socket = if (useSsl) {
-                    SSLSocketFactory.getDefault().createSocket()
-                } else {
-                    Socket()
-                }
-                socket?.connect(InetSocketAddress(host, port), 10000)
+                openSocket()
 
                 if (socket?.isConnected == true) {
                     writer = BufferedWriter(OutputStreamWriter(socket!!.getOutputStream(), Charsets.UTF_8))
@@ -99,6 +101,30 @@ class ManualIrcClient(
                 notifyConnectionLost()
             }
         }
+    }
+
+    /**
+     * Abre [socket]. Con TLS hace el handshake y comprueba que el certificado corresponde a [host]:
+     * un `SSLSocket` crudo valida la cadena de confianza pero NO el nombre del servidor.
+     */
+    private fun openSocket() {
+        val plain = Socket()
+        socket = plain // para que cleanupConnection() pueda cerrarlo si algo falla a mitad
+        plain.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT_MS)
+        if (!useSsl) return
+
+        val factory = SSLSocketFactory.getDefault() as SSLSocketFactory
+        // Envuelve el socket ya conectado: así se envía SNI y el handshake conoce el nombre de host.
+        val ssl = factory.createSocket(plain, host, port, true) as SSLSocket
+        socket = ssl
+        ssl.soTimeout = CONNECT_TIMEOUT_MS // límite también para el handshake
+        ssl.startHandshake()
+        val verifier = HttpsURLConnection.getDefaultHostnameVerifier()
+        val names = TlsHostPolicy.acceptedCertificateHosts(host)
+        if (names.none { verifier.verify(it, ssl.session) }) {
+            throw SSLPeerUnverifiedException("El certificado del servidor no corresponde a $host (se esperaba: ${names.joinToString()})")
+        }
+        ssl.soTimeout = 0
     }
 
     private suspend fun listenForMessages() {
