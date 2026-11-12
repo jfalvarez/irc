@@ -174,7 +174,7 @@ class IrcService : Service() {
                  }
             }
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     /** `startForeground` con el tipo declarado en el manifiesto (obligatorio con targetSdk 34+). */
