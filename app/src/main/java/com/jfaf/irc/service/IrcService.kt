@@ -7,10 +7,12 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import com.jfaf.irc.AppConstants
 import com.jfaf.irc.MainActivity
 import com.jfaf.irc.data.remote.ManualIrcClient
@@ -100,14 +102,14 @@ class IrcService : Service() {
             isFriendObserverStarted = true
         }
 
-        if (action != ACTION_DISCONNECT_AND_STOP_SERVICE) {
-            val initialNotificationText = when {
-                IrcServiceApi.connectionState.value -> getString(R.string.notification_status_connected_to, currentHostForNotification)
-                action == ACTION_CONNECT -> getString(R.string.notification_status_connecting)
-                else -> getString(R.string.notification_status_disconnected)
-            }
-            startForeground(FOREGROUND_NOTIFICATION_ID, createForegroundServiceNotification(initialNotificationText))
+        // Siempre, también para ACTION_DISCONNECT_AND_STOP_SERVICE: el servicio llega aquí vía
+        // startForegroundService y debe llamar a startForeground en 5 s aunque vaya a detenerse.
+        val initialNotificationText = when {
+            IrcServiceApi.connectionState.value -> getString(R.string.notification_status_connected_to, currentHostForNotification)
+            action == ACTION_CONNECT -> getString(R.string.notification_status_connecting)
+            else -> getString(R.string.notification_status_disconnected)
         }
+        startAsForeground(createForegroundServiceNotification(initialNotificationText))
 
         when (action) {
             ACTION_CONNECT -> {
@@ -166,13 +168,23 @@ class IrcService : Service() {
             else -> {
                  Log.w(TAG, "Acción desconocida o nula: $action")
                  if (IrcServiceApi.connectionState.value) {
-                    startForeground(FOREGROUND_NOTIFICATION_ID, createForegroundServiceNotification(getString(R.string.notification_status_connected_to, currentHostForNotification)))
+                    startAsForeground(createForegroundServiceNotification(getString(R.string.notification_status_connected_to, currentHostForNotification)))
                  } else if (manualIrcClient != null) {
-                    startForeground(FOREGROUND_NOTIFICATION_ID, createForegroundServiceNotification(getString(R.string.notification_status_disconnected)))
+                    startAsForeground(createForegroundServiceNotification(getString(R.string.notification_status_disconnected)))
                  }
             }
         }
         return START_STICKY
+    }
+
+    /** `startForeground` con el tipo declarado en el manifiesto (obligatorio con targetSdk 34+). */
+    private fun startAsForeground(notification: Notification) {
+        ServiceCompat.startForeground(
+            this,
+            FOREGROUND_NOTIFICATION_ID,
+            notification,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING
+        )
     }
 
     private fun observeFriendOnlineStatus() {

@@ -3,6 +3,7 @@ package com.jfaf.irc.data.repositories
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.service.IrcService
 import com.jfaf.irc.service.IrcServiceApi
@@ -34,7 +35,7 @@ class IrcRepository @Inject constructor(
             putExtra(IrcService.EXTRA_USE_SSL, useSsl)
             putExtra(IrcService.EXTRA_NICKNAME, nickname)
         }
-        context.startService(intent)
+        sendToService(intent)
     }
 
     @Deprecated("Use disconnectAndStopService for a full cleanup including service stop", ReplaceWith("disconnectAndStopService(null)"))
@@ -43,7 +44,7 @@ class IrcRepository @Inject constructor(
         val intent = Intent(context, IrcService::class.java).apply {
             action = IrcService.ACTION_DISCONNECT
         }
-        context.startService(intent)
+        sendToService(intent)
     }
 
     fun disconnectAndStopService(quitMessage: String? = null) {
@@ -52,7 +53,7 @@ class IrcRepository @Inject constructor(
             action = IrcService.ACTION_DISCONNECT_AND_STOP_SERVICE
             quitMessage?.let { putExtra(IrcService.EXTRA_QUIT_MESSAGE, it) } // Nuevo Extra
         }
-        context.startService(intent)
+        sendToService(intent)
     }
 
     fun joinChannel(channelName: String, key: String? = null) {
@@ -62,7 +63,7 @@ class IrcRepository @Inject constructor(
             putExtra(IrcService.EXTRA_CHANNEL_NAME, channelName)
             key?.let { putExtra(IrcService.EXTRA_CHANNEL_KEY, it) } // Nuevo Extra
         }
-        context.startService(intent)
+        sendToService(intent)
     }
 
     fun partChannel(channelName: String, partMessage: String? = null) {
@@ -72,7 +73,7 @@ class IrcRepository @Inject constructor(
             putExtra(IrcService.EXTRA_CHANNEL_NAME, channelName)
             partMessage?.let { putExtra(IrcService.EXTRA_PART_MESSAGE, it) } // Nuevo Extra
         }
-        context.startService(intent)
+        sendToService(intent)
     }
 
     fun sendMessage(target: String, message: String) {
@@ -82,7 +83,7 @@ class IrcRepository @Inject constructor(
             putExtra(IrcService.EXTRA_TARGET, target)
             putExtra(IrcService.EXTRA_MESSAGE, message)
         }
-        context.startService(intent)
+        sendToService(intent)
     }
 
     fun sendRawCommand(command: String, isSilent: Boolean = false) {
@@ -97,7 +98,15 @@ class IrcRepository @Inject constructor(
             action = IrcService.ACTION_SEND_RAW_COMMAND
             putExtra(IrcService.EXTRA_RAW_COMMAND, command)
         }
-        context.startService(intent)
+        sendToService(intent)
+    }
+
+    /**
+     * Arranca el servicio como foreground (válido también con la app en segundo plano desde Android 8).
+     * `IrcService.onStartCommand` llama siempre a `startForeground` en los 5 s siguientes.
+     */
+    private fun sendToService(intent: Intent) {
+        ContextCompat.startForegroundService(context, intent)
     }
 
     fun isWhoisSilent(nick: String): Boolean {
