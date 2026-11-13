@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library) apply false
     // AGP 9 trae Kotlin integrado (KGP 2.2.10); declarar KGP aquí fija la versión del catálogo.
     alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.jvm) apply false // :desktopApp
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.compose.multiplatform) apply false
     alias(libs.plugins.ksp) apply false

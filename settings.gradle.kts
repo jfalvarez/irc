@@ -27,3 +27,4 @@ dependencyResolutionManagement {
 rootProject.name = "irc"
 include(":app")
 include(":shared")
+include(":desktopApp")

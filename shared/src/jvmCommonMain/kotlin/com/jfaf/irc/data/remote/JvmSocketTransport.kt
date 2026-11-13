@@ -9,7 +9,7 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.InetSocketAddress
 import java.net.Socket
-import javax.net.ssl.HttpsURLConnection
+import java.security.cert.X509Certificate
 import javax.net.ssl.SSLPeerUnverifiedException
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
@@ -44,9 +44,9 @@ class JvmSocketTransport : IrcTransport {
             socket = ssl
             ssl.soTimeout = CONNECT_TIMEOUT_MS // límite también para el handshake
             ssl.startHandshake()
-            val verifier = HttpsURLConnection.getDefaultHostnameVerifier()
             val names = TlsHostPolicy.acceptedCertificateHosts(host)
-            if (names.none { verifier.verify(it, ssl.session) }) {
+            val certNames = (ssl.session.peerCertificates.firstOrNull() as? X509Certificate)?.dnsNames().orEmpty()
+            if (names.none { CertificateHostMatcher.matches(it, certNames) }) {
                 throw SSLPeerUnverifiedException("El certificado del servidor no corresponde a $host (se esperaba: ${names.joinToString()})")
             }
             ssl.soTimeout = 0
@@ -74,4 +74,16 @@ class JvmSocketTransport : IrcTransport {
         reader = null
         socket = null
     }
+}
+
+/** Nombres DNS del certificado: los `subjectAltName` de tipo DNS o, si no hay, el CN del sujeto. */
+internal fun X509Certificate.dnsNames(): List<String> {
+    val sans = try {
+        subjectAlternativeNames.orEmpty().filter { it.size >= 2 && it[0] == 2 }.mapNotNull { it[1] as? String }
+    } catch (e: Exception) {
+        emptyList()
+    }
+    if (sans.isNotEmpty()) return sans
+    val cn = Regex("""(?:^|,)\s*CN=([^,]+)""", RegexOption.IGNORE_CASE).find(subjectX500Principal.name)?.groupValues?.get(1)
+    return listOfNotNull(cn?.trim())
 }
