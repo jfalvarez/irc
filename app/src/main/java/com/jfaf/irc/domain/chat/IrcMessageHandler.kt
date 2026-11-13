@@ -1,11 +1,11 @@
-package com.jfaf.irc.ui.viewmodels
+package com.jfaf.irc.domain.chat
 
 import com.jfaf.irc.domain.config.AppConfig
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
-import com.jfaf.irc.ui.model.MediaTypeEnum
-import com.jfaf.irc.ui.model.UiChatMessage
-import com.jfaf.irc.ui.model.UiMessageType
+import com.jfaf.irc.domain.chat.model.MediaTypeEnum
+import com.jfaf.irc.domain.chat.model.UiChatMessage
+import com.jfaf.irc.domain.chat.model.UiMessageType
 import com.jfaf.irc.log.Log
 import androidx.compose.ui.text.* 
 import androidx.compose.ui.text.font.FontWeight

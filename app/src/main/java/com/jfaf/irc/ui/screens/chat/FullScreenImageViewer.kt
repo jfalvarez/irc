@@ -40,7 +40,7 @@ import coil.compose.AsyncImagePainter
 import coil.decode.ImageDecoderDecoder // Added import
 import coil.request.ImageRequest     // Added import
 import com.jfaf.irc.R
-import com.jfaf.irc.ui.model.MediaTypeEnum
+import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 
 @Composable
 fun FullScreenImageViewer( 

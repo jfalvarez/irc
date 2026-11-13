@@ -5,7 +5,7 @@ import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.domain.platform.AuthSession
 import com.jfaf.irc.domain.user.UserMetadataStore
-import com.jfaf.irc.ui.viewmodels.ChatStateManager
+import com.jfaf.irc.domain.chat.ChatStateManager
 import javax.inject.Inject
 
 class IgnoreUserUseCase @Inject constructor(

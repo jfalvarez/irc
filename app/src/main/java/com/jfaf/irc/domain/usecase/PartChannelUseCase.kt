@@ -3,7 +3,7 @@ package com.jfaf.irc.domain.usecase
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.data.repositories.IrcRepository
-import com.jfaf.irc.ui.viewmodels.ChatStateManager
+import com.jfaf.irc.domain.chat.ChatStateManager
 import javax.inject.Inject
 
 sealed interface PartChannelResult {

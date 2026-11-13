@@ -1,4 +1,4 @@
-package com.jfaf.irc.ui.viewmodels
+package com.jfaf.irc.domain.chat
 
 import com.jfaf.irc.domain.text.Msg
 

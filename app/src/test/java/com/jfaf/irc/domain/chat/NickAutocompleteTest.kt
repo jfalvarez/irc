@@ -1,4 +1,4 @@
-package com.jfaf.irc.ui.viewmodels
+package com.jfaf.irc.domain.chat
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

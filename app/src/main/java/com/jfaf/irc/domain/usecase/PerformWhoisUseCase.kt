@@ -5,7 +5,7 @@ import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.data.repositories.IrcRepository
-import com.jfaf.irc.ui.viewmodels.ChatStateManager
+import com.jfaf.irc.domain.chat.ChatStateManager
 import javax.inject.Inject
 
 sealed interface WhoisRequestResult {

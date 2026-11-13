@@ -10,9 +10,9 @@ import androidx.compose.ui.unit.dp
 import com.jfaf.irc.ads.AdMobAd
 import com.jfaf.irc.domain.platform.AdHandle
 import com.jfaf.irc.ui.viewmodels.MainViewModel
-import com.jfaf.irc.ui.model.MediaTypeEnum
-import com.jfaf.irc.ui.model.UiChatMessage
-import com.jfaf.irc.ui.model.UiMessageType
+import com.jfaf.irc.domain.chat.model.MediaTypeEnum
+import com.jfaf.irc.domain.chat.model.UiChatMessage
+import com.jfaf.irc.domain.chat.model.UiMessageType
 
 @Composable
 fun MessagesList(

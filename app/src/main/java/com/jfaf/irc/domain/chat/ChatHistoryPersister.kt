@@ -1,4 +1,4 @@
-package com.jfaf.irc.ui.viewmodels
+package com.jfaf.irc.domain.chat
 
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.data.history.ChatHistoryStore
@@ -26,7 +26,7 @@ class ChatHistoryPersister @Inject constructor(
         const val SAVE_DEBOUNCE_MS = 1000L
     }
 
-    private var lastSaved: Map<String, List<com.jfaf.irc.ui.model.UiChatMessage>> = emptyMap()
+    private var lastSaved: Map<String, List<com.jfaf.irc.domain.chat.model.UiChatMessage>> = emptyMap()
 
     fun start(scope: CoroutineScope) {
         scope.launch {

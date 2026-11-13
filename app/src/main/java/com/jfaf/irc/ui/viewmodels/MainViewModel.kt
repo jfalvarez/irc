@@ -1,8 +1,15 @@
 package com.jfaf.irc.ui.viewmodels
 
-import com.jfaf.irc.ui.model.MediaTypeEnum
-import com.jfaf.irc.ui.model.UiChatMessage
-import com.jfaf.irc.ui.model.UiMessageType
+import com.jfaf.irc.domain.chat.ChatHistoryPersister
+import com.jfaf.irc.domain.chat.ChatStateManager
+import com.jfaf.irc.domain.chat.LinkState
+import com.jfaf.irc.domain.chat.LinkTransitions
+import com.jfaf.irc.domain.chat.MessageFilterOptions
+import com.jfaf.irc.domain.chat.NickAutocomplete
+import com.jfaf.irc.domain.chat.UiMessageFilter
+import com.jfaf.irc.domain.chat.model.MediaTypeEnum
+import com.jfaf.irc.domain.chat.model.UiChatMessage
+import com.jfaf.irc.domain.chat.model.UiMessageType
 import com.jfaf.irc.log.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -31,7 +38,7 @@ import com.jfaf.irc.domain.usecase.SendMessageActionStatus
 import com.jfaf.irc.domain.usecase.SendMessageOrCommandUseCase
 import com.jfaf.irc.domain.usecase.UpdateFriendMonitoringUseCase
 import com.jfaf.irc.domain.usecase.WhoisRequestResult
-import com.jfaf.irc.ui.viewmodels.command.CommandResult
+import com.jfaf.irc.domain.chat.command.CommandResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow

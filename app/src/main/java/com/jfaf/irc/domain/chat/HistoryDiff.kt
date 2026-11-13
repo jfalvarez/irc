@@ -1,4 +1,4 @@
-package com.jfaf.irc.ui.viewmodels
+package com.jfaf.irc.domain.chat
 
 /** Qué hay que escribir/borrar en el almacén para que refleje el estado actual. */
 data class HistoryChanges<T>(val replace: Map<String, List<T>>, val delete: Set<String>) {

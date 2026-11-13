@@ -15,7 +15,7 @@ import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import coil.decode.ImageDecoderDecoder 
 import coil.request.ImageRequest     
-import com.jfaf.irc.ui.model.MediaTypeEnum
+import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 
 @Composable
 fun MediaPreview(

@@ -1,4 +1,4 @@
-package com.jfaf.irc.ui.viewmodels.command
+package com.jfaf.irc.domain.chat.command
 
 /**
  * Represents the outcome of processing a user command.

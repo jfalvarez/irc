@@ -7,9 +7,9 @@ import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
 import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.domain.user.FriendPresenceTracker
-import com.jfaf.irc.ui.viewmodels.ChatStateManager
-import com.jfaf.irc.ui.viewmodels.ChatUiSnapshot
-import com.jfaf.irc.ui.viewmodels.IrcMessageHandler
+import com.jfaf.irc.domain.chat.ChatStateManager
+import com.jfaf.irc.domain.chat.ChatUiSnapshot
+import com.jfaf.irc.domain.chat.IrcMessageHandler
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 

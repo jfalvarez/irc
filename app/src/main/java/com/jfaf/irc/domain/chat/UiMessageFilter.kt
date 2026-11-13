@@ -1,7 +1,7 @@
-package com.jfaf.irc.ui.viewmodels
+package com.jfaf.irc.domain.chat
 
-import com.jfaf.irc.ui.model.UiChatMessage
-import com.jfaf.irc.ui.model.UiMessageType
+import com.jfaf.irc.domain.chat.model.UiChatMessage
+import com.jfaf.irc.domain.chat.model.UiMessageType
 
 /** Preferencias que deciden qué mensajes se muestran en la lista del chat. */
 data class MessageFilterOptions(

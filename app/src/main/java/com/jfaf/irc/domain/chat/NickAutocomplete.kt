@@ -1,4 +1,4 @@
-package com.jfaf.irc.ui.viewmodels
+package com.jfaf.irc.domain.chat
 
 /** Lógica pura del autocompletado de nicks en el campo de entrada. */
 object NickAutocomplete {

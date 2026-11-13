@@ -1,7 +1,7 @@
-package com.jfaf.irc.ui.viewmodels
+package com.jfaf.irc.domain.chat
 
-import com.jfaf.irc.ui.model.UiChatMessage
-import com.jfaf.irc.ui.model.UiMessageType
+import com.jfaf.irc.domain.chat.model.UiChatMessage
+import com.jfaf.irc.domain.chat.model.UiMessageType
 import com.jfaf.irc.log.Log
 import androidx.compose.ui.text.AnnotatedString // Necesario para UiChatMessage
 import dagger.hilt.android.scopes.ViewModelScoped

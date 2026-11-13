@@ -56,7 +56,7 @@ import com.jfaf.irc.ui.screens.chat.MessagesList
 import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
-import com.jfaf.irc.ui.model.MediaTypeEnum
+import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import kotlinx.coroutines.launch

@@ -1,4 +1,4 @@
-package com.jfaf.irc.ui.model
+package com.jfaf.irc.domain.chat.model
 
 import androidx.compose.ui.text.AnnotatedString
 

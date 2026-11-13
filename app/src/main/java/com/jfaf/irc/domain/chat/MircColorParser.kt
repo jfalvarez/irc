@@ -1,4 +1,4 @@
-package com.jfaf.irc.ui.viewmodels
+package com.jfaf.irc.domain.chat
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.* // Importación global para androidx.compose.ui.text

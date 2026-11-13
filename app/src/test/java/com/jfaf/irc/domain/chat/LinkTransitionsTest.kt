@@ -1,9 +1,9 @@
-package com.jfaf.irc.ui.viewmodels
+package com.jfaf.irc.domain.chat
 
 import com.jfaf.irc.domain.text.Msg
-import com.jfaf.irc.ui.viewmodels.LinkState.CONNECTED
-import com.jfaf.irc.ui.viewmodels.LinkState.DISCONNECTED
-import com.jfaf.irc.ui.viewmodels.LinkState.RECONNECTING
+import com.jfaf.irc.domain.chat.LinkState.CONNECTED
+import com.jfaf.irc.domain.chat.LinkState.DISCONNECTED
+import com.jfaf.irc.domain.chat.LinkState.RECONNECTING
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

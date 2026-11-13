@@ -1,12 +1,12 @@
-package com.jfaf.irc.ui.viewmodels
+package com.jfaf.irc.domain.chat
 
 import com.jfaf.irc.data.model.IrcLineParser
 import com.jfaf.irc.domain.config.AppConfig
 import com.jfaf.irc.domain.config.parseKeywordList
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
-import com.jfaf.irc.ui.model.UiChatMessage
-import com.jfaf.irc.ui.model.UiMessageType
+import com.jfaf.irc.domain.chat.model.UiChatMessage
+import com.jfaf.irc.domain.chat.model.UiMessageType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
