@@ -13,7 +13,8 @@ import com.jfaf.irc.data.prefs.UserPreferences
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
-import com.jfaf.irc.data.repositories.UserMetadataRepository
+import com.jfaf.irc.domain.user.UserMetadataStore
+import com.jfaf.irc.domain.user.FriendPresenceTracker
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.usecase.AttemptNickServIdentificationUseCase
@@ -75,7 +76,8 @@ data class ChatScreenState(
 class MainViewModel @Inject constructor(
     private val ircRepository: IrcRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val userMetadataRepository: UserMetadataRepository,
+    private val userMetadataStore: UserMetadataStore,
+    private val friendPresence: FriendPresenceTracker,
     private val chatStateManager: ChatStateManager,
     private val chatHistoryPersister: ChatHistoryPersister,
     private val connectUseCase: ConnectUseCase,
@@ -96,7 +98,7 @@ class MainViewModel @Inject constructor(
 
     private var chatEventOrchestrator = ChatEventOrchestrator(
         ircRepository,
-        userMetadataRepository,
+        userMetadataStore,
         this,
         viewModelScope,
         strings
@@ -143,7 +145,7 @@ class MainViewModel @Inject constructor(
         userPreferencesRepository.showModeChangesFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private val ignoredUsersPref: StateFlow<Set<String>> =
-        userMetadataRepository.ignoredUsersFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        userMetadataStore.ignoredUsersFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     private val showMediaPreviewsPref: StateFlow<Boolean> =
         userPreferencesRepository.showMediaPreviewsFlow.stateIn(
@@ -152,7 +154,7 @@ class MainViewModel @Inject constructor(
             true
         )
 
-    private val onlineFriendsState: StateFlow<Set<String>> = userMetadataRepository.onlineFriendsFlow
+    private val onlineFriendsState: StateFlow<Set<String>> = friendPresence.onlineFriendsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     fun loadNativeAd(context: Context) {
@@ -244,7 +246,7 @@ class MainViewModel @Inject constructor(
             }
         }.launchIn(viewModelScope)
 
-        userMetadataRepository.friendCameOnlineEvent.onEach { nick ->
+        friendPresence.friendCameOnlineEvent.onEach { nick ->
             _friendCameOnlineEvent.emit(nick)
             _snackbarEvents.emit(strings.get(Msg.SNACK_FRIEND_ONLINE, nick))
         }.launchIn(viewModelScope)
@@ -255,7 +257,7 @@ class MainViewModel @Inject constructor(
         friendCheckJob = viewModelScope.launch {
             while (true) {
                 if (!isFriendCheckPaused.get()) {
-                    val friends = userMetadataRepository.friendsFlow.first()
+                    val friends = userMetadataStore.friendsFlow.first()
                     if (friends.isNotEmpty()) {
                         for (friend in friends) {
                             if (!isFriendCheckPaused.get()) {

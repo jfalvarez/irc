@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
-import com.jfaf.irc.data.repositories.UserMetadataRepository
+import com.jfaf.irc.domain.user.UserMetadataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +15,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val userMetadataRepository: UserMetadataRepository
+    private val userMetadataStore: UserMetadataStore
 ) : ViewModel() {
 
     val showJoinPartQuitMessages: StateFlow<Boolean> =
@@ -86,7 +86,7 @@ class SettingsViewModel @Inject constructor(
     // --- Fin Preferencia para Previsualizaciones de Medios ---
 
     val ignoredUsers: StateFlow<Set<String>> =
-        userMetadataRepository.ignoredUsersFlow.stateIn(
+        userMetadataStore.ignoredUsersFlow.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptySet() // Default to an empty set
@@ -95,19 +95,19 @@ class SettingsViewModel @Inject constructor(
     fun addIgnoredUser(nick: String) {
         if (nick.isNotBlank()) {
             viewModelScope.launch {
-                userMetadataRepository.addIgnoredUser(nick)
+                userMetadataStore.addIgnoredUser(nick)
             }
         }
     }
 
     fun removeIgnoredUser(nick: String) {
         viewModelScope.launch {
-            userMetadataRepository.removeIgnoredUser(nick)
+            userMetadataStore.removeIgnoredUser(nick)
         }
     }
 
     val friends: StateFlow<Set<String>> =
-        userMetadataRepository.friendsFlow.stateIn(
+        userMetadataStore.friendsFlow.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptySet()
@@ -116,14 +116,14 @@ class SettingsViewModel @Inject constructor(
     fun addFriend(nick: String) {
         if (nick.isNotBlank()) {
             viewModelScope.launch {
-                userMetadataRepository.addFriend(nick)
+                userMetadataStore.addFriend(nick)
             }
         }
     }
 
     fun removeFriend(nick: String) {
         viewModelScope.launch {
-            userMetadataRepository.removeFriend(nick)
+            userMetadataStore.removeFriend(nick)
         }
     }
 

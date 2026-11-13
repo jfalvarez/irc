@@ -5,7 +5,8 @@ import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
-import com.jfaf.irc.data.repositories.UserMetadataRepository
+import com.jfaf.irc.domain.user.UserMetadataStore
+import com.jfaf.irc.domain.user.FriendPresenceTracker
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import com.jfaf.irc.ui.viewmodels.ChatUiSnapshot
 import com.jfaf.irc.ui.viewmodels.IrcMessageHandler
@@ -16,7 +17,8 @@ class HandleIncomingMessageUseCase @Inject constructor(
     private val ircMessageHandler: IrcMessageHandler,
     private val chatStateManager: ChatStateManager,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val userMetadataRepository: UserMetadataRepository,
+    private val userMetadataStore: UserMetadataStore,
+    private val friendPresence: FriendPresenceTracker,
     private val ircRepository: IrcRepository,
     private val silentWhoisCompletionSignal: SilentWhoisCompletionSignal
 ) {
@@ -33,7 +35,7 @@ class HandleIncomingMessageUseCase @Inject constructor(
         ) {
             var isEndOfSilentWhois = false
             when (parsedMessage.command) {
-                "311" -> userMetadataRepository.friendSeen(whoisNickParam)
+                "311" -> friendPresence.friendSeen(whoisNickParam)
                 "318", "401" -> {
                     ircRepository.completeSilentWhois(whoisNickParam)
                     isEndOfSilentWhois = true
@@ -68,7 +70,7 @@ class HandleIncomingMessageUseCase @Inject constructor(
         var pmEventNickForVm: String? = null
 
         if (handlerResult.privateMessageEventNick != null) {
-            val ignoredUsersLowercaseFromPrefs = userMetadataRepository.ignoredUsersFlow.first()
+            val ignoredUsersLowercaseFromPrefs = userMetadataStore.ignoredUsersFlow.first()
                 .map { it.lowercase() }.toSet()
             if (handlerResult.privateMessageEventNick.lowercase() !in ignoredUsersLowercaseFromPrefs) {
                 pmEventNickForVm = handlerResult.privateMessageEventNick

@@ -4,13 +4,13 @@ import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.domain.platform.AuthSession
-import com.jfaf.irc.data.repositories.UserMetadataRepository // Importar el nuevo repositorio
+import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import javax.inject.Inject
 
 class IgnoreUserUseCase @Inject constructor(
     private val strings: StringProvider,
-    private val userMetadataRepository: UserMetadataRepository, // Reemplazar UserPreferencesRepository
+    private val userMetadataStore: UserMetadataStore,
     private val chatStateManager: ChatStateManager,
     private val analytics: AnalyticsTracker,
     private val authSession: AuthSession
@@ -28,7 +28,7 @@ class IgnoreUserUseCase @Inject constructor(
             return
         }
 
-        userMetadataRepository.addIgnoredUser(userName)
+        userMetadataStore.addIgnoredUser(userName)
 
         // El resto de la lógica permanece igual
         val targetForMessage = chatStateManager.activeTarget.value

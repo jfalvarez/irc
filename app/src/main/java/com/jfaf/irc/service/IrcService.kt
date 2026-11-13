@@ -19,7 +19,8 @@ import com.jfaf.irc.data.remote.ManualIrcClient
 import com.jfaf.irc.R
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.util.NotificationHelper
-import com.jfaf.irc.data.repositories.UserMetadataRepository
+import com.jfaf.irc.domain.user.UserMetadataStore
+import com.jfaf.irc.domain.user.FriendPresenceTracker
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,7 +38,10 @@ import kotlin.math.min
 class IrcService : Service() {
 
     @Inject
-    lateinit var userMetadataRepository: UserMetadataRepository
+    lateinit var userMetadataStore: UserMetadataStore
+
+    @Inject
+    lateinit var friendPresence: FriendPresenceTracker
 
     @Inject
     lateinit var ircServiceApi: IrcServiceApi
@@ -193,7 +197,7 @@ class IrcService : Service() {
 
     private fun observeFriendOnlineStatus() {
         serviceScope.launch {
-            userMetadataRepository.friendCameOnlineEvent.collectLatest { nick ->
+            friendPresence.friendCameOnlineEvent.collectLatest { nick ->
                 if (!ircServiceApi.isAppInForeground.value) {
                     showFriendOnlineNotification(nick)
                 }
@@ -254,7 +258,7 @@ class IrcService : Service() {
                     if (parsedMessage.command == "PRIVMSG" && target != null && !target.startsWith("#")) {
                         val senderNick = parsedMessage.senderNickname
                         if (senderNick != null) {
-                            val ignoredUsers = userMetadataRepository.ignoredUsersFlow.first()
+                            val ignoredUsers = userMetadataStore.ignoredUsersFlow.first()
                             val ignoredUsersLowercase = ignoredUsers.map { it.lowercase() }.toSet()
                             if (senderNick.lowercase() in ignoredUsersLowercase) {
                                 Log.d(TAG, "App en background. Mensaje PRIVADO de usuario ignorado ($senderNick). No se muestra notificación.")

@@ -6,7 +6,9 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import com.jfaf.irc.data.firebase.FirebaseAuthSession
+import com.jfaf.irc.data.firebase.FirestoreUserMetadataStore
 import com.jfaf.irc.domain.platform.AuthSession
+import com.jfaf.irc.domain.user.UserMetadataStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -28,4 +30,8 @@ object FirebaseModule {
     @Provides
     @Singleton
     fun provideAuthSession(impl: FirebaseAuthSession): AuthSession = impl
+
+    @Provides
+    @Singleton
+    fun provideUserMetadataStore(impl: FirestoreUserMetadataStore): UserMetadataStore = impl
 }

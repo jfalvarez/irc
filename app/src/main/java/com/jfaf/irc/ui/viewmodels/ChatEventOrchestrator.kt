@@ -5,7 +5,7 @@ import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.repositories.IrcRepository
-import com.jfaf.irc.data.repositories.UserMetadataRepository
+import com.jfaf.irc.domain.user.UserMetadataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -20,7 +20,7 @@ interface ChatEventListener {
 
 class ChatEventOrchestrator(
     private val ircRepository: IrcRepository,
-    private val userMetadataRepository: UserMetadataRepository,
+    private val userMetadataStore: UserMetadataStore,
     private val eventListener: ChatEventListener,
     private val scope: CoroutineScope,
     private val strings: StringProvider
@@ -30,7 +30,7 @@ class ChatEventOrchestrator(
 
     fun startObservingRawMessages() {
         ircRepository.incomingMessages
-            .combine(userMetadataRepository.ignoredUsersFlow) { parsedMessage, currentIgnoredNicks ->
+            .combine(userMetadataStore.ignoredUsersFlow) { parsedMessage, currentIgnoredNicks ->
                 Pair(parsedMessage, currentIgnoredNicks.map { it.lowercase() }.toSet())
             }
             .onEach { (parsedMessage, ignoredNicksLowercase) -> 

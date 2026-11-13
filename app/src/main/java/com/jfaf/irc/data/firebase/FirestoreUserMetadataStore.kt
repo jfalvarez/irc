@@ -1,23 +1,16 @@
-package com.jfaf.irc.data.repositories
+package com.jfaf.irc.data.firebase
 
 import com.jfaf.irc.log.Log
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.snapshots
 import com.google.firebase.firestore.toObject
+import com.jfaf.irc.domain.platform.AuthSession
+import com.jfaf.irc.domain.user.UserMetadataStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -34,39 +27,21 @@ data class UserMetadata(
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
-class UserMetadataRepository @Inject constructor(
+class FirestoreUserMetadataStore @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val firebaseAuth: FirebaseAuth
-) {
-    private val TAG = "UserMetadataRepository"
+    private val authSession: AuthSession
+) : UserMetadataStore {
+    private val TAG = "FirestoreUserMetadataStore"
 
-    private val _onlineFriendsTimestamps = MutableStateFlow<Map<String, Long>>(emptyMap())
-
-    private val _friendCameOnlineEvent = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    val friendCameOnlineEvent = _friendCameOnlineEvent.asSharedFlow()
-
-    val onlineFriendsFlow: Flow<Set<String>> = _onlineFriendsTimestamps.map { timestamps ->
-        val now = System.currentTimeMillis()
-        timestamps.filterValues {
-            (now - it) < 70000
-        }.keys
-    }.distinctUntilChanged()
-
-    private fun currentUserDocument() = firebaseAuth.currentUser?.uid?.let {
+    private fun currentUserDocument() = authSession.currentUser.value?.uid?.let {
         firestore.collection("users").document(it)
     }
 
-    private val userFlow: Flow<FirebaseUser?> = callbackFlow {
-        val authStateListener = FirebaseAuth.AuthStateListener { auth ->
-            trySend(auth.currentUser)
-        }
-        firebaseAuth.addAuthStateListener(authStateListener)
-        awaitClose { firebaseAuth.removeAuthStateListener(authStateListener) }
-    }
+    private val uidFlow: Flow<String?> = authSession.currentUser.map { it?.uid }.distinctUntilChanged()
 
-    val ignoredUsersFlow: Flow<Set<String>> = userFlow.flatMapLatest { user ->
-        if (user != null) {
-            firestore.collection("users").document(user.uid).snapshots().map { snapshot ->
+    override val ignoredUsersFlow: Flow<Set<String>> = uidFlow.flatMapLatest { uid ->
+        if (uid != null) {
+            firestore.collection("users").document(uid).snapshots().map { snapshot ->
                 snapshot.toObject<UserMetadata>()?.ignoredNicks?.toSet() ?: emptySet()
             }
         } else {
@@ -74,9 +49,9 @@ class UserMetadataRepository @Inject constructor(
         }
     }
 
-    val friendsFlow: Flow<Set<String>> = userFlow.flatMapLatest { user ->
-        if (user != null) {
-            firestore.collection("users").document(user.uid).snapshots().map { snapshot ->
+    override val friendsFlow: Flow<Set<String>> = uidFlow.flatMapLatest { uid ->
+        if (uid != null) {
+            firestore.collection("users").document(uid).snapshots().map { snapshot ->
                 snapshot.toObject<UserMetadata>()?.friends?.toSet() ?: emptySet()
             }
         } else {
@@ -84,16 +59,7 @@ class UserMetadataRepository @Inject constructor(
         }
     }
 
-    fun friendSeen(nick: String) {
-        val now = System.currentTimeMillis()
-        val previouslyOnline = _onlineFriendsTimestamps.value.containsKey(nick)
-        _onlineFriendsTimestamps.value = _onlineFriendsTimestamps.value + (nick to now)
-        if (!previouslyOnline) {
-            _friendCameOnlineEvent.tryEmit(nick)
-        }
-    }
-
-    suspend fun addIgnoredUser(nick: String) {
+    override suspend fun addIgnoredUser(nick: String) {
         val document = currentUserDocument() ?: return
         val nickLowercase = nick.lowercase()
 
@@ -106,7 +72,7 @@ class UserMetadataRepository @Inject constructor(
         }
     }
 
-    suspend fun removeIgnoredUser(nick: String) {
+    override suspend fun removeIgnoredUser(nick: String) {
         val document = currentUserDocument() ?: return
         val nickLowercase = nick.lowercase()
 
@@ -122,7 +88,7 @@ class UserMetadataRepository @Inject constructor(
         }
     }
 
-    suspend fun addFriend(nick: String) {
+    override suspend fun addFriend(nick: String) {
         val document = currentUserDocument() ?: return
         val nickLowercase = nick.lowercase()
 
@@ -135,7 +101,7 @@ class UserMetadataRepository @Inject constructor(
         }
     }
 
-    suspend fun removeFriend(nick: String) {
+    override suspend fun removeFriend(nick: String) {
         val document = currentUserDocument() ?: return
         val nickLowercase = nick.lowercase()
 
