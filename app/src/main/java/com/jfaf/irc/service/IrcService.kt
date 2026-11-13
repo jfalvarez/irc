@@ -15,9 +15,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.jfaf.irc.AppConstants
 import com.jfaf.irc.MainActivity
-import com.jfaf.irc.data.remote.ManualIrcClient
 import com.jfaf.irc.R
 import com.jfaf.irc.data.model.ParsedIrcMessage
+import com.jfaf.irc.data.remote.ConnectParams
+import com.jfaf.irc.data.remote.IrcSession
+import com.jfaf.irc.data.remote.SessionStatus
 import com.jfaf.irc.util.NotificationHelper
 import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.domain.user.FriendPresenceTracker
@@ -25,16 +27,17 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
-import kotlin.math.min
 
+/**
+ * Mantiene viva la [IrcSession] en segundo plano (servicio en primer plano) y la refleja en
+ * notificaciones. La lógica de conexión y reconexión vive en la sesión, no aquí.
+ */
 @AndroidEntryPoint
 class IrcService : Service() {
 
@@ -47,6 +50,9 @@ class IrcService : Service() {
     @Inject
     lateinit var ircServiceApi: IrcServiceApi
 
+    @Inject
+    lateinit var session: IrcSession
+
     private val TAG = "IrcService"
     private val FOREGROUND_NOTIFICATION_CHANNEL_ID = "IrcServiceChannel"
     private val FOREGROUND_NOTIFICATION_ID = 1
@@ -57,22 +63,10 @@ class IrcService : Service() {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
-    private var manualIrcClient: ManualIrcClient? = null
-    private var currentHostForNotification: String = AppConstants.DEFAULT_HOST_PLACEHOLDER
     private var isFriendObserverStarted = false
-
-    private data class ConnectParams(val nickname: String, val host: String, val port: Int, val useSsl: Boolean)
-    private var lastConnectParams: ConnectParams? = null
-    private var reconnectJob: Job? = null
-    private var clientCollectorsJob: Job? = null
-    private var reconnectAttempt = 0
+    private var sessionObserversJob: Job? = null
 
     companion object {
-        private const val RECONNECT_BASE_DELAY_MS = 2_000L
-        private const val RECONNECT_MAX_DELAY_MS = 60_000L
-        private const val RECONNECT_MAX_ATTEMPTS = 8
-        private const val RECONNECT_REGISTER_TIMEOUT_MS = 15_000L
-
         const val ACTION_CONNECT = "com.jfaf.irc.service.ACTION_CONNECT"
         const val ACTION_DISCONNECT = "com.jfaf.irc.service.ACTION_DISCONNECT"
         const val ACTION_SEND_MESSAGE = "com.jfaf.irc.service.ACTION_SEND_MESSAGE"
@@ -114,11 +108,11 @@ class IrcService : Service() {
         // Siempre, también para ACTION_DISCONNECT_AND_STOP_SERVICE: el servicio llega aquí vía
         // startForegroundService y debe llamar a startForeground en 5 s aunque vaya a detenerse.
         val initialNotificationText = when {
-            ircServiceApi.connectionState.value -> getString(R.string.notification_status_connected_to, currentHostForNotification)
             action == ACTION_CONNECT -> getString(R.string.notification_status_connecting)
-            else -> getString(R.string.notification_status_disconnected)
+            else -> statusText(session.status.value)
         }
         startAsForeground(createForegroundServiceNotification(initialNotificationText))
+        if (sessionObserversJob == null) observeSession() // tras startForeground: nunca antes
 
         when (action) {
             ACTION_CONNECT -> {
@@ -126,19 +120,11 @@ class IrcService : Service() {
                 val serverHost = intent.getStringExtra(EXTRA_SERVER_HOST) ?: AppConstants.DEFAULT_SERVER_HOST
                 val serverPort = intent.getIntExtra(EXTRA_SERVER_PORT, 6667)
                 val useSsl = intent.getBooleanExtra(EXTRA_USE_SSL, false)
-                currentHostForNotification = serverHost
-                connect(nickname, serverHost, serverPort, useSsl)
+                session.connect(ConnectParams(nickname, serverHost, serverPort, useSsl))
             }
             ACTION_DISCONNECT -> {
                 Log.i(TAG, "Acción DISCONNECT recibida. Desconectando socket, servicio permanece en foreground.")
-                cancelReconnect()
-                serviceScope.launch {
-                    manualIrcClient?.disconnectAndCleanup()
-                }
-                if (ircServiceApi.connectionState.value) {
-                    ircServiceApi.updateConnectionState(false)
-                }
-                updateForegroundServiceNotification(getString(R.string.notification_status_disconnected))
+                serviceScope.launch { session.disconnect() }
             }
             ACTION_DISCONNECT_AND_STOP_SERVICE -> {
                 Log.i(TAG, "Acción DISCONNECT_AND_STOP_SERVICE recibida. Desconectando y deteniendo el servicio.")
@@ -149,38 +135,34 @@ class IrcService : Service() {
                 val target = intent.getStringExtra(EXTRA_TARGET)
                 val message = intent.getStringExtra(EXTRA_MESSAGE)
                 if (target != null && message != null) {
-                    sendMessage(target, message)
+                    session.sendMessage(target, message)
                 }
             }
             ACTION_JOIN_CHANNEL -> {
                 val channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME)
                 val channelKey = intent.getStringExtra(EXTRA_CHANNEL_KEY)
                 if (channelName != null) {
-                    joinChannel(channelName, channelKey)
+                    session.joinChannel(channelName, channelKey)
                 }
             }
             ACTION_PART_CHANNEL -> {
                 val channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME)
                 val partMessage = intent.getStringExtra(EXTRA_PART_MESSAGE)
                 if (channelName != null) {
-                    partChannel(channelName, partMessage)
+                    session.partChannel(channelName, partMessage)
                 }
             }
-            ACTION_SEND_RAW_COMMAND -> { 
+            ACTION_SEND_RAW_COMMAND -> {
                 val rawCommand = intent.getStringExtra(EXTRA_RAW_COMMAND)
                 if (!rawCommand.isNullOrBlank()) {
-                    sendRawCommand(rawCommand)
+                    Log.d(TAG, "Enviando comando crudo al cliente IRC: $rawCommand")
+                    session.sendRaw(rawCommand)
                 } else {
                     Log.w(TAG, "ACTION_SEND_RAW_COMMAND recibido con comando nulo o vacío.")
                 }
             }
             else -> {
-                 Log.w(TAG, "Acción desconocida o nula: $action")
-                 if (ircServiceApi.connectionState.value) {
-                    startAsForeground(createForegroundServiceNotification(getString(R.string.notification_status_connected_to, currentHostForNotification)))
-                 } else if (manualIrcClient != null) {
-                    startAsForeground(createForegroundServiceNotification(getString(R.string.notification_status_disconnected)))
-                 }
+                Log.w(TAG, "Acción desconocida o nula: $action")
             }
         }
         return START_NOT_STICKY
@@ -196,6 +178,51 @@ class IrcService : Service() {
         )
     }
 
+    /** Refleja la sesión en IrcServiceApi (hasta 1.5c), la notificación persistente y las de privados. */
+    private fun observeSession() {
+        sessionObserversJob = serviceScope.launch {
+            launch { session.connectionState.collect { ircServiceApi.updateConnectionState(it) } }
+            launch { session.isReconnecting.collect { ircServiceApi.updateReconnecting(it) } }
+            launch { session.status.collect { updateForegroundServiceNotification(statusText(it)) } }
+            launch {
+                session.incomingMessages.collect { parsedMessage ->
+                    ircServiceApi.postMessage(parsedMessage)
+
+                    if (!ircServiceApi.isAppInForeground.value) { // App is in background
+                        val target = parsedMessage.params.firstOrNull()
+                        if (parsedMessage.command == "PRIVMSG" && target != null && !target.startsWith("#")) {
+                            val senderNick = parsedMessage.senderNickname
+                            if (senderNick != null) {
+                                val ignoredUsers = userMetadataStore.ignoredUsersFlow.first()
+                                val ignoredUsersLowercase = ignoredUsers.map { it.lowercase() }.toSet()
+                                if (senderNick.lowercase() in ignoredUsersLowercase) {
+                                    Log.d(TAG, "App en background. Mensaje PRIVADO de usuario ignorado ($senderNick). No se muestra notificación.")
+                                } else {
+                                    Log.d(TAG, "App en background. Mensaje PRIVADO de $senderNick no ignorado. Mostrando notificación para: ${parsedMessage.rawLine}")
+                                    showNewMessageNotification(parsedMessage)
+                                }
+                            } else {
+                                Log.d(TAG, "App en background. Mensaje PRIVADO sin senderNick claro. Mostrando notificación. Raw: ${parsedMessage.rawLine}")
+                                showNewMessageNotification(parsedMessage)
+                            }
+                        } else {
+                            Log.d(TAG, "App en background. Mensaje de CANAL o no PRIVMSG. No se muestra notificación emergente para: ${parsedMessage.rawLine}")
+                        }
+                    } else { // App is in foreground
+                        Log.d(TAG, "App en foreground, no se muestra notificación emergente para: ${parsedMessage.rawLine}")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun statusText(status: SessionStatus): String = when (status) {
+        SessionStatus.Disconnected -> getString(R.string.notification_status_disconnected)
+        SessionStatus.Connecting -> getString(R.string.notification_status_connecting)
+        is SessionStatus.Connected -> getString(R.string.notification_status_connected_to, status.host)
+        is SessionStatus.Reconnecting -> getString(R.string.notification_status_reconnecting, status.attempt, status.maxAttempts)
+    }
+
     private fun observeFriendOnlineStatus() {
         serviceScope.launch {
             friendPresence.friendCameOnlineEvent.collectLatest { nick ->
@@ -206,160 +233,21 @@ class IrcService : Service() {
         }
     }
 
-    private fun connect(nickname: String, serverHost: String, serverPort: Int, useSsl: Boolean) {
-        cancelReconnect()
-        lastConnectParams = ConnectParams(nickname, serverHost, serverPort, useSsl)
-        if (manualIrcClient != null && manualIrcClient!!.isConnected) {
-            Log.w(TAG, "Ya conectado o conectando.")
-            currentHostForNotification = manualIrcClient?.host ?: serverHost
-            updateForegroundServiceNotification(getString(R.string.notification_status_connected_to, currentHostForNotification))
-            ircServiceApi.updateConnectionState(true)
-            return
-        }
-        Log.i(TAG, "Conectando a $serverHost:$serverPort como $nickname (SSL: $useSsl)")
-        serviceScope.launch {
-            manualIrcClient?.disconnectAndCleanup()
-        }
-        currentHostForNotification = serverHost
-
-        val client = ManualIrcClient(
-            host = serverHost,
-            port = serverPort,
-            useSsl = useSsl,
-            coroutineScope = serviceScope,
-            ioDispatcher = Dispatchers.IO,
-            onConnectionLost = { scheduleReconnect() }
-        )
-        manualIrcClient = client
-
-        // Cancela los colectores del cliente anterior para que no se acumulen
-        clientCollectorsJob?.cancel()
-        clientCollectorsJob = serviceScope.launch {
-          launch {
-            client.connectionState.collectLatest { isConnected ->
-                // Durante una reconexión el socket abierto aún no es "conectado": se espera al 001
-                // (lo publica el bucle de reconexión). Evita el parpadeo Reconectado/Conexión perdida.
-                if (isConnected && reconnectJob?.isActive == true && !client.isRegistered.value) {
-                    return@collectLatest
-                }
-                ircServiceApi.updateConnectionState(isConnected)
-                val statusText = if (isConnected) getString(R.string.status_connected_to_host, currentHostForNotification) else getString(R.string.status_disconnected_short)
-                if (isConnected || reconnectJob?.isActive != true) {
-                    updateForegroundServiceNotification(statusText)
-                }
-            }
-          }
-
-          launch {
-            client.incomingMessages.collect { parsedMessage ->
-                ircServiceApi.postMessage(parsedMessage)
-
-                if (!ircServiceApi.isAppInForeground.value) { // App is in background
-                    val target = parsedMessage.params.firstOrNull()
-                    if (parsedMessage.command == "PRIVMSG" && target != null && !target.startsWith("#")) {
-                        val senderNick = parsedMessage.senderNickname
-                        if (senderNick != null) {
-                            val ignoredUsers = userMetadataStore.ignoredUsersFlow.first()
-                            val ignoredUsersLowercase = ignoredUsers.map { it.lowercase() }.toSet()
-                            if (senderNick.lowercase() in ignoredUsersLowercase) {
-                                Log.d(TAG, "App en background. Mensaje PRIVADO de usuario ignorado ($senderNick). No se muestra notificación.")
-                            } else {
-                                Log.d(TAG, "App en background. Mensaje PRIVADO de $senderNick no ignorado. Mostrando notificación para: ${parsedMessage.rawLine}")
-                                showNewMessageNotification(parsedMessage)
-                            }
-                        } else {
-                            Log.d(TAG, "App en background. Mensaje PRIVADO sin senderNick claro. Mostrando notificación. Raw: ${parsedMessage.rawLine}")
-                            showNewMessageNotification(parsedMessage)
-                        }
-                    } else {
-                        Log.d(TAG, "App en background. Mensaje de CANAL o no PRIVMSG. No se muestra notificación emergente para: ${parsedMessage.rawLine}")
-                    }
-                } else { // App is in foreground
-                    Log.d(TAG, "App en foreground, no se muestra notificación emergente para: ${parsedMessage.rawLine}")
-                }
-            }
-          }
-        }
-        client.connect(nickname, user = "ircandroid", real = "Android IRC User")
-    }
-
     private fun disconnect(quitMessage: String? = null) {
         Log.i(TAG, "Función disconnect(quitMessage: $quitMessage) llamada. Limpiando cliente, quitando foreground y deteniendo servicio.")
-        cancelReconnect()
         serviceScope.launch {
-            val wasConnected = ircServiceApi.connectionState.value
-            // Un único QUIT, que se espera a que salga antes de cerrar (antes se enviaban dos y se perdían)
-            manualIrcClient?.disconnectAndCleanup(
-                quitMessage?.takeIf { it.isNotBlank() } ?: AppConstants.QUIT_MSG_CLIENT_SHUTDOWN
-            )
-            if (wasConnected) {
-                ircServiceApi.updateConnectionState(false)
-            }
+            // Un único QUIT, que se espera a que salga antes de cerrar
+            session.disconnect(quitMessage?.takeIf { it.isNotBlank() } ?: AppConstants.QUIT_MSG_CLIENT_SHUTDOWN)
+            // Deja de observar ANTES de quitar el foreground: que el "Desconectado" no repinte una notificación huérfana
+            sessionObserversJob?.cancelAndJoin()
+            sessionObserversJob = null
+            ircServiceApi.updateConnectionState(false)
             stopForeground(STOP_FOREGROUND_REMOVE)
             // Después de parar el foreground para que ninguna notificación (conexión, mensajes, amigos) quede huérfana.
             NotificationHelper.clearAllNotifications(this@IrcService)
             stopSelf()
             Log.i(TAG, "Servicio detenido y limpiado.")
         }
-    }
-
-    private fun scheduleReconnect() {
-        val params = lastConnectParams ?: return
-        if (reconnectJob?.isActive == true) return
-        ircServiceApi.updateReconnecting(true)
-        reconnectJob = serviceScope.launch {
-            try {
-                while (reconnectAttempt < RECONNECT_MAX_ATTEMPTS) {
-                    reconnectAttempt++
-                    val delayMs = min(RECONNECT_BASE_DELAY_MS shl (reconnectAttempt - 1), RECONNECT_MAX_DELAY_MS)
-                    updateForegroundServiceNotification(
-                        getString(R.string.notification_status_reconnecting, reconnectAttempt, RECONNECT_MAX_ATTEMPTS)
-                    )
-                    Log.i(TAG, "Reconexión $reconnectAttempt/$RECONNECT_MAX_ATTEMPTS en ${delayMs}ms")
-                    delay(delayMs)
-                    val client = manualIrcClient ?: return@launch
-                    client.connect(params.nickname, user = "ircandroid", real = "Android IRC User")
-                    val registered = withTimeoutOrNull(RECONNECT_REGISTER_TIMEOUT_MS) {
-                        client.isRegistered.first { it }
-                    } != null
-                    if (registered) {
-                        reconnectAttempt = 0
-                        ircServiceApi.updateConnectionState(true)
-                        updateForegroundServiceNotification(getString(R.string.status_connected_to_host, currentHostForNotification))
-                        return@launch
-                    }
-                    client.disconnectAndCleanup()
-                }
-                Log.w(TAG, "Reconexión abandonada tras $RECONNECT_MAX_ATTEMPTS intentos")
-                updateForegroundServiceNotification(getString(R.string.notification_status_disconnected))
-            } finally {
-                // Éxito, abandono o cancelación
-                ircServiceApi.updateReconnecting(false)
-            }
-        }
-    }
-
-    private fun cancelReconnect() {
-        reconnectJob?.cancel()
-        reconnectJob = null
-        reconnectAttempt = 0
-    }
-
-    private fun sendMessage(target: String, message: String) {
-        manualIrcClient?.sendMessageToChannel(target, message)
-    }
-
-    private fun joinChannel(channelName: String, key: String? = null) {
-        manualIrcClient?.joinChannel(channelName, key) // Asumiendo que ManualIrcClient se actualizará
-    }
-
-    private fun partChannel(channelName: String, partMessage: String? = null) {
-        manualIrcClient?.partFromChannel(channelName, partMessage) // Asumiendo que ManualIrcClient se actualizará
-    }
-
-    private fun sendRawCommand(command: String) {
-        Log.d(TAG, "Enviando comando crudo al cliente IRC: $command")
-        manualIrcClient?.sendRaw(command)
     }
 
     private fun createNotificationChannels() {
@@ -498,10 +386,8 @@ class IrcService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "IrcService onDestroy")
-        // NonCancellable: serviceJob.cancel() de la línea siguiente no debe impedir enviar el QUIT y cerrar
-        serviceScope.launch(NonCancellable) {
-            manualIrcClient?.disconnectAndCleanup()
-        }
+        // Corre en el scope de la sesión: serviceJob.cancel() no impide enviar el QUIT y cerrar
+        session.disconnectInBackground()
         serviceJob.cancel()
         if (ircServiceApi.connectionState.value) {
             ircServiceApi.updateConnectionState(false)
