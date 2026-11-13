@@ -86,11 +86,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.activity.compose)
-    implementation(libs.coil.compose)
-    implementation(libs.coil.gif)
+    implementation(libs.coil.gif) // decodificador de GIF animado (sólo Android); Coil en sí viene de :shared
     implementation(libs.koin.android)
-    implementation(libs.androidx.media3.exoplayer)
-    implementation(libs.androidx.media3.ui)
 
 
     // Firebase - Asegúrate de que el BoM (Bill of Materials) esté presente

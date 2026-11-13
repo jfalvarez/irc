@@ -7,6 +7,10 @@ import android.os.Build
 import androidx.core.content.ContextCompat // Correct import for getSystemService
 import com.google.android.gms.ads.MobileAds // Import MobileAds
 import co.touchlab.kermit.platformLogWriter
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.gif.AnimatedImageDecoder
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.di.androidModule
 import com.jfaf.irc.di.commonModule
@@ -16,7 +20,7 @@ import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
 
-class IrcApplication : Application() {
+class IrcApplication : Application(), SingletonImageLoader.Factory {
 
     companion object {
         const val PRIVATE_MESSAGE_CHANNEL_ID = "private_message_channel"
@@ -36,6 +40,12 @@ class IrcApplication : Application() {
 
         createNotificationChannels()
     }
+
+    // Coil 3: el ImageLoader global añade el decodificador de GIF animado (API 28+; minSdk es 29).
+    override fun newImageLoader(context: PlatformContext): ImageLoader =
+        ImageLoader.Builder(context)
+            .components { add(AnimatedImageDecoder.Factory()) }
+            .build()
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

@@ -69,6 +69,16 @@ kotlin {
             api(libs.compose.mp.icons.extended)
             api(libs.compose.mp.ui.backhandler)
             api(libs.jetbrains.navigation.compose)
+            // Imágenes (Coil 3, paso 3.3). Se expone con api porque :app registra su ImageLoader.
+            api(libs.coil.compose)
+        }
+        // Android y escritorio son JVM: el cliente de red de Coil (OkHttp) va en el grupo compartido.
+        named("jvmCommonMain").dependencies {
+            implementation(libs.coil.network.okhttp)
+        }
+        androidMain.dependencies {
+            implementation(libs.androidx.media3.exoplayer)
+            implementation(libs.androidx.media3.ui)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

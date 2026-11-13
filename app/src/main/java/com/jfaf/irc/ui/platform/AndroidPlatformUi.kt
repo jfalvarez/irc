@@ -13,13 +13,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.jfaf.irc.R
 import com.jfaf.irc.ads.AdMobAd
-import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 import com.jfaf.irc.domain.platform.AdHandle
 import com.jfaf.irc.resources.Res
 import com.jfaf.irc.resources.account_sign_in_google
 import org.jetbrains.compose.resources.stringResource
 
-/** Implementación Android de [PlatformUi]: AdMob, Google Sign-In, Coil 2 y Media3. */
+/** Implementación Android de [PlatformUi]: AdMob y Google Sign-In. */
 object AndroidPlatformUi : PlatformUi {
     override val supportsGoogleSignIn = true
 
@@ -42,15 +41,5 @@ object AndroidPlatformUi : PlatformUi {
     @Composable
     override fun AdContent(ad: AdHandle) {
         (ad as? AdMobAd)?.let { NativeAdMessage(nativeAd = it.nativeAd) }
-    }
-
-    @Composable
-    override fun MediaPreview(mediaUrl: String, mediaType: MediaTypeEnum, modifier: Modifier) {
-        com.jfaf.irc.ui.platform.MediaPreview(modifier = modifier, mediaUrl = mediaUrl, mediaType = mediaType)
-    }
-
-    @Composable
-    override fun FullScreenMedia(mediaUrl: String, mediaType: MediaTypeEnum, onClose: () -> Unit) {
-        FullScreenImageViewer(mediaUrl = mediaUrl, mediaType = mediaType, onClose = onClose)
     }
 }

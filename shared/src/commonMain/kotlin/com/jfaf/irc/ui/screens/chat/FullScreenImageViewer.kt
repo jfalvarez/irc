@@ -1,4 +1,4 @@
-package com.jfaf.irc.ui.platform
+package com.jfaf.irc.ui.screens.chat
 
 import com.jfaf.irc.resources.Res
 import com.jfaf.irc.resources.*
@@ -16,7 +16,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,20 +26,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
-import coil.compose.AsyncImage
-import coil.compose.AsyncImagePainter
-import coil.decode.ImageDecoderDecoder // Added import
-import coil.request.ImageRequest     // Added import
+import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import com.jfaf.irc.ui.media.FullScreenDialog
+import com.jfaf.irc.ui.media.VideoPlayer
+import coil3.compose.AsyncImagePainter
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 
 @Composable
@@ -51,10 +45,7 @@ fun FullScreenImageViewer(
 ) {
     Log.d("FullScreenViewer", "Displaying media. Type: $mediaType, URL: $mediaUrl")
 
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
-    ) {
+    FullScreenDialog(onDismissRequest = onClose) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -68,12 +59,11 @@ fun FullScreenImageViewer(
         ) {
             when (mediaType) {
                 MediaTypeEnum.IMAGE -> {
-                    val context = LocalContext.current // Get context for ImageRequest
+                    val context = LocalPlatformContext.current
                     var imagePainterState by remember { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(mediaUrl)
-                            .decoderFactory(ImageDecoderDecoder.Factory()) // For animated GIFs
                             .crossfade(true) // Optional smooth transition
                             .build(), 
                         contentDescription = stringResource(Res.string.cd_full_screen_image),
@@ -116,40 +106,18 @@ fun FullScreenImageViewer(
                     }
                 }
                 MediaTypeEnum.VIDEO -> {
-                    val context = LocalContext.current
-                    val exoPlayer = remember(mediaUrl) { 
-                        ExoPlayer.Builder(context).build().apply {
-                            val mediaItem = MediaItem.fromUri(mediaUrl)
-                            setMediaItem(mediaItem)
-                            prepare()
-                            playWhenReady = true       
-                            volume = 1f                
-                            repeatMode = Player.REPEAT_MODE_OFF 
-                        }
-                    }
-
-                    DisposableEffect(exoPlayer) { 
-                        onDispose {
-                            exoPlayer.release()
-                        }
-                    }
-
-                    AndroidView(
+                    VideoPlayer(
+                        videoUrl = mediaUrl,
+                        isPreview = false,
                         modifier = Modifier
                             .fillMaxWidth(0.95f)
                             .fillMaxHeight(0.85f)
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable( 
+                            .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                                 onClick = { /* Consumes the click */ }
-                            ),
-                        factory = { ctx ->
-                            PlayerView(ctx).apply {
-                                player = exoPlayer
-                                useController = true 
-                            }
-                        }
+                            )
                     )
                 }
                 MediaTypeEnum.NONE -> {

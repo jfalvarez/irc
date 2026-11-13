@@ -16,7 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import coil.compose.rememberAsyncImagePainter
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.core.graphics.drawable.toBitmap
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdView
 
@@ -32,7 +35,7 @@ fun NativeAdMessage(nativeAd: NativeAd) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 nativeAd.icon?.drawable?.let {
                     Image(
-                        painter = rememberAsyncImagePainter(model = it),
+                        painter = remember(it) { BitmapPainter(it.toBitmap().asImageBitmap()) },
                         contentDescription = null,
                         modifier = Modifier.size(40.dp)
                     )

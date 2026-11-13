@@ -32,7 +32,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 // import com.jfaf.irc.R // No longer needed for string resources of placeholder
-import com.jfaf.irc.ui.platform.LocalPlatformUi
+import com.jfaf.irc.ui.media.MediaPreview
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 import com.jfaf.irc.domain.chat.model.UiChatMessage
@@ -140,7 +140,7 @@ fun MessageRow(
         val mediaUrl = message.mediaUrl
         if (!mediaUrl.isNullOrBlank() && showMediaPreviews) {
             Spacer(modifier = Modifier.height(4.dp))
-            LocalPlatformUi.current.MediaPreview(
+            MediaPreview(
                 mediaUrl = mediaUrl,
                 mediaType = message.mediaType,
                 modifier = Modifier

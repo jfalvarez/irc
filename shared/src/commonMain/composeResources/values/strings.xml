@@ -145,4 +145,5 @@
     <string name="account_sign_out">Cerrar sesión</string>
     <string name="account_sign_in_hint">Inicia sesión con Google para sincronizar tu configuración (ej. lista de ignorados) entre dispositivos.</string>
     <string name="account_sign_in_google">Iniciar sesión con Google</string>
+    <string name="video_open_in_browser">Abrir vídeo en el navegador</string>
 </resources>
