@@ -1,60 +1,19 @@
 <resources>
     <string name="app_name">irc</string>
-    <string name="log_notification_pm_shown">"Notificación mostrada/actualizada con ID: %1$d. Contenido: '%2$s'"</string>
-    <string name="log_no_notification_permission">No se tiene permiso para mostrar notificaciones.</string>
 
+    <!-- Notificación persistente del servicio en primer plano -->
+    <string name="notification_title_irc_client">Cliente IRC</string>
     <string name="notification_status_connected_to">Estado: Conectado a %1$s</string>
     <string name="notification_status_connecting">Iniciando conexión IRC...</string>
     <string name="notification_status_disconnected">Estado: Desconectado</string>
     <string name="notification_status_reconnecting">Estado: Reconectando (intento %1$d de %2$d)…</string>
     <string name="notification_channel_name_irc_service">IRC Service Channel</string>
-    <string name="notification_title_irc_client">Cliente IRC</string>
-    <string name="status_connected_to_host">Conectado a %1$s</string>
-    <string name="status_disconnected_short">Desconectado</string>
+    <string name="notification_channel_description_irc_service">Notificación persistente que indica el estado de conexión del servicio IRC.</string>
 
-    <string name="prompt_select_channel_or_conversation">Selecciona un canal o conversación para empezar.</string>
-    <string name="connection_setup_title_simplified">CONEXIÓN IRC - VERSIÓN SIMPLIFICADA</string>
-    <string name="checkbox_label_connect_securely">Conectar de forma segura (SSL/TLS)</string>
-
-    <string name="app_title_disconnected">IRC App - Desconectado</string>
-
-    <string name="cd_private_message">Privado</string>
-
-    <string name="pm_notification_title">Nuevo Mensaje Privado</string>
-    <string name="pm_notification_content_single">Has recibido un nuevo mensaje.</string>
-    <string name="pm_notification_content_multiple">Tienes %1$d mensajes nuevos</string>
-
-    <!-- Para el NUEVO canal de notificación de mensajes -->
+    <!-- Notificaciones de mensajes privados y de amigos -->
     <string name="notification_channel_name_irc_messages">Mensajes IRC</string>
     <string name="notification_channel_description_irc_messages">Notificaciones para nuevos mensajes recibidos en canales y privados.</string>
-
-    <!-- Para el contenido de las NUEVAS notificaciones de mensajes -->
-    <string name="new_message_in_channel_title">Nuevo mensaje en %1$s</string> <!-- %1$s será el nombre del canal -->
     <string name="new_private_message_from_sender_title">Mensaje privado de %1$s</string>
-    <string name="notification_channel_description_irc_service">Notificación persistente que indica el estado de conexión del servicio IRC.</string> <!-- %1$s será el nick del remitente -->
-
-    <!-- Settings Screen -->
-
-    <!-- Settings Screen - Ignored Users -->
-    <string name="settings_ignore_user_dialog_title">Ignorar Usuario</string>
-    <string name="settings_ignored_user_added">"Usuario '%1$s' añadido a ignorados."</string>
-    <string name="settings_ignored_user_removed">"Usuario '%1$s' eliminado de ignorados."</string>
-
-    <!-- Settings Screen - Friends -->
-
-    <string name="settings_error_nick_empty">El nick no puede estar vacío.</string>
-    <!-- ... tus otros strings ... -->
-    <string name="cd_user_options">Opciones para %s</string>
-
-
-
-    <!-- Nuevas strings para AppDrawerContent -->
-    <string name="drawer_no_online_friends">Ningún amigo conectado.</string>
-
-    <string name="checkbox_label_remember_nickserv_password">Recordar contraseña de NickServ</string>
-    <string name="label_nickserv_password_optional">Contraseña de NickServ (opcional)</string>
-    <string name="label_use_ssl">Usar SSL</string>
-
     <string name="friend_online_notification_title">Amigo conectado</string>
     <string name="friend_online_notification_text">%1$s se ha conectado.</string>
 </resources>

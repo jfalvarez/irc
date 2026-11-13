@@ -19,11 +19,9 @@ if (localPropertiesFile.exists()) {
 // Asegúrate de que admob.appId en local.properties NO tenga comillas alrededor del valor.
 // Ejemplo en local.properties: admob.appId=ca-app-pub-3940256099942544~3347511713
 val admobAppIdFromLocalProps = localProperties.getProperty("admob.appId", "ca-app-pub-3940256099942544~3347511713") // Default al ID de prueba
-println("ADMOB APP ID FROM GRADLE: '$admobAppIdFromLocalProps'") // Para depuración, puedes quitarlo después
 
 // Obtener las palabras clave del filtro de imagen, o una cadena vacía si no se define
 val imageFilterKeywords = localProperties.getProperty("IMAGE_FILTER_KEYWORDS", "")
-println("IMAGE FILTER KEYWORDS FROM GRADLE: '$imageFilterKeywords'") // Para depuración
 
 val googleSignInClientId = localProperties.getProperty("google.signin.clientId")
 
@@ -103,7 +101,6 @@ dependencies {
     // AdMob
     implementation(libs.play.services.ads)
 
-    testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
