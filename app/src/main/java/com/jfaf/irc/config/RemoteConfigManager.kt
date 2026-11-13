@@ -1,7 +1,7 @@
 package com.jfaf.irc.config
 
 import android.content.Context
-import android.content.pm.ApplicationInfo // Importación añadida
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import com.jfaf.irc.log.Log
@@ -9,7 +9,9 @@ import com.google.firebase.Firebase
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import com.google.firebase.remoteconfig.remoteConfig
-// No se usa BuildConfig ya que no se resuelve
+import com.jfaf.irc.domain.platform.UNKNOWN_VERSION
+import com.jfaf.irc.domain.platform.UpdateChecker
+import com.jfaf.irc.domain.platform.isUpdateRequired
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +21,7 @@ import javax.inject.Singleton
 @Singleton
 class RemoteConfigManager @Inject constructor(
     @ApplicationContext private val context: Context
-) {
+) : UpdateChecker {
 
     companion object {
         private const val TAG = "RemoteConfigManager"
@@ -27,7 +29,7 @@ class RemoteConfigManager @Inject constructor(
     }
 
     private val _isUpdateRequired = MutableStateFlow(false)
-    val isUpdateRequired: StateFlow<Boolean> = _isUpdateRequired
+    override val isUpdateRequired: StateFlow<Boolean> = _isUpdateRequired
 
     private val remoteConfig: FirebaseRemoteConfig by lazy {
         Firebase.remoteConfig 
@@ -58,7 +60,7 @@ class RemoteConfigManager @Inject constructor(
         remoteConfig.setDefaultsAsync(defaults)
     }
 
-    fun fetchAndActivateConfig() {
+    override fun check() {
         remoteConfig.fetchAndActivate()
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
@@ -77,11 +79,7 @@ class RemoteConfigManager @Inject constructor(
 
         Log.i(TAG, "Current app version: $currentVersion, Min required version from Remote Config: $minRequiredVersion")
 
-        if (currentVersion != -1L && currentVersion < minRequiredVersion) {
-            _isUpdateRequired.value = true
-        } else {
-            _isUpdateRequired.value = false
-        }
+        _isUpdateRequired.value = isUpdateRequired(currentVersion, minRequiredVersion)
     }
 
     private fun getCurrentAppVersionCode(context: Context): Long {
@@ -95,7 +93,7 @@ class RemoteConfigManager @Inject constructor(
             }
         } catch (e: PackageManager.NameNotFoundException) {
             Log.e(TAG, "Could not get package info", e)
-            -1L // Indicate error
+            UNKNOWN_VERSION
         }
     }
 }

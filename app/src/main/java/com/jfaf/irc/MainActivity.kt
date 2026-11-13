@@ -51,7 +51,7 @@ import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
-import com.jfaf.irc.config.RemoteConfigManager
+import com.jfaf.irc.domain.platform.UpdateChecker
 import com.jfaf.irc.service.IrcService
 import com.jfaf.irc.service.IrcServiceApi
 import com.jfaf.irc.ui.screens.MainScreen
@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Inject
-    lateinit var remoteConfigManager: RemoteConfigManager
+    lateinit var updateChecker: UpdateChecker
 
     @Inject
     lateinit var ircServiceApi: IrcServiceApi
@@ -138,13 +138,13 @@ class MainActivity : ComponentActivity() {
             var showExitConfirmationDialog by remember { mutableStateOf(false) }
 
             val currentActiveTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()
-            val showUpdateDialog by remoteConfigManager.isUpdateRequired.collectAsState()
+            val showUpdateDialog by updateChecker.isUpdateRequired.collectAsState()
 
             val snackbarHostState = remember { SnackbarHostState() }
             val coroutineScope = rememberCoroutineScope()
 
             LaunchedEffect(Unit) {
-                remoteConfigManager.fetchAndActivateConfig()
+                updateChecker.check()
                 handleIntent(intent)
             }
 
