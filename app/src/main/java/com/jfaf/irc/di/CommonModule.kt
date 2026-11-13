@@ -4,6 +4,7 @@ import com.jfaf.irc.data.history.ChatHistoryStore
 import com.jfaf.irc.data.history.room.RoomChatHistoryStore
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.remote.IrcSession
+import com.jfaf.irc.data.remote.IrcTransport
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
 import com.jfaf.irc.domain.IrcConnection
@@ -30,7 +31,7 @@ val ApplicationScope = named("ApplicationScope")
 val commonModule = module {
     single(ApplicationScope) { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
 
-    single { IrcSession() }
+    single { IrcSession(transportFactory = { get<IrcTransport>() }) }
     single { IrcRepository(get(), get(), get(ApplicationScope)) } binds arrayOf(IrcConnection::class, IrcSender::class)
     single { SilentWhoisCompletionSignal() }
     single { AppVisibility() }

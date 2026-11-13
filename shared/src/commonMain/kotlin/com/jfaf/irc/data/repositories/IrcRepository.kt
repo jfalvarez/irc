@@ -10,13 +10,14 @@ import com.jfaf.irc.log.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 
 /** [IrcConnection] sobre la [IrcSession] del proceso; [ConnectionHost] la mantiene viva en segundo plano. */
 class IrcRepository(
@@ -26,7 +27,7 @@ class IrcRepository(
 ) : IrcConnection {
     private val TAG = "IrcRepository"
 
-    private val silentWhoisNicks = ConcurrentHashMap.newKeySet<String>()
+    private val silentWhoisNicks = MutableStateFlow<Set<String>>(emptySet()) // update{} es atómico
 
     override val connectionState: StateFlow<Boolean> = session.connectionState
     override val isReconnecting: StateFlow<Boolean> = session.isReconnecting
@@ -62,11 +63,11 @@ class IrcRepository(
 
     override fun sendRawCommand(command: String, isSilent: Boolean) {
         if (isSilent && command.startsWith("WHOIS", ignoreCase = true)) {
-            command.split(" ").getOrNull(1)?.let { silentWhoisNicks.add(it.lowercase()) }
+            command.split(" ").getOrNull(1)?.let { nick -> silentWhoisNicks.update { it + nick.lowercase() } }
         }
         session.sendRaw(command)
     }
 
-    override fun isWhoisSilent(nick: String): Boolean = silentWhoisNicks.contains(nick.lowercase())
-    override fun completeSilentWhois(nick: String) { silentWhoisNicks.remove(nick.lowercase()) }
+    override fun isWhoisSilent(nick: String): Boolean = nick.lowercase() in silentWhoisNicks.value
+    override fun completeSilentWhois(nick: String) { silentWhoisNicks.update { it - nick.lowercase() } }
 }

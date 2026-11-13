@@ -17,6 +17,8 @@ import com.jfaf.irc.data.history.room.ChatDatabase
 import com.jfaf.irc.data.history.room.buildChatDatabase
 import com.jfaf.irc.data.prefs.USER_PREFERENCES_FILE
 import com.jfaf.irc.data.prefs.createPreferencesDataStore
+import com.jfaf.irc.data.remote.IrcTransport
+import com.jfaf.irc.data.remote.JvmSocketTransport
 import com.jfaf.irc.domain.config.AppConfig
 import com.jfaf.irc.domain.notifications.Notifier
 import com.jfaf.irc.domain.platform.AdProvider
@@ -46,6 +48,7 @@ val androidModule = module {
     }
 
     // Plataforma
+    factory<IrcTransport> { JvmSocketTransport() } // uno nuevo por intento de conexión
     single<StringProvider> { AndroidStringProvider(androidContext()) }
     single<AppConfig> { BuildConfigAppConfig() }
     single<ConnectionHost> { AndroidConnectionHost(androidContext()) }

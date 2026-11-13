@@ -15,9 +15,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.min
+import kotlin.concurrent.Volatile
 
 /** Estado de la sesión para la notificación persistente (o lo que muestre cada plataforma). */
 sealed interface SessionStatus {
@@ -48,10 +51,11 @@ class IrcSession(
     private val policy: ReconnectPolicy,
     private val clientFactory: (ConnectParams, CoroutineScope, onConnectionLost: () -> Unit) -> ManualIrcClient
 ) {
-    constructor() : this(
+    /** Producción: cada intento de conexión abre un transporte nuevo de [transportFactory]. */
+    constructor(transportFactory: () -> IrcTransport) : this(
         CoroutineScope(SupervisorJob() + Dispatchers.IO),
         ReconnectPolicy(),
-        { p, s, onLost -> ManualIrcClient(p.host, p.port, p.useSsl, s, Dispatchers.IO, onLost) }
+        { p, s, onLost -> ManualIrcClient(p.host, p.port, p.useSsl, s, Dispatchers.IO, onLost, transportFactory()) }
     )
 
     private companion object {
@@ -75,6 +79,7 @@ class IrcSession(
     @Volatile private var client: ManualIrcClient? = null
     private var lastParams: ConnectParams? = null
     @Volatile private var reconnectJob: Job? = null
+    private val disconnectLock = Mutex()
     private var collectorsJob: Job? = null
     private var reconnectAttempt = 0
 
@@ -104,7 +109,7 @@ class IrcSession(
     /** Envía QUIT (esperando a que salga), cierra y deja la sesión sin cliente. */
     suspend fun disconnect(quitMessage: String = AppConstants.QUIT_MSG_CLIENT_SHUTDOWN) {
         cancelReconnect()
-        val c = synchronized(this) {
+        val c = disconnectLock.withLock {
             val current = client
             client = null
             collectorsJob?.cancel()

@@ -10,12 +10,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.AfterTest
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.Test
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Transporte en memoria: el test "envía" líneas del servidor y lee lo que escribe el cliente. */
@@ -47,7 +47,7 @@ class ManualIrcClientTest {
         transport = transport
     )
 
-    @After
+    @AfterTest
     fun tearDown() = scope.cancel()
 
     private suspend fun nextWritten(): String = withTimeout(2_000) { transport.written.receive() }

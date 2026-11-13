@@ -10,12 +10,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.AfterTest
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.Test
 
 
 class IrcSessionTest {
@@ -29,7 +29,7 @@ class IrcSessionTest {
         ManualIrcClient(p.host, p.port, p.useSsl, s, Dispatchers.IO, onLost, t)
     }
 
-    @After
+    @AfterTest
     fun tearDown() = scope.cancel()
 
     private fun params(host: String = "irc.test") = ConnectParams("yo", host, 6667, false)

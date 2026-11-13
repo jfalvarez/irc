@@ -5,7 +5,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics") // Plugin de Crashlytics
 }
@@ -100,9 +99,6 @@ dependencies {
     implementation(libs.kermit)
     implementation(libs.koin.android)
     implementation(libs.koin.compose.viewmodel)
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.sqlite.bundled)
-    ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
 
@@ -134,8 +130,4 @@ kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_17
     }
-}
-
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
 }

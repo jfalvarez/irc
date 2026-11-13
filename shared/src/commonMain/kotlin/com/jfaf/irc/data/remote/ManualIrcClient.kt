@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.concurrent.Volatile
 
 class ManualIrcClient(
     val host: String,
@@ -21,7 +22,7 @@ class ManualIrcClient(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     /** Se invoca cuando la conexión se cierra sin que el usuario lo haya pedido. */
     private val onConnectionLost: () -> Unit = {},
-    private val transport: IrcTransport = JvmSocketTransport()
+    private val transport: IrcTransport
 ) {
     private val TAG = "ManualIrcClient"
 

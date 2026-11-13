@@ -14,9 +14,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.AfterTest
+import kotlin.test.assertEquals
+import kotlin.test.Test
 import java.util.Collections
 
 class IrcRepositoryTest {
@@ -36,7 +36,7 @@ class IrcRepositoryTest {
 
     private val repo = IrcRepository(session, host, scope)
 
-    @After
+    @AfterTest
     fun tearDown() = scope.cancel()
 
     @Test
