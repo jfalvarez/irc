@@ -76,6 +76,15 @@ class DesktopLayoutTest {
 
     private fun SkikoComposeUiTest.count(text: String) = onAllNodesWithText(text, substring = true).fetchSemanticsNodes().size
 
+    /**
+     * Espera a que un texto aparezca en la UI. El panel de usuarios está tras un `AnimatedVisibility` y su lista
+     * llega por un flujo derivado (`stateIn`), así que comprobarlo justo al activar el canal es una carrera.
+     */
+    private fun SkikoComposeUiTest.awaitText(text: String, message: String) {
+        runCatching { waitUntil(timeoutMillis = 5_000) { count(text) > 0 } }
+        assertTrue(count(text) > 0, message)
+    }
+
     @Test
     fun ventanaAnchaMuestraPestanasYUsuariosSinCajon() = runSkikoComposeUiTest(size = Size(1200f, 760f)) {
         val vm = koin.get<MainViewModel>()
@@ -86,8 +95,8 @@ class DesktopLayoutTest {
         assertEquals(0, onAllNodesWithContentDescription("Abrir menú lateral").fetchSemanticsNodes().size)
         assertEquals(0, onAllNodesWithContentDescription("Mostrar/ocultar lista de usuarios").fetchSemanticsNodes().size)
         // Panel izquierdo (pestañas) y derecho (usuarios del canal; aún vacío)
-        assertTrue(count("Canales y Chats") > 0, "Debe verse el panel de pestañas")
-        assertTrue(count("No hay usuarios en este canal") > 0, "Debe verse el panel de usuarios")
+        awaitText("Canales y Chats", "Debe verse el panel de pestañas")
+        awaitText("No hay usuarios en este canal", "Debe verse el panel de usuarios")
     }
 
     @Test
