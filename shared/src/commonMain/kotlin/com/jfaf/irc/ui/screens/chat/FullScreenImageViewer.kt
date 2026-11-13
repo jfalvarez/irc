@@ -28,13 +28,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
-import coil3.compose.LocalPlatformContext
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.jfaf.irc.ui.media.FullScreenDialog
+import com.jfaf.irc.ui.media.ImageLoadState
+import com.jfaf.irc.ui.media.MediaImage
 import com.jfaf.irc.ui.media.VideoPlayer
-import coil3.compose.AsyncImagePainter
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 
 @Composable
@@ -59,21 +56,18 @@ fun FullScreenImageViewer(
         ) {
             when (mediaType) {
                 MediaTypeEnum.IMAGE -> {
-                    val context = LocalPlatformContext.current
-                    var imagePainterState by remember { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(mediaUrl)
-                            .crossfade(true) // Optional smooth transition
-                            .build(), 
+                    var imageState by remember { mutableStateOf(ImageLoadState.Loading) }
+                    // Los GIF se animan también a pantalla completa.
+                    MediaImage(
+                        url = mediaUrl,
                         contentDescription = stringResource(Res.string.cd_full_screen_image),
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxWidth(0.95f)
                             .fillMaxHeight(0.85f)
                             .clip(RoundedCornerShape(8.dp))
-                            .graphicsLayer { 
-                                alpha = if (imagePainterState is AsyncImagePainter.State.Success) 1f else 0f
+                            .graphicsLayer {
+                                alpha = if (imageState == ImageLoadState.Success) 1f else 0f
                             }
                             .clickable( // Prevent closing dialog when clicking on the image itself
                                 interactionSource = remember { MutableInteractionSource() },
@@ -81,16 +75,16 @@ fun FullScreenImageViewer(
                                 onClick = { /* Consumes the click */ }
                             ),
                         onState = { state ->
-                            Log.d("FullScreenViewer", "AsyncImage State: $state for URL: $mediaUrl") 
-                            imagePainterState = state 
+                            Log.d("FullScreenViewer", "Image state: $state for URL: $mediaUrl")
+                            imageState = state
                         }
                     )
 
-                    when (val currentState = imagePainterState) {
-                        is AsyncImagePainter.State.Loading -> {
+                    when (imageState) {
+                        ImageLoadState.Loading -> {
                             CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
                         }
-                        is AsyncImagePainter.State.Error -> {
+                        ImageLoadState.Error -> {
                             Text(
                                 text = stringResource(Res.string.error_loading_image),
                                 color = MaterialTheme.colorScheme.onErrorContainer,
@@ -99,10 +93,7 @@ fun FullScreenImageViewer(
                                     .padding(16.dp)
                             )
                         }
-                        is AsyncImagePainter.State.Success -> { /* Image loaded */ }
-                        is AsyncImagePainter.State.Empty -> {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
-                        }
+                        ImageLoadState.Success -> { /* Image loaded */ }
                     }
                 }
                 MediaTypeEnum.VIDEO -> {

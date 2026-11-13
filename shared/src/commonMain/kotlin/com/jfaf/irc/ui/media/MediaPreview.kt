@@ -3,12 +3,7 @@ package com.jfaf.irc.ui.media
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import coil3.compose.AsyncImage
-import coil3.compose.LocalPlatformContext
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 
 /** Vista previa de una imagen o un vídeo dentro de un mensaje. */
@@ -25,19 +20,12 @@ fun MediaPreview(
     Box(modifier = modifier) {
         when (mediaType) {
             MediaTypeEnum.IMAGE -> {
-                val context = LocalPlatformContext.current
-                // Se recuerda la petición por URL: así no se reinicia un GIF si la URL no cambia.
-                val imageRequest = remember(mediaUrl) {
-                    ImageRequest.Builder(context)
-                        .data(mediaUrl)
-                        .memoryCacheKey(mediaUrl)
-                        .crossfade(true)
-                        .build()
-                }
-                AsyncImage(
-                    model = imageRequest,
+                // Los GIF se animan (en escritorio, con GifAnimation; en Android, con Coil).
+                MediaImage(
+                    url = mediaUrl,
                     contentDescription = "Image Preview",
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    memoryCacheKey = mediaUrl
                 )
             }
             MediaTypeEnum.VIDEO -> {
