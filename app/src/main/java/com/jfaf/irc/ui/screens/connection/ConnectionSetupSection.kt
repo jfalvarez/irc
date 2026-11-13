@@ -35,9 +35,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.jfaf.irc.MainActivity
 import com.jfaf.irc.R
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
@@ -49,7 +46,7 @@ fun ConnectionSetupSection(
     nickServPasswordState: MutableState<String>,
     rememberNickServPasswordState: MutableState<Boolean>,
     signInViewModel: SignInViewModel,
-    mainActivity: MainActivity,
+    onGoogleSignIn: () -> Unit,
     onConnect: (String, String, Boolean) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
@@ -130,14 +127,7 @@ fun ConnectionSetupSection(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(
-                onClick = {
-                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestIdToken(signInViewModel.googleSignInClientId)
-                        .requestEmail()
-                        .build()
-                    val googleSignInClient = GoogleSignIn.getClient(mainActivity, gso)
-                    mainActivity.signInLauncher.launch(googleSignInClient.signInIntent)
-                },
+                onClick = onGoogleSignIn,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondary
                 )

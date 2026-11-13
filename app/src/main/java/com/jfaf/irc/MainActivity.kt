@@ -1,7 +1,5 @@
 package com.jfaf.irc
 
-import com.jfaf.irc.resources.Res
-import com.jfaf.irc.resources.*
 import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Context
@@ -14,59 +12,37 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import com.jfaf.irc.log.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import org.jetbrains.compose.resources.stringResource
 import androidx.core.content.ContextCompat
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import com.jfaf.irc.domain.platform.UpdateChecker
 import com.jfaf.irc.service.AndroidNotifier
 import com.jfaf.irc.domain.platform.AppVisibility
-import com.jfaf.irc.ui.screens.MainScreen
-import com.jfaf.irc.ui.screens.settings.SettingsScreen
-import com.jfaf.irc.ui.theme.IRCAppTheme
+import com.jfaf.irc.ui.App
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import com.jfaf.irc.util.NotificationHelper
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import java.util.Arrays
 
+/**
+ * Anfitrión Android de la UI común ([App]): sólo lo exclusivo de la plataforma (permiso de
+ * notificaciones, borde a borde, AdMob, Google Sign-In, vibración, intents de las notificaciones).
+ */
 class MainActivity : ComponentActivity() {
 
     companion object {
@@ -74,7 +50,6 @@ class MainActivity : ComponentActivity() {
         private const val VIBRATION_DURATION_MS = 150L
     }
 
-    private val updateChecker: UpdateChecker by inject()
     private val appVisibility: AppVisibility by inject()
 
     private lateinit var mainViewModel: MainViewModel
@@ -90,7 +65,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    val signInLauncher = registerForActivityResult(
+    private val signInLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
@@ -130,30 +105,10 @@ class MainActivity : ComponentActivity() {
             signInViewModel = koinViewModel()
 
             val context = LocalContext.current
-            val navController = rememberNavController()
-            val connectionState by mainViewModel.chatScreenState.connectionState.collectAsState()
-            var showExitConfirmationDialog by remember { mutableStateOf(false) }
-
             val currentActiveTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()
-            val showUpdateDialog by updateChecker.isUpdateRequired.collectAsState()
-
-            val snackbarHostState = remember { SnackbarHostState() }
-            val coroutineScope = rememberCoroutineScope()
 
             LaunchedEffect(Unit) {
-                updateChecker.check()
                 handleIntent(intent)
-            }
-
-            LaunchedEffect(mainViewModel.snackbarEvents) {
-                mainViewModel.snackbarEvents.collectLatest { message ->
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = message,
-                            duration = SnackbarDuration.Short
-                        )
-                    }
-                }
             }
 
             // El efecto no se reinicia al cambiar de pestaña: sin esto leería siempre la pestaña inicial.
@@ -174,87 +129,16 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            IRCAppTheme {
-                BackHandler(enabled = connectionState && navController.previousBackStackEntry == null) {
-                    showExitConfirmationDialog = true
-                }
-
-                NavHost(
-                    navController = navController,
-                    startDestination = "main",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
-                ) {
-                    composable(
-                        route = "main",
-                        exitTransition = { slideOutHorizontally(targetOffsetX = { -it }) + fadeOut() },
-                        popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }) + fadeIn() }
-                    ) {
-                        MainScreen(
-                            viewModel = mainViewModel,
-                            signInViewModel = signInViewModel,
-                            mainActivity = this@MainActivity,
-                            navController = navController,
-                            snackbarHostState = snackbarHostState
-                        )
-                    }
-                    composable(
-                        route = "settings",
-                        enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn() },
-                        popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() }
-                    ) {
-                        SettingsScreen(onNavigateUp = { navController.navigateUp() })
-                    }
-                }
-
-                if (showUpdateDialog) {
-                    AlertDialog(
-                        onDismissRequest = { /* No hacer nada */ },
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        title = { Text(stringResource(Res.string.force_update_title)) },
-                        text = { Text(stringResource(Res.string.force_update_message)) },
-                        confirmButton = {
-                            TextButton(
-                                onClick = { redirectToPlayStore(this@MainActivity) },
-                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
-                            ) {
-                                Text(stringResource(Res.string.force_update_button_text))
-                            }
-                        }
-                    )
-                }
-
-                if (showExitConfirmationDialog) {
-                    AlertDialog(
-                        onDismissRequest = { showExitConfirmationDialog = false },
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        title = { Text(stringResource(Res.string.dialog_exit_title)) },
-                        text = { Text(stringResource(Res.string.dialog_exit_message)) },
-                        confirmButton = {
-                            TextButton(
-                                onClick = {
-                                    showExitConfirmationDialog = false
-                                    mainViewModel.disconnectFromServerAndStopService()
-                                    NotificationHelper.clearAllNotifications(context)
-                                    finishAndRemoveTask()
-                                },
-                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                            ) {
-                                Text(stringResource(Res.string.dialog_exit_confirm_button))
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(
-                                onClick = { showExitConfirmationDialog = false },
-                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
-                            ) {
-                                Text(stringResource(Res.string.dialog_exit_cancel_button))
-                            }
-                        }
-                    )
-                }
-            }
+            App(
+                onGoogleSignIn = ::launchGoogleSignIn,
+                onRedirectToPlayStore = { redirectToPlayStore(context) },
+                onExit = {
+                    NotificationHelper.clearAllNotifications(context)
+                    finishAndRemoveTask()
+                },
+                mainViewModel = mainViewModel,
+                signInViewModel = signInViewModel
+            )
         }
     }
 
@@ -276,6 +160,15 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun launchGoogleSignIn() {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(signInViewModel.googleSignInClientId)
+            .requestEmail()
+            .build()
+        val googleSignInClient = GoogleSignIn.getClient(this, gso)
+        signInLauncher.launch(googleSignInClient.signInIntent)
     }
 
     private fun redirectToPlayStore(context: Context) {

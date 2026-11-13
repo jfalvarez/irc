@@ -63,6 +63,7 @@ compose-mp-runtime = { module = "org.jetbrains.compose.runtime:runtime", version
 compose-mp-ui-text = { module = "org.jetbrains.compose.ui:ui-text", version.ref = "composeMultiplatform" }
 compose-mp-ui-graphics = { module = "org.jetbrains.compose.ui:ui-graphics", version.ref = "composeMultiplatform" }
 compose-mp-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
+compose-mp-ui-backhandler = { module = "org.jetbrains.compose.ui:ui-backhandler", version.ref = "composeMultiplatform" }
 # New libraries
 androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "lifecycle" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }

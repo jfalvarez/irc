@@ -86,6 +86,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.compose.mp.ui.backhandler) // BackHandler multiplataforma (en 3.2 pasa a :shared)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
