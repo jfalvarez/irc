@@ -26,11 +26,13 @@ import com.jfaf.irc.domain.platform.AdProvider
 import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.domain.platform.AuthSession
 import com.jfaf.irc.domain.platform.ConnectionHost
+import com.jfaf.irc.domain.platform.Haptics
 import com.jfaf.irc.domain.platform.UpdateChecker
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.service.AndroidConnectionHost
 import com.jfaf.irc.service.AndroidNotifier
+import com.jfaf.irc.util.AndroidHaptics
 import com.jfaf.irc.util.BuildConfigAppConfig
 import org.koin.android.ext.koin.androidContext
 import kotlinx.coroutines.runBlocking
@@ -55,6 +57,7 @@ val androidModule = module {
     single<AppConfig> { BuildConfigAppConfig() }
     single<ConnectionHost> { AndroidConnectionHost(androidContext()) }
     single<Notifier> { AndroidNotifier(androidContext()) }
+    single<Haptics> { AndroidHaptics(androidContext()) }
     single<AdProvider> { NativeAdManager(androidContext()) }
 
     // Firebase

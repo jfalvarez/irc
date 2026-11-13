@@ -1,4 +1,4 @@
-package com.jfaf.irc.ui.screens.chat
+package com.jfaf.irc.ui.platform
 
 import com.jfaf.irc.resources.Res
 import com.jfaf.irc.resources.*

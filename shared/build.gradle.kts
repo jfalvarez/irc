@@ -62,6 +62,13 @@ kotlin {
             api(libs.koin.core) // commonModule
             api(libs.koin.compose.viewmodel) // viewModel { } y koinViewModel()
             api(libs.jetbrains.lifecycle.viewmodel) // ViewModel multiplataforma (K10)
+            // UI común (paso 3.2)
+            api(libs.compose.mp.ui)
+            api(libs.compose.mp.foundation)
+            api(libs.compose.mp.material3)
+            api(libs.compose.mp.icons.extended)
+            api(libs.compose.mp.ui.backhandler)
+            api(libs.jetbrains.navigation.compose)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

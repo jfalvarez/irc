@@ -86,20 +86,12 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.activity.compose)
-    implementation(libs.compose.mp.ui.backhandler) // BackHandler multiplataforma (en 3.2 pasa a :shared)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.material.icons.extended) 
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     implementation(libs.koin.android)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
 
-    implementation(libs.jetbrains.navigation.compose)
 
     // Firebase - Asegúrate de que el BoM (Bill of Materials) esté presente
     implementation(platform(libs.firebase.bom))
@@ -117,10 +109,6 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
 kotlin {

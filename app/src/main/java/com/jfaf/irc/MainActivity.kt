@@ -8,22 +8,15 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
 import com.jfaf.irc.log.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import org.koin.compose.viewmodel.koinViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -32,10 +25,10 @@ import com.google.android.gms.common.api.ApiException
 import com.jfaf.irc.service.AndroidNotifier
 import com.jfaf.irc.domain.platform.AppVisibility
 import com.jfaf.irc.ui.App
+import com.jfaf.irc.ui.platform.AndroidPlatformUi
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import com.jfaf.irc.util.NotificationHelper
-import kotlinx.coroutines.flow.collectLatest
 import org.koin.android.ext.android.inject
 import java.util.Arrays
 
@@ -47,7 +40,6 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val TAG_ACTIVITY = "MainActivity"
-        private const val VIBRATION_DURATION_MS = 150L
     }
 
     private val appVisibility: AppVisibility by inject()
@@ -105,31 +97,13 @@ class MainActivity : ComponentActivity() {
             signInViewModel = koinViewModel()
 
             val context = LocalContext.current
-            val currentActiveTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()
 
             LaunchedEffect(Unit) {
                 handleIntent(intent)
             }
 
-            // El efecto no se reinicia al cambiar de pestaña: sin esto leería siempre la pestaña inicial.
-            val latestActiveTarget by rememberUpdatedState(currentActiveTarget)
-
-            // En segundo plano las notificaciones las genera BackgroundNotifications; aquí sólo se vibra con la app visible.
-            LaunchedEffect(mainViewModel.incomingPrivateMessageEvent) {
-                mainViewModel.incomingPrivateMessageEvent.collectLatest { pmSourceNick ->
-                    if (isAppResumed() && !pmSourceNick.equals(latestActiveTarget, ignoreCase = true)) {
-                        vibrate(context)
-                    }
-                }
-            }
-
-            LaunchedEffect(mainViewModel.friendCameOnlineEvent) {
-                mainViewModel.friendCameOnlineEvent.collectLatest {
-                    if (isAppResumed()) vibrate(context)
-                }
-            }
-
             App(
+                platformUi = AndroidPlatformUi,
                 onGoogleSignIn = ::launchGoogleSignIn,
                 onRedirectToPlayStore = { redirectToPlayStore(context) },
                 onExit = {
@@ -185,18 +159,6 @@ class MainActivity : ComponentActivity() {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
-        }
-    }
-
-    private fun isAppResumed(): Boolean =
-        ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
-
-    private fun vibrate(context: Context) {
-        try {
-            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            vibrator.vibrate(VibrationEffect.createOneShot(VIBRATION_DURATION_MS, VibrationEffect.DEFAULT_AMPLITUDE))
-        } catch (e: Exception) {
-            Log.e(TAG_ACTIVITY, "Error al activar vibración", e)
         }
     }
 }

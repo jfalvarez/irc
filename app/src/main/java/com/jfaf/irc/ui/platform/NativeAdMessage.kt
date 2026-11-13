@@ -1,4 +1,4 @@
-package com.jfaf.irc.ui.screens.chat
+package com.jfaf.irc.ui.platform
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column

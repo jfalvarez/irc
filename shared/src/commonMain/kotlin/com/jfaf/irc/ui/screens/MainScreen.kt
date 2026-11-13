@@ -50,7 +50,7 @@ import androidx.navigation.NavHostController
 import com.jfaf.irc.ui.screens.chat.AppDrawerContent
 import com.jfaf.irc.ui.screens.chat.ChannelUserListView
 import com.jfaf.irc.ui.screens.chat.ChatTopAppBar
-import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer
+import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.ui.screens.chat.MessageInputSection
 import com.jfaf.irc.ui.screens.chat.MessagesList
 import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
@@ -142,7 +142,7 @@ fun MainScreen(
                 exit = fadeOut(animationSpec = tween(150))
             ) {
                 selectedMediaForFullScreen?.let { (mediaUrl, mediaType) ->
-                    FullScreenImageViewer(
+                    LocalPlatformUi.current.FullScreenMedia(
                         mediaUrl = mediaUrl,
                         mediaType = mediaType,
                         onClose = { viewModel.clearExpandedMedia() }

@@ -2,7 +2,6 @@ package com.jfaf.irc.ui.screens.connection
 
 import com.jfaf.irc.resources.Res
 import com.jfaf.irc.resources.*
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -29,13 +27,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.jfaf.irc.R
+import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
 
@@ -50,6 +47,7 @@ fun ConnectionSetupSection(
     onConnect: (String, String, Boolean) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
+    val platformUi = LocalPlatformUi.current
     val isUserAuthenticated by signInViewModel.isUserAuthenticated.collectAsState()
     val currentUser by signInViewModel.currentUser.collectAsState()
 
@@ -103,42 +101,31 @@ fun ConnectionSetupSection(
             Text(stringResource(Res.string.button_connect))
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        Divider()
-        Spacer(modifier = Modifier.height(24.dp))
+        if (platformUi.supportsGoogleSignIn) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Divider()
+            Spacer(modifier = Modifier.height(24.dp))
 
-        if (isUserAuthenticated) {
-            Text(
-                text = stringResource(Res.string.account_signed_in_as, currentUser?.email ?: ""),
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            TextButton(onClick = { signInViewModel.signOut() }) {
-                Text(stringResource(Res.string.account_sign_out))
-            }
-        } else {
-            Text(
-                text = stringResource(Res.string.account_sign_in_hint),
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onGoogleSignIn,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary
+            if (isUserAuthenticated) {
+                Text(
+                    text = stringResource(Res.string.account_signed_in_as, currentUser?.email ?: ""),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_google_logo),
-                    contentDescription = "Google Logo",
-                    modifier = Modifier.size(24.dp)
+                Spacer(modifier = Modifier.height(16.dp))
+                TextButton(onClick = { signInViewModel.signOut() }) {
+                    Text(stringResource(Res.string.account_sign_out))
+                }
+            } else {
+                Text(
+                    text = stringResource(Res.string.account_sign_in_hint),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-                Text(stringResource(Res.string.account_sign_in_google))
+                Spacer(modifier = Modifier.height(16.dp))
+                platformUi.GoogleSignInButton(onClick = onGoogleSignIn)
             }
         }
     }

@@ -32,7 +32,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 // import com.jfaf.irc.R // No longer needed for string resources of placeholder
-import com.jfaf.irc.ui.chat.MediaPreview 
+import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 import com.jfaf.irc.domain.chat.model.UiChatMessage
@@ -140,15 +140,13 @@ fun MessageRow(
         val mediaUrl = message.mediaUrl
         if (!mediaUrl.isNullOrBlank() && showMediaPreviews) {
             Spacer(modifier = Modifier.height(4.dp))
-            MediaPreview(
+            LocalPlatformUi.current.MediaPreview(
+                mediaUrl = mediaUrl,
+                mediaType = message.mediaType,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp) 
-                    .clickable {
-                        onMediaClick(mediaUrl, message.mediaType)
-                    },
-                mediaUrl = mediaUrl,
-                mediaType = message.mediaType
+                    .height(200.dp)
+                    .clickable { onMediaClick(mediaUrl, message.mediaType) }
             )
         } 
         // No 'else' block, so no placeholder text if showMediaPreviews is false

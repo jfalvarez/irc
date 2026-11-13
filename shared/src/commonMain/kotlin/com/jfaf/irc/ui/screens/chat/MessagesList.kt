@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.jfaf.irc.ads.AdMobAd
+import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.domain.platform.AdHandle
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
@@ -23,6 +23,7 @@ fun MessagesList(
     ad: AdHandle?,
     mainViewModel: MainViewModel
 ) {
+    val platformUi = LocalPlatformUi.current
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         reverseLayout = true,
@@ -30,8 +31,8 @@ fun MessagesList(
     ) {
         items(messages.reversed()) { msg ->
             if (msg.type == UiMessageType.AD_MESSAGE) {
-                // En 3.2 esto pasa a un slot de plataforma; en escritorio no hay anuncios.
-                (ad as? AdMobAd)?.let { NativeAdMessage(nativeAd = it.nativeAd) }
+                // Anuncio: lo pinta la plataforma (en escritorio no hay)
+                ad?.let { platformUi.AdContent(it) }
             } else {
                 MessageRow(
                     message = msg,
