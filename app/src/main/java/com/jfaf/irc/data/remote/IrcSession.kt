@@ -168,7 +168,7 @@ class IrcSession(
                         _status.value = SessionStatus.Connected(c.host)
                         return@launch
                     }
-                    c.disconnectAndCleanup()
+                    c.abortAttempt() // conserva los canales para el siguiente intento
                 }
                 Log.w(TAG, "Reconexión abandonada tras ${policy.maxAttempts} intentos")
                 _status.value = SessionStatus.Disconnected

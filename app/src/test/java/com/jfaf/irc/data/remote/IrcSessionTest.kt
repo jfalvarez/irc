@@ -115,6 +115,23 @@ class IrcSessionTest {
     }
 
     @Test
+    fun reintentoFallido_conservaLosCanales() = runBlocking {
+        session.connect(params())
+        val t = transports.getValue("irc.test")
+        t.awaitOpenAndHandshake()
+        t.serverSends(":server 001 yo :Welcome")
+        session.status.await { it is SessionStatus.Connected }
+        session.joinChannel("#c", null)
+        assertEquals("JOIN #c", t.awaitWritten("JOIN"))
+
+        t.serverSends(null)              // se pierde la conexión
+        t.awaitOpenAndHandshake()        // intento 1: el servidor no envía el 001 → se aborta
+        t.awaitOpenAndHandshake()        // intento 2
+        t.serverSends(":server 001 yo :Welcome back")
+        assertEquals("JOIN #c", t.awaitWritten("JOIN")) // vuelve a entrar en el canal
+    }
+
+    @Test
     fun desconectar_enviaQuitYNoReconecta() = runBlocking {
         session.connect(params())
         val t = transports.getValue("irc.test")

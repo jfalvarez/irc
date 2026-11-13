@@ -230,5 +230,15 @@ class ManualIrcClient(
         }
         Log.i(TAG, "ManualIrcClient desconectado y limpiado.")
     }
-    
+
+    /**
+     * Cierra un intento de conexión que no llegó a registrarse (sin 001), **conservando los canales**
+     * para el siguiente intento. A diferencia de [disconnectAndCleanup], no envía QUIT (aún no estamos
+     * registrados) ni olvida a qué canales hay que volver.
+     */
+    suspend fun abortAttempt() {
+        closedByUser = true // quien aborta ya gestiona el reintento: no es una "pérdida de conexión"
+        withContext(NonCancellable) { cleanupConnection() }
+        Log.i(TAG, "Intento de conexión abortado; se conservan ${channelsToRejoin.size} canales para reintentar.")
+    }
 }

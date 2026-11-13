@@ -99,6 +99,16 @@ class ManualIrcClientTest {
     }
 
     @Test
+    fun abortarIntento_cierraSinQuitNiAvisoDePerdida() = runBlocking {
+        connected()
+        client.abortAttempt()
+        assertFalse(transport.isOpen)
+        assertFalse(client.connectionState.value)
+        assertNull(withTimeoutOrNull(200) { transport.written.receive() }) // ningún QUIT
+        assertFalse(connectionLost.get())
+    }
+
+    @Test
     fun desconectar_enviaQuitAntesDeCerrar() = runBlocking {
         connected()
         client.disconnectAndCleanup("adios")
