@@ -81,7 +81,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":shared"))
+    implementation(project(":shared")) // también aporta (api) Kermit, coroutines, DataStore, Room, Compose MP ui-text y koin-core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.process)
@@ -94,9 +94,6 @@ dependencies {
     implementation(libs.androidx.material.icons.extended) 
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
-    implementation(libs.androidx.datastore.preferences.core)
-    implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kermit)
     implementation(libs.koin.android)
     implementation(libs.koin.compose.viewmodel)
     implementation(libs.androidx.media3.exoplayer)

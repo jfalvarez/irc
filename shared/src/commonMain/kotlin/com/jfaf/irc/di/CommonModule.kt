@@ -24,9 +24,9 @@ import org.koin.dsl.module
 val ApplicationScope = named("ApplicationScope")
 
 /**
- * Lógica sin Android: sesión IRC, repositorios y coordinadores. Irá a `commonMain` (paso 2.2).
+ * Lógica sin Android: sesión IRC, repositorios y coordinadores. Común a Android y escritorio.
  * Las piezas de plataforma que necesita (textos, config, Firebase, notificador…) las aporta
- * [androidModule] (o el módulo de escritorio en 4.1).
+ * `androidModule` de `:app` (o el módulo de escritorio en 4.1).
  */
 val commonModule = module {
     single(ApplicationScope) { CoroutineScope(SupervisorJob() + Dispatchers.Default) }

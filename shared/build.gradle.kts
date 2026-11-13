@@ -56,6 +56,7 @@ kotlin {
             api(libs.compose.mp.ui.graphics)
             api(libs.androidx.room.runtime)
             api(libs.androidx.sqlite.bundled)
+            api(libs.koin.core) // commonModule
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
