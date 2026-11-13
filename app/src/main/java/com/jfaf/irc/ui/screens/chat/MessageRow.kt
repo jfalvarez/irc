@@ -1,7 +1,7 @@
 package com.jfaf.irc.ui.screens.chat
 
 import com.jfaf.irc.log.Log
-import android.util.Patterns
+import com.jfaf.irc.domain.chat.LinkFinder
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -88,41 +88,32 @@ fun MessageRow(
             }
         }
 
-        val matcher = Patterns.WEB_URL.matcher(baseString.text)
-        while (matcher.find()) {
-            val rawUrl = matcher.group()
-            if (rawUrl != null) {
-                val url = rawUrl.trimEnd('.', ',', ';', ':', '!', '?', ')', ']', '"', '\'')
-                if (url.isEmpty()) continue
-                val startIndex = matcher.start()
-                val endIndex = startIndex + url.length
-                val isMediaLink = message.mediaUrl != null &&
-                    message.mediaUrl.removePrefix("https://").removePrefix("http://") ==
-                        url.removePrefix("https://").removePrefix("http://")
-                if (!isMediaLink || !showMediaPreviews) {
-                    val target = if (Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(url))
-                        url else "https://$url"
-                    addLink(
-                        url = LinkAnnotation.Url(
-                            url = target,
-                            styles = TextLinkStyles(
-                                style = SpanStyle(
-                                    color = Color.White, // Consider MaterialTheme.colorScheme.primary for theming
-                                    textDecoration = TextDecoration.Underline
-                                )
-                            ),
-                            linkInteractionListener = {
-                                try {
-                                    uriHandler.openUri(target)
-                                } catch (e: Exception) {
-                                    Log.e("MessageRow", "Could not open URL $target", e)
-                                }
-                            }
+        for (link in LinkFinder.find(baseString.text)) {
+            val isMediaLink = message.mediaUrl != null &&
+                message.mediaUrl.removePrefix("https://").removePrefix("http://") ==
+                    link.text.removePrefix("https://").removePrefix("http://")
+            if (!isMediaLink || !showMediaPreviews) {
+                val target = link.target
+                addLink(
+                    url = LinkAnnotation.Url(
+                        url = target,
+                        styles = TextLinkStyles(
+                            style = SpanStyle(
+                                color = Color.White, // Consider MaterialTheme.colorScheme.primary for theming
+                                textDecoration = TextDecoration.Underline
+                            )
                         ),
-                        start = startIndex,
-                        end = endIndex
-                    )
-                }
+                        linkInteractionListener = {
+                            try {
+                                uriHandler.openUri(target)
+                            } catch (e: Exception) {
+                                Log.e("MessageRow", "Could not open URL $target", e)
+                            }
+                        }
+                    ),
+                    start = link.start,
+                    end = link.end
+                )
             }
         }
     }
