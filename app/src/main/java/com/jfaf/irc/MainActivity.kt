@@ -52,7 +52,7 @@ import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 import com.jfaf.irc.domain.platform.UpdateChecker
-import com.jfaf.irc.service.IrcService
+import com.jfaf.irc.service.AndroidNotifier
 import com.jfaf.irc.domain.platform.AppVisibility
 import com.jfaf.irc.ui.screens.MainScreen
 import com.jfaf.irc.ui.screens.settings.SettingsScreen
@@ -162,7 +162,7 @@ class MainActivity : ComponentActivity() {
             // El efecto no se reinicia al cambiar de pestaña: sin esto leería siempre la pestaña inicial.
             val latestActiveTarget by rememberUpdatedState(currentActiveTarget)
 
-            // En segundo plano las notificaciones las genera IrcService; aquí sólo se vibra con la app visible.
+            // En segundo plano las notificaciones las genera BackgroundNotifications; aquí sólo se vibra con la app visible.
             LaunchedEffect(mainViewModel.incomingPrivateMessageEvent) {
                 mainViewModel.incomingPrivateMessageEvent.collectLatest { pmSourceNick ->
                     if (isAppResumed() && !pmSourceNick.equals(latestActiveTarget, ignoreCase = true)) {
@@ -270,7 +270,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        intent?.getStringExtra(IrcService.EXTRA_TARGET_FOR_NOTIFICATION)?.let { target ->
+        intent?.getStringExtra(AndroidNotifier.EXTRA_TARGET_FOR_NOTIFICATION)?.let { target ->
             if (::mainViewModel.isInitialized) {
                 if (target.startsWith("#")) {
                     mainViewModel.setActiveTarget(target)

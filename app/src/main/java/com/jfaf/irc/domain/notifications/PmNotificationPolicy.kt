@@ -1,4 +1,4 @@
-package com.jfaf.irc.service
+package com.jfaf.irc.domain.notifications
 
 import com.jfaf.irc.data.model.ParsedIrcMessage
 
@@ -28,5 +28,5 @@ object PmNotificationPolicy {
 
     /** Id estable por conversación: un PM nuevo de otra persona no pisa la notificación anterior. */
     fun notificationId(conversationKey: String): Int =
-        ID_BASE + Math.floorMod(conversationKey.hashCode(), ID_RANGE)
+        ID_BASE + conversationKey.hashCode().mod(ID_RANGE) // Kotlin común; mismo resultado que floorMod
 }

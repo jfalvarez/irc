@@ -1,7 +1,9 @@
 package com.jfaf.irc.di
 
+import com.jfaf.irc.domain.notifications.Notifier
 import com.jfaf.irc.domain.platform.ConnectionHost
 import com.jfaf.irc.service.AndroidConnectionHost
+import com.jfaf.irc.service.AndroidNotifier
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -19,6 +21,9 @@ import javax.inject.Singleton
 abstract class ConnectionHostModule {
     @Binds
     abstract fun bindConnectionHost(impl: AndroidConnectionHost): ConnectionHost
+
+    @Binds
+    abstract fun bindNotifier(impl: AndroidNotifier): Notifier
 }
 
 @Retention(AnnotationRetention.BINARY)

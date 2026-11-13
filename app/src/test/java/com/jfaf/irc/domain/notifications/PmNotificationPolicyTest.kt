@@ -1,4 +1,4 @@
-package com.jfaf.irc.service
+package com.jfaf.irc.domain.notifications
 
 import com.jfaf.irc.data.model.IrcLineParser
 import org.junit.Assert.assertEquals
