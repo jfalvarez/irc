@@ -5,6 +5,8 @@ import com.jfaf.irc.resources.*
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.PermanentDrawerSheet
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Text
@@ -122,7 +125,9 @@ fun AppDrawerContent(
     onTargetSelected: (String) -> Unit,
     onCloseTargetAction: (String) -> Unit,
     onOpenPrivateMessage: (String) -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    /** En la ventana ancha de escritorio el panel es fijo en vez de un cajón modal. */
+    permanent: Boolean = false
 ) {
     val serverString = stringResource(Res.string.cd_server)
     val distinctTargets = chatTargets.distinct()
@@ -136,7 +141,7 @@ fun AppDrawerContent(
     var conversationsExpanded by remember { mutableStateOf(true) }
     var friendsExpanded by remember { mutableStateOf(true) }
 
-    ModalDrawerSheet(drawerContainerColor = IRCTheme.drawerContainerOpaque) {
+    val sheetContent: @Composable ColumnScope.() -> Unit = {
         Column(modifier = Modifier.padding(bottom = 8.dp)) {
             Text(
                 stringResource(Res.string.drawer_title_channels_chats),
@@ -281,5 +286,15 @@ fun AppDrawerContent(
                 modifier = Modifier
             )
         }
+    }
+
+    if (permanent) {
+        PermanentDrawerSheet(
+            modifier = Modifier.width(300.dp),
+            drawerContainerColor = IRCTheme.drawerContainerOpaque,
+            content = sheetContent
+        )
+    } else {
+        ModalDrawerSheet(drawerContainerColor = IRCTheme.drawerContainerOpaque, content = sheetContent)
     }
 }

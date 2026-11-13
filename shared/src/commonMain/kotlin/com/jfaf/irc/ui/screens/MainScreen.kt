@@ -13,6 +13,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.LinearProgressIndicator
@@ -54,12 +56,19 @@ import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer
 import com.jfaf.irc.ui.screens.chat.MessageInputSection
 import com.jfaf.irc.ui.screens.chat.MessagesList
 import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
+import com.jfaf.irc.domain.chat.ChatStateManager
+import com.jfaf.irc.domain.chat.TargetNavigation
+import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import kotlinx.coroutines.launch
+
+/** Ancho a partir del cual la versión de escritorio usa paneles fijos (el "expandido" de Material). */
+private val WIDE_LAYOUT_MIN_WIDTH = 840.dp
+private val USER_LIST_FIXED_WIDTH = 240.dp
 
 @Composable
 fun MainScreen(
@@ -87,14 +96,22 @@ fun MainScreen(
         }
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            AppDrawerMainContent(viewModel = viewModel, connectionState = connectionState, navController = navController) {
-                scope.launch { drawerState.close() }
-            }
-        }
-    ) {
+    val platformUi = LocalPlatformUi.current
+    val chatTargets by viewModel.chatScreenState.chatTargets.collectAsState()
+    val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
+
+    // Atajos de teclado: Ctrl+Tab / Ctrl+Mayús+Tab cambian de pestaña y Ctrl+W cierra la activa (menos Servidor).
+    val shortcuts = Modifier.chatShortcuts(
+        onNextTab = { TargetNavigation.neighbour(chatTargets, activeTarget, forward = true)?.let(viewModel::setActiveTarget) },
+        onPreviousTab = { TargetNavigation.neighbour(chatTargets, activeTarget, forward = false)?.let(viewModel::setActiveTarget) },
+        onCloseTab = { activeTarget?.takeIf { it != ChatStateManager.SERVER_TARGET_ID }?.let(viewModel::closeTarget) }
+    )
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    // Ventana ancha de escritorio: pestañas fijas a la izquierda y usuarios a la derecha, sin cajón.
+    val wide = platformUi.isDesktop && connectionState && maxWidth >= WIDE_LAYOUT_MIN_WIDTH
+
+    val screenContent: @Composable () -> Unit = {
         Box(modifier = Modifier.fillMaxSize().background(IRCTheme.gradientBrush)) {
             Scaffold(
                 modifier = modifier.imePadding(),
@@ -105,6 +122,8 @@ fun MainScreen(
                         ChatTopAppBar(
                             activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value,
                             onNavigationIconClick = { scope.launch { drawerState.open() } },
+                            showNavigationIcon = !wide,
+                            showUserListOption = !wide,
                             onDisconnectClick = { viewModel.disconnectFromServerAndStopService() },
                             onJoinChannelRequest = { viewModel.joinChannel(it) },
                             onOpenPrivateMessageRequest = { viewModel.openPrivateMessage(it) },
@@ -121,7 +140,8 @@ fun MainScreen(
                         connectionState = connectionState,
                         isReconnecting = isReconnecting,
                         activeTargetValue = viewModel.chatScreenState.activeTarget.collectAsState().value,
-                        nickSuggestionsState = viewModel.chatScreenState.nickSuggestions.collectAsState().value
+                        nickSuggestionsState = viewModel.chatScreenState.nickSuggestions.collectAsState().value,
+                        autoFocusInput = platformUi.isDesktop
                     )
                 }
             ) { paddingValues ->
@@ -131,6 +151,7 @@ fun MainScreen(
                     viewModel = viewModel,
                     signInViewModel = signInViewModel,
                     onGoogleSignIn = onGoogleSignIn,
+                    fixedUserList = wide,
                     onMediaClick = { mediaUrl, mediaType ->
                         viewModel.userClickedOnMedia(mediaUrl, mediaType)
                     }
@@ -151,6 +172,32 @@ fun MainScreen(
             }
         }
     }
+
+    val openDrawerContent: @Composable (closeAction: () -> Unit) -> Unit = { closeAction ->
+        AppDrawerMainContent(
+            viewModel = viewModel,
+            connectionState = connectionState,
+            navController = navController,
+            permanent = wide,
+            closeDrawerAction = closeAction
+        )
+    }
+
+    if (wide) {
+        Row(modifier = Modifier.fillMaxSize().then(shortcuts)) {
+            openDrawerContent {}
+            Box(modifier = Modifier.weight(1f)) { screenContent() }
+        }
+    } else {
+        ModalNavigationDrawer(
+            modifier = shortcuts,
+            drawerState = drawerState,
+            drawerContent = { openDrawerContent { scope.launch { drawerState.close() } } }
+        ) {
+            screenContent()
+        }
+    }
+    } // BoxWithConstraints
 }
 
 @Composable
@@ -158,6 +205,7 @@ private fun AppDrawerMainContent(
     viewModel: MainViewModel,
     connectionState: Boolean,
     navController: NavHostController,
+    permanent: Boolean = false,
     closeDrawerAction: () -> Unit
 ) {
     val onlineFriends by viewModel.chatScreenState.onlineFriends.collectAsState()
@@ -181,7 +229,8 @@ private fun AppDrawerMainContent(
             onSettingsClick = {
                 closeDrawerAction()
                 navController.navigate("settings")
-            }
+            },
+            permanent = permanent
         )
     } else {
         Column(
@@ -206,7 +255,8 @@ private fun MainScreenBottomBar(
     connectionState: Boolean,
     isReconnecting: Boolean,
     activeTargetValue: String?,
-    nickSuggestionsState: List<String>
+    nickSuggestionsState: List<String>,
+    autoFocusInput: Boolean
 ) {
     Column {
         val showInputSection = connectionState && !isReconnecting && activeTargetValue != null
@@ -222,7 +272,9 @@ private fun MainScreenBottomBar(
                 onSuggestionSelected = { suggestion, currentText, cursorPos ->
                     viewModel.onNickSuggestionSelected(suggestion, currentText, cursorPos)
                 },
-                onClearSuggestions = { viewModel.clearNickSuggestions() }
+                onClearSuggestions = { viewModel.clearNickSuggestions() },
+                autoFocus = autoFocusInput,
+                focusKey = activeTargetValue
             )
         }
     }
@@ -235,6 +287,7 @@ private fun MainScreenScaffoldContent(
     viewModel: MainViewModel,
     signInViewModel: SignInViewModel,
     onGoogleSignIn: () -> Unit,
+    fixedUserList: Boolean,
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
     val userPreferences by viewModel.userPreferences.collectAsState()
@@ -287,6 +340,7 @@ private fun MainScreenScaffoldContent(
         } else {
             ConnectedStateView(
                 viewModel = viewModel,
+                fixedUserList = fixedUserList,
                 onMediaClick = onMediaClick
             )
         }
@@ -296,6 +350,7 @@ private fun MainScreenScaffoldContent(
 @Composable
 private fun ConnectedStateView(
     viewModel: MainViewModel,
+    fixedUserList: Boolean,
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
     val currentAd by viewModel.currentAd.collectAsState()
@@ -306,7 +361,8 @@ private fun ConnectedStateView(
     val isReconnecting by viewModel.chatScreenState.isReconnecting.collectAsState()
 
     val currentTargetIsChannel = activeTarget?.startsWith("#") == true
-    val shouldShowUserListComposite = showUserListState && currentTargetIsChannel
+    // En la ventana ancha los usuarios van en un panel fijo de la derecha, sin depender del botón.
+    val shouldShowUserListComposite = (fixedUserList || showUserListState) && currentTargetIsChannel
 
     Column(modifier = Modifier.fillMaxSize()) {
     if (isReconnecting) {
@@ -328,7 +384,7 @@ private fun ConnectedStateView(
         MessagesList(
             messages = messages,
             onMediaClick = onMediaClick,
-            modifier = Modifier.weight(if (shouldShowUserListComposite) 0.6f else 1f),
+            modifier = Modifier.weight(if (shouldShowUserListComposite && !fixedUserList) 0.6f else 1f),
             showMediaPreviews = showMediaPreviews,
             ad = currentAd,
             mainViewModel = viewModel
@@ -336,7 +392,7 @@ private fun ConnectedStateView(
 
         AnimatedVisibility(
             visible = shouldShowUserListComposite,
-            modifier = Modifier.weight(0.4f)
+            modifier = if (fixedUserList) Modifier.width(USER_LIST_FIXED_WIDTH) else Modifier.weight(0.4f)
         ) {
             Row {
                 VerticalDivider(

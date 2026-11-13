@@ -34,6 +34,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.TextRange
@@ -51,7 +57,10 @@ fun MessageInputSection(
     onSendMessage: (String) -> Unit,
     onTextInputChanged: (text: String, cursorPosition: Int) -> Unit,
     onSuggestionSelected: (suggestion: String, currentFullText: String, cursorPosition: Int) -> String,
-    onClearSuggestions: () -> Unit
+    onClearSuggestions: () -> Unit,
+    /** Pone el foco en el campo al aparecer y cada vez que cambia [focusKey] (escritorio; en el móvil abriría el teclado). */
+    autoFocus: Boolean = false,
+    focusKey: Any? = null
 ) {
     Surface(modifier = modifier, color = MaterialTheme.colorScheme.primary, shadowElevation = 4.dp) {
         var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
@@ -61,6 +70,30 @@ fun MessageInputSection(
 
         LaunchedEffect(nickSuggestions) {
             showSuggestions = nickSuggestions.isNotEmpty()
+        }
+
+        LaunchedEffect(focusKey, autoFocus) {
+            if (autoFocus) runCatching { focusRequester.requestFocus() }
+        }
+
+        fun applySuggestion(suggestion: String) {
+            val originalText = textFieldValue.text
+            val originalCursorPos = textFieldValue.selection.start
+            val newTextString = onSuggestionSelected(suggestion, originalText, originalCursorPos)
+
+            val textBeforeCursorInOriginal = originalText.substring(0, originalCursorPos)
+            val lastSpaceBeforeWord = textBeforeCursorInOriginal.lastIndexOf(' ')
+            val prefixLength = if (lastSpaceBeforeWord == -1) 0 else lastSpaceBeforeWord + 1
+            val newCursorPos = prefixLength + suggestion.length + 1
+
+            textFieldValue = TextFieldValue(
+                text = newTextString,
+                selection = TextRange(minOf(newCursorPos, newTextString.length))
+            )
+
+            onClearSuggestions()
+            showSuggestions = false
+            focusRequester.requestFocus()
         }
 
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -97,6 +130,17 @@ fun MessageInputSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester)
+                        .onPreviewKeyEvent { event ->
+                            // Tab acepta la primera sugerencia de nick (autocompletado)
+                            if (event.type == KeyEventType.KeyDown && event.key == Key.Tab && !event.isCtrlPressed &&
+                                showSuggestions && nickSuggestions.isNotEmpty()
+                            ) {
+                                applySuggestion(nickSuggestions.first())
+                                true
+                            } else {
+                                false
+                            }
+                        }
                         .onFocusChanged { focusState ->
                             if (!focusState.isFocused && !showSuggestions) {
                                 onClearSuggestions()
@@ -147,25 +191,7 @@ fun MessageInputSection(
                         nickSuggestions.forEach { suggestion ->
                             DropdownMenuItem(
                                 text = { Text(suggestion, color = MaterialTheme.colorScheme.onSurface) },
-                                onClick = {
-                                    val originalText = textFieldValue.text
-                                    val originalCursorPos = textFieldValue.selection.start
-                                    val newTextString = onSuggestionSelected(suggestion, originalText, originalCursorPos)
-
-                                    val textBeforeCursorInOriginal = originalText.substring(0, originalCursorPos)
-                                    val lastSpaceBeforeWord = textBeforeCursorInOriginal.lastIndexOf(' ')
-                                    val prefixLength = if (lastSpaceBeforeWord == -1) 0 else lastSpaceBeforeWord + 1
-                                    val newCursorPos = prefixLength + suggestion.length + 1 
-
-                                    textFieldValue = TextFieldValue(
-                                        text = newTextString,
-                                        selection = TextRange(minOf(newCursorPos, newTextString.length))
-                                    )
-                                    
-                                    onClearSuggestions() 
-                                    showSuggestions = false
-                                    focusRequester.requestFocus() 
-                                }
+                                onClick = { applySuggestion(suggestion) }
                             )
                         }
                     }

@@ -12,6 +12,9 @@ interface PlatformUi {
     /** Si la plataforma ofrece iniciar sesión con Google (en escritorio, no). */
     val supportsGoogleSignIn: Boolean
 
+    /** Si es la versión de escritorio: ventana ancha con paneles fijos y foco automático en el campo de texto. */
+    val isDesktop: Boolean get() = false
+
     @Composable
     fun GoogleSignInButton(onClick: () -> Unit)
 

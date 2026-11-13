@@ -23,6 +23,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.swing) // Dispatchers.Main (viewModelScope, Compose)
 
     testImplementation(libs.kotlin.test)
+    testImplementation(compose.desktop.uiTestJUnit4) // pruebas de la UI de escritorio (sin ventana)
 }
 
 tasks.test {

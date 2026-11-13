@@ -32,6 +32,10 @@ import com.jfaf.irc.ui.theme.IRCTheme
 fun ChatTopAppBar(
     activeTarget: String?,
     onNavigationIconClick: () -> Unit,
+    /** Ventana ancha de escritorio: las pestañas son un panel fijo y no hace falta el botón del cajón. */
+    showNavigationIcon: Boolean = true,
+    /** Ventana ancha de escritorio: la lista de usuarios es fija y no hay botón para ocultarla. */
+    showUserListOption: Boolean = true,
     onDisconnectClick: () -> Unit,
     onJoinChannelRequest: (String) -> Unit,
     onOpenPrivateMessageRequest: (String) -> Unit,
@@ -53,9 +57,13 @@ fun ChatTopAppBar(
 
     TopAppBar(
         title = { Text(activeTarget ?: stringResource(Res.string.app_title_default)) },
-        navigationIcon = { IconButton(onClick = onNavigationIconClick) { Icon(Icons.Filled.Menu, stringResource(Res.string.cd_open_navigation_menu)) } },
+        navigationIcon = {
+            if (showNavigationIcon) {
+                IconButton(onClick = onNavigationIconClick) { Icon(Icons.Filled.Menu, stringResource(Res.string.cd_open_navigation_menu)) }
+            }
+        },
         actions = {
-            if (isChannel) {
+            if (isChannel && showUserListOption) {
                 IconButton(onClick = onToggleUserList) { Icon(Icons.Filled.Person, stringResource(Res.string.cd_toggle_user_list)) }
             }
             IconButton(onClick = { showMenu = !showMenu }) { Icon(Icons.Filled.MoreVert, stringResource(Res.string.cd_more_options)) }

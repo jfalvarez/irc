@@ -20,7 +20,6 @@ import com.jfaf.irc.di.viewModelModule
 import com.jfaf.irc.domain.platform.AppVisibility
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.ui.App
-import com.jfaf.irc.ui.platform.NoPlatformUi
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.core.context.startKoin
@@ -90,7 +89,7 @@ fun main() {
             }
 
             App(
-                platformUi = NoPlatformUi,
+                platformUi = DesktopPlatformUi,
                 onGoogleSignIn = {},
                 onRedirectToPlayStore = {},
                 onExit = exit
