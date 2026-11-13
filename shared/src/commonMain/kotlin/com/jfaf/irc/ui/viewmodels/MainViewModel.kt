@@ -483,11 +483,15 @@ class MainViewModel(
 
     // --- Nick Autocompletion Functions ---
     fun updateNickSuggestions(currentFullText: String, cursorPosition: Int) {
+        val activeTarget = chatStateManager.activeTarget.value
         _nickSuggestions.value = NickAutocomplete.suggestions(
-            activeTarget = chatStateManager.activeTarget.value,
-            usersInChannel = currentChannelUserListState.value,
+            activeTarget = activeTarget,
+            // Se lee del estado de origen: `currentChannelUserListState` sólo se actualiza mientras alguien lo
+            // observa (el panel de usuarios), y con el panel cerrado seguía vacío y no se sugería nada.
+            usersInChannel = chatStateManager.usersInChannel.value[activeTarget].orEmpty(),
             text = currentFullText,
-            cursorPosition = cursorPosition
+            cursorPosition = cursorPosition,
+            ownNick = currentNickname
         )
     }
 

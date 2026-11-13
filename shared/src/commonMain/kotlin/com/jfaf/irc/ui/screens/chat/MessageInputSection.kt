@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
+import com.jfaf.irc.domain.chat.NickAutocomplete
 import com.jfaf.irc.ui.theme.IRCTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,10 +82,7 @@ fun MessageInputSection(
             val originalCursorPos = textFieldValue.selection.start
             val newTextString = onSuggestionSelected(suggestion, originalText, originalCursorPos)
 
-            val textBeforeCursorInOriginal = originalText.substring(0, originalCursorPos)
-            val lastSpaceBeforeWord = textBeforeCursorInOriginal.lastIndexOf(' ')
-            val prefixLength = if (lastSpaceBeforeWord == -1) 0 else lastSpaceBeforeWord + 1
-            val newCursorPos = prefixLength + suggestion.length + 1
+            val newCursorPos = NickAutocomplete.cursorAfterApply(suggestion, originalText, originalCursorPos)
 
             textFieldValue = TextFieldValue(
                 text = newTextString,
