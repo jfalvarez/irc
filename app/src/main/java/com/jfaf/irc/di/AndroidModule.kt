@@ -1,9 +1,7 @@
 package com.jfaf.irc.di
 
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -14,7 +12,11 @@ import com.jfaf.irc.config.RemoteConfigManager
 import com.jfaf.irc.data.firebase.FirebaseAnalyticsTracker
 import com.jfaf.irc.data.firebase.FirebaseAuthSession
 import com.jfaf.irc.data.firebase.FirestoreUserMetadataStore
+import com.jfaf.irc.data.history.room.CHAT_DATABASE_NAME
 import com.jfaf.irc.data.history.room.ChatDatabase
+import com.jfaf.irc.data.history.room.buildChatDatabase
+import com.jfaf.irc.data.prefs.USER_PREFERENCES_FILE
+import com.jfaf.irc.data.prefs.createPreferencesDataStore
 import com.jfaf.irc.domain.config.AppConfig
 import com.jfaf.irc.domain.notifications.Notifier
 import com.jfaf.irc.domain.platform.AdProvider
@@ -35,13 +37,12 @@ import org.koin.dsl.module
 val androidModule = module {
     // Persistencia
     single {
-        Room.databaseBuilder(androidContext(), ChatDatabase::class.java, "chat_history.db")
-            .fallbackToDestructiveMigration(dropAllTables = true)
-            .build()
+        val dbFile = androidContext().getDatabasePath(CHAT_DATABASE_NAME)
+        buildChatDatabase(Room.databaseBuilder<ChatDatabase>(androidContext(), dbFile.absolutePath))
     }
     factory { get<ChatDatabase>().chatHistoryDao() }
     single<DataStore<Preferences>> {
-        PreferenceDataStoreFactory.create { androidContext().preferencesDataStoreFile("user_prefs") }
+        createPreferencesDataStore(androidContext().filesDir.resolve("datastore/$USER_PREFERENCES_FILE").absolutePath)
     }
 
     // Plataforma
