@@ -30,7 +30,7 @@ val googleSignInClientId = localProperties.getProperty("google.signin.clientId")
 
 android {
     namespace = "com.jfaf.irc"
-    compileSdk = 36
+    compileSdk = 37 // Compose 1.12 lo exige; targetSdk sigue en 36
 
     defaultConfig {
         applicationId = "com.jfaf.irc"

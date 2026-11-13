@@ -79,7 +79,9 @@ fun MessageRow(
                 addLink(
                     clickable = LinkAnnotation.Clickable(
                         tag = "nick",
-                        styles = null,
+                        // Estilo explícito: con styles = null, el Text de Material3 1.4 pinta el enlace
+                        // con el color primario y subrayado, y el nick casi no se ve sobre el fondo.
+                        styles = TextLinkStyles(style = SpanStyle(color = baseTextColor)),
                         linkInteractionListener = { nickMenuExpanded = true }
                     ),
                     start = 0,
@@ -89,8 +91,9 @@ fun MessageRow(
         }
 
         for (link in LinkFinder.find(baseString.text)) {
-            val isMediaLink = message.mediaUrl != null &&
-                message.mediaUrl.removePrefix("https://").removePrefix("http://") ==
+            val mediaUrl = message.mediaUrl
+            val isMediaLink = mediaUrl != null &&
+                mediaUrl.removePrefix("https://").removePrefix("http://") ==
                     link.text.removePrefix("https://").removePrefix("http://")
             if (!isMediaLink || !showMediaPreviews) {
                 val target = link.target
@@ -134,16 +137,17 @@ fun MessageRow(
             }
         }
 
-        if (!message.mediaUrl.isNullOrBlank() && showMediaPreviews) {
+        val mediaUrl = message.mediaUrl
+        if (!mediaUrl.isNullOrBlank() && showMediaPreviews) {
             Spacer(modifier = Modifier.height(4.dp))
             MediaPreview(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp) 
                     .clickable {
-                        onMediaClick(message.mediaUrl, message.mediaType)
+                        onMediaClick(mediaUrl, message.mediaType)
                     },
-                mediaUrl = message.mediaUrl,
+                mediaUrl = mediaUrl,
                 mediaType = message.mediaType
             )
         } 
