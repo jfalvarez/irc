@@ -2,6 +2,8 @@ package com.jfaf.irc.di
 
 import android.content.Context
 import com.google.firebase.analytics.FirebaseAnalytics
+import com.jfaf.irc.data.firebase.FirebaseAnalyticsTracker
+import com.jfaf.irc.domain.platform.AnalyticsTracker
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,4 +20,8 @@ object AnalyticsModule {
     fun provideFirebaseAnalytics(@ApplicationContext context: Context): FirebaseAnalytics {
         return FirebaseAnalytics.getInstance(context)
     }
+
+    @Provides
+    @Singleton
+    fun provideAnalyticsTracker(impl: FirebaseAnalyticsTracker): AnalyticsTracker = impl
 }

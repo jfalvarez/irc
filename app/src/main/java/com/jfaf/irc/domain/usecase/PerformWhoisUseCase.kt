@@ -2,9 +2,8 @@ package com.jfaf.irc.domain.usecase
 
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
-import android.os.Bundle
 import com.jfaf.irc.log.Log
-import com.google.firebase.analytics.FirebaseAnalytics
+import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import javax.inject.Inject
@@ -19,7 +18,7 @@ class PerformWhoisUseCase @Inject constructor(
     private val strings: StringProvider,
     private val ircRepository: IrcRepository,
     private val chatStateManager: ChatStateManager,
-    private val firebaseAnalytics: FirebaseAnalytics
+    private val analytics: AnalyticsTracker
 ) {
     suspend operator fun invoke(nick: String): WhoisRequestResult {
         if (nick.isBlank()) {
@@ -28,9 +27,7 @@ class PerformWhoisUseCase @Inject constructor(
             return WhoisRequestResult.InvalidNickInput 
         }
 
-        val bundle = Bundle()
-        bundle.putString("whois_target_nick", nick) 
-        firebaseAnalytics.logEvent("whois_request", bundle)
+        analytics.logEvent("whois_request", mapOf("whois_target_nick" to nick))
 
         if (!ircRepository.connectionState.value) {
             Log.w("PerformWhoisUseCase", "performWhois called but not connected to the server.")
