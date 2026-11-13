@@ -2,8 +2,8 @@ package com.jfaf.irc.domain.usecase
 
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
-import com.google.firebase.auth.FirebaseAuth
 import com.jfaf.irc.domain.platform.AnalyticsTracker
+import com.jfaf.irc.domain.platform.AuthSession
 import com.jfaf.irc.data.repositories.UserMetadataRepository // Importar el nuevo repositorio
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import javax.inject.Inject
@@ -13,11 +13,11 @@ class IgnoreUserUseCase @Inject constructor(
     private val userMetadataRepository: UserMetadataRepository, // Reemplazar UserPreferencesRepository
     private val chatStateManager: ChatStateManager,
     private val analytics: AnalyticsTracker,
-    private val firebaseAuth: FirebaseAuth // Añadir FirebaseAuth
+    private val authSession: AuthSession
 ) {
     suspend operator fun invoke(userName: String) {
-        // Solo proceder si el usuario está logueado en Firebase
-        if (firebaseAuth.currentUser == null) {
+        // Solo proceder si hay sesión iniciada (los ignorados se guardan en la cuenta)
+        if (authSession.currentUser.value == null) {
             val targetForMessage = chatStateManager.activeTarget.value
                 ?: ChatStateManager.SERVER_TARGET_ID
             chatStateManager.addSystemMessageToTarget(

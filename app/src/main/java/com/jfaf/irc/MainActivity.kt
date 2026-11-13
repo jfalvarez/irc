@@ -51,7 +51,6 @@ import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
-import com.google.firebase.auth.GoogleAuthProvider
 import com.jfaf.irc.config.RemoteConfigManager
 import com.jfaf.irc.service.IrcService
 import com.jfaf.irc.service.IrcServiceApi
@@ -100,8 +99,7 @@ class MainActivity : ComponentActivity() {
         val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
         try {
             val account = task.getResult(ApiException::class.java)!!
-            val credential = GoogleAuthProvider.getCredential(account.idToken!!, null)
-            signInViewModel.signInWithCredential(credential)
+            signInViewModel.signInWithGoogleIdToken(account.idToken!!)
         } catch (e: ApiException) {
             Log.w(TAG_ACTIVITY, "Google sign in failed", e)
         }

@@ -2,42 +2,37 @@ package com.jfaf.irc.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.AuthCredential
-import com.google.firebase.auth.FirebaseUser
-import com.jfaf.irc.data.repositories.SignInRepository
 import com.jfaf.irc.domain.config.AppConfig
+import com.jfaf.irc.domain.platform.AuthSession
+import com.jfaf.irc.domain.platform.AuthUser
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class SignInViewModel @Inject constructor(
-    private val signInRepository: SignInRepository,
+    private val authSession: AuthSession,
     appConfig: AppConfig
 ) : ViewModel() {
 
     /** Client ID de OAuth para pedir el idToken de Google. */
     val googleSignInClientId: String = appConfig.googleSignInClientId
 
-    private val _isUserAuthenticated = MutableStateFlow(signInRepository.currentUser != null)
-    val isUserAuthenticated = _isUserAuthenticated.asStateFlow()
+    val currentUser: StateFlow<AuthUser?> = authSession.currentUser
 
-    private val _currentUser = MutableStateFlow<FirebaseUser?>(signInRepository.currentUser)
-    val currentUser = _currentUser.asStateFlow()
+    val isUserAuthenticated: StateFlow<Boolean> = currentUser
+        .map { it != null }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, currentUser.value != null)
 
-    fun signInWithCredential(credential: AuthCredential) {
-        viewModelScope.launch {
-            val user = signInRepository.signInWithCredential(credential)
-            _isUserAuthenticated.value = user != null
-            _currentUser.value = user
-        }
+    fun signInWithGoogleIdToken(idToken: String) {
+        viewModelScope.launch { authSession.signInWithGoogleIdToken(idToken) }
     }
 
     fun signOut() {
-        signInRepository.signOut()
-        _isUserAuthenticated.value = false
-        _currentUser.value = null
+        authSession.signOut()
     }
 }
