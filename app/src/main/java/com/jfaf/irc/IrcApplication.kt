@@ -6,6 +6,8 @@ import android.app.NotificationManager
 import android.os.Build
 import androidx.core.content.ContextCompat // Correct import for getSystemService
 import com.google.android.gms.ads.MobileAds // Import MobileAds
+import co.touchlab.kermit.platformLogWriter
+import com.jfaf.irc.log.Log
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
@@ -17,6 +19,7 @@ class IrcApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        Log.install(platformLogWriter()) // Logcat en Android
         
         // Initialize Mobile Ads SDK
         MobileAds.initialize(this) {}

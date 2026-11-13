@@ -1,6 +1,6 @@
 package com.jfaf.irc.data.prefs
 
-import android.util.Log
+import com.jfaf.irc.log.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey

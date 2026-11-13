@@ -1,6 +1,6 @@
 package com.jfaf.irc.ui.viewmodels
 
-import android.util.Log
+import com.jfaf.irc.log.Log
 import com.jfaf.irc.data.history.ChatHistoryStore
 import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.CoroutineScope

@@ -2,7 +2,7 @@ package com.jfaf.irc.util
 
 import android.app.NotificationManager
 import android.content.Context
-import android.util.Log
+import com.jfaf.irc.log.Log
 import androidx.core.content.ContextCompat
 
 object NotificationHelper {

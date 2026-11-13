@@ -12,6 +12,7 @@ ksp = "2.0.21-1.0.28"
 activityCompose = "1.8.0"
 composeBom = "2025.09.00"
 kotlinxCoroutines = "1.10.2" # Reverted to 1.10.2
+kermit = "2.0.5" # 2.0.5 es la última compatible con Kotlin 2.0.21; subir a 2.2.0 en el paso 2.1
 # New versions
 coil = "2.7.0"
 playServicesAds = "23.0.0"
@@ -55,6 +56,7 @@ androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-te
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" } # Añadida librería de iconos extendida
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 # New libraries
 androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "lifecycle" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }

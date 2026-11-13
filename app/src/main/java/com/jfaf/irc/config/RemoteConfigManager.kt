@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo // Importación añadida
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
+import com.jfaf.irc.log.Log
 import com.google.firebase.Firebase
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings

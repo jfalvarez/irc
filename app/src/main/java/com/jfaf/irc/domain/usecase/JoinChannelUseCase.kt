@@ -2,7 +2,7 @@ package com.jfaf.irc.domain.usecase
 
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
-import android.util.Log
+import com.jfaf.irc.log.Log
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import javax.inject.Inject

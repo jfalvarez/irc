@@ -1,6 +1,6 @@
 package com.jfaf.irc.data.repositories
 
-import android.util.Log
+import com.jfaf.irc.log.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FieldValue

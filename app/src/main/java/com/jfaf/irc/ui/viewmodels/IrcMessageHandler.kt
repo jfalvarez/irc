@@ -5,7 +5,7 @@ import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.ui.model.MediaTypeEnum
 import com.jfaf.irc.ui.model.UiChatMessage
 import com.jfaf.irc.ui.model.UiMessageType
-import android.util.Log
+import com.jfaf.irc.log.Log
 import androidx.compose.ui.text.* 
 import androidx.compose.ui.text.font.FontWeight
 import com.jfaf.irc.BuildConfig 

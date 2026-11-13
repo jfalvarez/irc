@@ -2,7 +2,7 @@ package com.jfaf.irc.data.repositories
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import com.jfaf.irc.log.Log
 import androidx.core.content.ContextCompat
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.domain.IrcSender

@@ -2,7 +2,7 @@ package com.jfaf.irc.ui.viewmodels
 
 import com.jfaf.irc.ui.model.UiChatMessage
 import com.jfaf.irc.ui.model.UiMessageType
-import android.util.Log
+import com.jfaf.irc.log.Log
 import androidx.compose.ui.text.AnnotatedString // Necesario para UiChatMessage
 import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.flow.Flow

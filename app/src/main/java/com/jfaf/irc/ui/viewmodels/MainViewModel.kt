@@ -4,7 +4,7 @@ import com.jfaf.irc.ui.model.MediaTypeEnum
 import com.jfaf.irc.ui.model.UiChatMessage
 import com.jfaf.irc.ui.model.UiMessageType
 import android.content.Context
-import android.util.Log
+import com.jfaf.irc.log.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jfaf.irc.ads.NativeAdManager

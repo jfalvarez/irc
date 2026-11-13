@@ -10,7 +10,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
+import com.jfaf.irc.log.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.jfaf.irc.AppConstants

@@ -78,9 +78,6 @@ android {
         compose = true
         buildConfig = true // Habilitar BuildConfig
     }
-    testOptions {
-        unitTests.isReturnDefaultValues = true // los tests JVM no tienen android.util.Log (se ira con el logger KMP, K2)
-    }
     packaging {
         resources {
             excludes += "/META-INF/INDEX.LIST"
@@ -104,6 +101,7 @@ dependencies {
     implementation(libs.coil.gif)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kermit)
     implementation(libs.hilt.android)
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)

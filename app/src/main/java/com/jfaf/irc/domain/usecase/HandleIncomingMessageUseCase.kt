@@ -1,6 +1,6 @@
 package com.jfaf.irc.domain.usecase
 
-import android.util.Log
+import com.jfaf.irc.log.Log
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
