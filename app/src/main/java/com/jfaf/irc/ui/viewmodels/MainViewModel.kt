@@ -1,5 +1,7 @@
 package com.jfaf.irc.ui.viewmodels
 
+import com.jfaf.irc.domain.chat.ChatEventListener
+import com.jfaf.irc.domain.chat.ChatEventOrchestrator
 import com.jfaf.irc.domain.chat.ChatHistoryPersister
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.LinkState
@@ -18,7 +20,7 @@ import com.jfaf.irc.domain.platform.AdProvider
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferences
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
-import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
 import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.domain.user.FriendPresenceTracker
@@ -81,7 +83,7 @@ data class ChatScreenState(
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val ircRepository: IrcRepository,
+    private val ircConnection: IrcConnection,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val userMetadataStore: UserMetadataStore,
     private val friendPresence: FriendPresenceTracker,
@@ -104,7 +106,7 @@ class MainViewModel @Inject constructor(
 ) : ViewModel(), ChatEventListener {
 
     private var chatEventOrchestrator = ChatEventOrchestrator(
-        ircRepository,
+        ircConnection,
         userMetadataStore,
         this,
         viewModelScope,
@@ -209,12 +211,12 @@ class MainViewModel @Inject constructor(
     private var previousLink: LinkState? = null
 
     private val uiConnectionState: StateFlow<Boolean> =
-        combine(ircRepository.connectionState, ircRepository.isReconnecting) { connected, reconnecting ->
+        combine(ircConnection.connectionState, ircConnection.isReconnecting) { connected, reconnecting ->
             connected || reconnecting
         }.stateIn(
             viewModelScope,
             SharingStarted.Eagerly,
-            ircRepository.connectionState.value || ircRepository.isReconnecting.value
+            ircConnection.connectionState.value || ircConnection.isReconnecting.value
         )
 
     val chatScreenState: ChatScreenState = ChatScreenState(
@@ -223,7 +225,7 @@ class MainViewModel @Inject constructor(
         unreadTargets = chatStateManager.unreadTargets,
         uiMessages = combinedUiMessagesFlow,
         connectionState = uiConnectionState,
-        isReconnecting = ircRepository.isReconnecting,
+        isReconnecting = ircConnection.isReconnecting,
         usersInChannel = chatStateManager.usersInChannel,
         currentChannelUserList = currentChannelUserListState,
         showUserList = chatStateManager.showUserList,
@@ -238,7 +240,7 @@ class MainViewModel @Inject constructor(
         chatHistoryPersister.start(viewModelScope)
         // El debounce evita ver el "desconectado" transitorio que ocurre justo antes de que
         // el servicio marque isReconnecting = true.
-        combine(ircRepository.connectionState, ircRepository.isReconnecting, LinkState::of)
+        combine(ircConnection.connectionState, ircConnection.isReconnecting, LinkState::of)
             .distinctUntilChanged()
             .debounce(300)
             .onEach { state ->
@@ -271,7 +273,7 @@ class MainViewModel @Inject constructor(
                     if (friends.isNotEmpty()) {
                         for (friend in friends) {
                             if (!isFriendCheckPaused.get()) {
-                                ircRepository.sendRawCommand("WHOIS $friend", isSilent = true)
+                                ircConnection.sendRawCommand("WHOIS $friend", isSilent = true)
                                 silentWhoisCompletionSignal.awaitCompletion()
                             }
                         }

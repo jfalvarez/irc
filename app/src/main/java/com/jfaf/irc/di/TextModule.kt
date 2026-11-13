@@ -21,4 +21,7 @@ abstract class TextModule {
 abstract class IrcSenderModule {
     @Binds
     abstract fun bindIrcSender(impl: com.jfaf.irc.data.repositories.IrcRepository): com.jfaf.irc.domain.IrcSender
+
+    @Binds
+    abstract fun bindIrcConnection(impl: com.jfaf.irc.data.repositories.IrcRepository): com.jfaf.irc.domain.IrcConnection
 }

@@ -3,7 +3,7 @@ package com.jfaf.irc.domain.usecase
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
-import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
 import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.domain.user.FriendPresenceTracker
@@ -19,7 +19,7 @@ class HandleIncomingMessageUseCase @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val userMetadataStore: UserMetadataStore,
     private val friendPresence: FriendPresenceTracker,
-    private val ircRepository: IrcRepository,
+    private val ircConnection: IrcConnection,
     private val silentWhoisCompletionSignal: SilentWhoisCompletionSignal
 ) {
     suspend operator fun invoke(
@@ -31,13 +31,13 @@ class HandleIncomingMessageUseCase @Inject constructor(
 
         if (whoisNickParam != null &&
             parsedMessage.command in silentWhoisCommands &&
-            ircRepository.isWhoisSilent(whoisNickParam)
+            ircConnection.isWhoisSilent(whoisNickParam)
         ) {
             var isEndOfSilentWhois = false
             when (parsedMessage.command) {
                 "311" -> friendPresence.friendSeen(whoisNickParam)
                 "318", "401" -> {
-                    ircRepository.completeSilentWhois(whoisNickParam)
+                    ircConnection.completeSilentWhois(whoisNickParam)
                     isEndOfSilentWhois = true
                 }
             }

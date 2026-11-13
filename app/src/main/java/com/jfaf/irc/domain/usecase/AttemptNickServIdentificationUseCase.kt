@@ -4,7 +4,7 @@ import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
-import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -13,7 +13,7 @@ import javax.inject.Inject
 class AttemptNickServIdentificationUseCase @Inject constructor(
     private val strings: StringProvider,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val ircRepository: IrcRepository,
+    private val ircConnection: IrcConnection,
     private val chatStateManager: ChatStateManager
 ) {
 
@@ -44,7 +44,7 @@ class AttemptNickServIdentificationUseCase @Inject constructor(
                     ChatStateManager.SERVER_TARGET_ID, 
                     strings.get(Msg.NICKSERV_IDENTIFYING, currentNickname)
                 )
-                ircRepository.sendRawCommand(command)
+                ircConnection.sendRawCommand(command)
             } else if (!passwordToUse.isNullOrBlank()) {
                  Log.w("AttemptNickServUseCase", "NickServ password is set, but currentNickname is blank. Cannot identify.")
             }

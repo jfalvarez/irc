@@ -2,7 +2,7 @@ package com.jfaf.irc.domain.usecase
 
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
-import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -10,7 +10,7 @@ import javax.inject.Inject
 
 class DisconnectUseCase @Inject constructor(
     private val strings: StringProvider,
-    private val ircRepository: IrcRepository,
+    private val ircConnection: IrcConnection,
     private val chatStateManager: ChatStateManager
 ) {
     suspend operator fun invoke(quitMessage: String?) {
@@ -27,7 +27,7 @@ class DisconnectUseCase @Inject constructor(
             strings.get(Msg.DISCONNECTING_REQUESTED)
         )
         withContext(Dispatchers.IO) {
-            ircRepository.disconnectAndStopService(quitMessage)
+            ircConnection.disconnect(quitMessage)
         }
     }
 }

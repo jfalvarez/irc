@@ -3,7 +3,7 @@ package com.jfaf.irc.domain.usecase
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.log.Log
-import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import javax.inject.Inject
 
@@ -14,7 +14,7 @@ sealed interface JoinChannelResult {
 
 class JoinChannelUseCase @Inject constructor(
     private val strings: StringProvider,
-    private val ircRepository: IrcRepository,
+    private val ircConnection: IrcConnection,
     private val chatStateManager: ChatStateManager
 ) {
     suspend operator fun invoke(channelName: String, key: String?): JoinChannelResult {
@@ -26,11 +26,11 @@ class JoinChannelUseCase @Inject constructor(
             return JoinChannelResult.Failure(errorMsg)
         }
 
-        if (ircRepository.connectionState.value && channelName.isNotBlank()) {
+        if (ircConnection.connectionState.value && channelName.isNotBlank()) {
             // Message about attempting to join is good UX, can be kept here or in ViewModel.
             // For consistency with how other messages are handled, let's keep it in the UseCase for now.
             chatStateManager.addSystemMessageToTarget(currentActiveTargetForMsg, strings.get(Msg.JOIN_REQUESTING, channelName))
-            ircRepository.joinChannel(channelName, key)
+            ircConnection.joinChannel(channelName, key)
             return JoinChannelResult.Success
         } else {
             val errorMsg = strings.get(Msg.JOIN_NOT_CONNECTED)

@@ -1,15 +1,15 @@
 package com.jfaf.irc.domain.usecase
 
-import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.domain.IrcConnection
 import javax.inject.Inject
 
 class UpdateFriendMonitoringUseCase @Inject constructor(
-    private val ircRepository: IrcRepository
+    private val ircConnection: IrcConnection
 ) {
     suspend operator fun invoke(friends: Set<String>) {
-        if (friends.isNotEmpty() && ircRepository.connectionState.value) {
+        if (friends.isNotEmpty() && ircConnection.connectionState.value) {
             friends.forEach { friend ->
-                ircRepository.sendRawCommand("WHOIS $friend", isSilent = true)
+                ircConnection.sendRawCommand("WHOIS $friend", isSilent = true)
             }
         }
     }

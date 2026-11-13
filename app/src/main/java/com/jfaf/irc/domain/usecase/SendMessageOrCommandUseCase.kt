@@ -3,7 +3,7 @@ package com.jfaf.irc.domain.usecase
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import androidx.compose.ui.text.AnnotatedString
-import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.model.UiChatMessage
 import com.jfaf.irc.domain.chat.model.UiMessageType
@@ -21,7 +21,7 @@ sealed interface SendMessageActionStatus {
 
 class SendMessageOrCommandUseCase @Inject constructor(
     private val strings: StringProvider,
-    private val ircRepository: IrcRepository,
+    private val ircConnection: IrcConnection,
     private val chatStateManager: ChatStateManager,
     private val commandProcessor: CommandProcessor
 ) {
@@ -31,7 +31,7 @@ class SendMessageOrCommandUseCase @Inject constructor(
         currentOwnNickname: String
     ): SendMessageActionStatus {
 
-        if (!ircRepository.connectionState.value) {
+        if (!ircConnection.connectionState.value) {
             chatStateManager.addSystemMessageToTarget(
                 currentActiveTargetFromViewModel ?: ChatStateManager.SERVER_TARGET_ID,
                 strings.get(Msg.SEND_NOT_CONNECTED),
@@ -117,7 +117,7 @@ class SendMessageOrCommandUseCase @Inject constructor(
                 isOwnMessage = true
             )
             chatStateManager.addLocalUiMessageToTarget(currentActiveTargetFromViewModel, uiMessage)
-            ircRepository.sendMessage(currentActiveTargetFromViewModel, messageContent)
+            ircConnection.sendMessage(currentActiveTargetFromViewModel, messageContent)
             return SendMessageActionStatus.Success
         }
     }

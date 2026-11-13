@@ -5,7 +5,7 @@ import android.content.Intent
 import com.jfaf.irc.log.Log
 import androidx.core.content.ContextCompat
 import com.jfaf.irc.data.model.ParsedIrcMessage
-import com.jfaf.irc.domain.IrcSender
+import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.service.IrcService
 import com.jfaf.irc.service.IrcServiceApi
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -19,16 +19,16 @@ import javax.inject.Singleton
 class IrcRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val ircServiceApi: IrcServiceApi
-) : IrcSender {
+) : IrcConnection {
     private val TAG = "IrcRepository"
 
     private val silentWhoisNicks = ConcurrentHashMap.newKeySet<String>()
 
-    val connectionState: StateFlow<Boolean> = ircServiceApi.connectionState
-    val isReconnecting: StateFlow<Boolean> = ircServiceApi.isReconnecting
-    val incomingMessages: SharedFlow<ParsedIrcMessage> = ircServiceApi.incomingMessages
+    override val connectionState: StateFlow<Boolean> = ircServiceApi.connectionState
+    override val isReconnecting: StateFlow<Boolean> = ircServiceApi.isReconnecting
+    override val incomingMessages: SharedFlow<ParsedIrcMessage> = ircServiceApi.incomingMessages
 
-    fun connect(serverHost: String, serverPort: Int, useSsl: Boolean, nickname: String) {
+    override fun connect(serverHost: String, serverPort: Int, useSsl: Boolean, nickname: String) {
         Log.d(TAG, "Solicitando conexión al servicio para: $nickname@$serverHost:$serverPort")
         val intent = Intent(context, IrcService::class.java).apply {
             action = IrcService.ACTION_CONNECT
@@ -40,16 +40,7 @@ class IrcRepository @Inject constructor(
         sendToService(intent)
     }
 
-    @Deprecated("Use disconnectAndStopService for a full cleanup including service stop", ReplaceWith("disconnectAndStopService(null)"))
-    fun disconnect() {
-        Log.d(TAG, "Solicitando SOLO desconexión del socket IRC al servicio (sin detener el servicio)")
-        val intent = Intent(context, IrcService::class.java).apply {
-            action = IrcService.ACTION_DISCONNECT
-        }
-        sendToService(intent)
-    }
-
-    fun disconnectAndStopService(quitMessage: String? = null) {
+    override fun disconnect(quitMessage: String?) {
         Log.d(TAG, "Solicitando desconexión Y DETENCIÓN del servicio IRC. Mensaje: $quitMessage")
         val intent = Intent(context, IrcService::class.java).apply {
             action = IrcService.ACTION_DISCONNECT_AND_STOP_SERVICE
@@ -58,7 +49,7 @@ class IrcRepository @Inject constructor(
         sendToService(intent)
     }
 
-    fun joinChannel(channelName: String, key: String? = null) {
+    override fun joinChannel(channelName: String, key: String?) {
         Log.d(TAG, "Solicitando unirse al canal $channelName${key?.let { " con clave" } ?: ""} vía servicio")
         val intent = Intent(context, IrcService::class.java).apply {
             action = IrcService.ACTION_JOIN_CHANNEL
@@ -68,7 +59,7 @@ class IrcRepository @Inject constructor(
         sendToService(intent)
     }
 
-    fun partChannel(channelName: String, partMessage: String? = null) {
+    override fun partChannel(channelName: String, partMessage: String?) {
         Log.d(TAG, "Solicitando salir del canal $channelName${partMessage?.let { " con mensaje: $it" } ?: ""} vía servicio")
         val intent = Intent(context, IrcService::class.java).apply {
             action = IrcService.ACTION_PART_CHANNEL
@@ -111,11 +102,11 @@ class IrcRepository @Inject constructor(
         ContextCompat.startForegroundService(context, intent)
     }
 
-    fun isWhoisSilent(nick: String): Boolean {
+    override fun isWhoisSilent(nick: String): Boolean {
         return silentWhoisNicks.contains(nick.lowercase())
     }
 
-    fun completeSilentWhois(nick: String) {
+    override fun completeSilentWhois(nick: String) {
         silentWhoisNicks.remove(nick.lowercase())
     }
 }

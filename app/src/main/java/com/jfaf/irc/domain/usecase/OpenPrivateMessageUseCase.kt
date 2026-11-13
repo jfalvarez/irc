@@ -3,7 +3,7 @@ package com.jfaf.irc.domain.usecase
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import androidx.compose.ui.text.AnnotatedString
-import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.model.UiChatMessage
 import com.jfaf.irc.domain.chat.model.UiMessageType
@@ -17,7 +17,7 @@ sealed interface OpenPrivateMessageResult {
 class OpenPrivateMessageUseCase @Inject constructor(
     private val strings: StringProvider,
     private val chatStateManager: ChatStateManager,
-    private val ircRepository: IrcRepository // Added IrcRepository
+    private val ircConnection: IrcConnection
 ) {
     suspend operator fun invoke(
         nick: String, 
@@ -39,7 +39,7 @@ class OpenPrivateMessageUseCase @Inject constructor(
         }
 
         if (!initialMessage.isNullOrBlank()) {
-            if (!ircRepository.connectionState.value) {
+            if (!ircConnection.connectionState.value) {
                 chatStateManager.addSystemMessageToTarget(
                     nick, 
                     strings.get(Msg.PM_NOT_CONNECTED, nick),
@@ -55,7 +55,7 @@ class OpenPrivateMessageUseCase @Inject constructor(
                     isOwnMessage = true
                 )
                 chatStateManager.addLocalUiMessageToTarget(nick, uiMessage) 
-                ircRepository.sendMessage(nick, initialMessage)
+                ircConnection.sendMessage(nick, initialMessage)
             }
         }
         return OpenPrivateMessageResult.Success

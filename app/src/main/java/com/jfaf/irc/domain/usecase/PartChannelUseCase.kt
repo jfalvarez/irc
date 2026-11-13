@@ -2,7 +2,7 @@ package com.jfaf.irc.domain.usecase
 
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
-import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import javax.inject.Inject
 
@@ -13,7 +13,7 @@ sealed interface PartChannelResult {
 
 class PartChannelUseCase @Inject constructor(
     private val strings: StringProvider,
-    private val ircRepository: IrcRepository,
+    private val ircConnection: IrcConnection,
     private val chatStateManager: ChatStateManager
 ) {
     suspend operator fun invoke(
@@ -34,7 +34,7 @@ class PartChannelUseCase @Inject constructor(
             return PartChannelResult.Failure(errorMessage)
         }
 
-        ircRepository.partChannel(targetToPart, partMessage)
+        ircConnection.partChannel(targetToPart, partMessage)
         // Optionally, add a system message here confirming the part attempt, e.g.:
         // chatStateManager.addSystemMessageToTarget(targetToPart, "Saliendo de $targetToPart...")
         // However, the server usually sends PART messages that IrcMessageHandler will process.

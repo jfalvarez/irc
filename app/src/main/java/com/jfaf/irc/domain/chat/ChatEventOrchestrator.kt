@@ -1,10 +1,10 @@
-package com.jfaf.irc.ui.viewmodels
+package com.jfaf.irc.domain.chat
 
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.data.model.ParsedIrcMessage
-import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.user.UserMetadataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +19,7 @@ interface ChatEventListener {
 }
 
 class ChatEventOrchestrator(
-    private val ircRepository: IrcRepository,
+    private val ircConnection: IrcConnection,
     private val userMetadataStore: UserMetadataStore,
     private val eventListener: ChatEventListener,
     private val scope: CoroutineScope,
@@ -29,7 +29,7 @@ class ChatEventOrchestrator(
     private val _autoRepliedToIgnoredUsersThisSession = MutableStateFlow<Set<String>>(emptySet())
 
     fun startObservingRawMessages() {
-        ircRepository.incomingMessages
+        ircConnection.incomingMessages
             .combine(userMetadataStore.ignoredUsersFlow) { parsedMessage, currentIgnoredNicks ->
                 Pair(parsedMessage, currentIgnoredNicks.map { it.lowercase() }.toSet())
             }
@@ -49,9 +49,9 @@ class ChatEventOrchestrator(
                             if (isPrivateMessageToUs) {
                                 if (senderNickLowercase !in _autoRepliedToIgnoredUsersThisSession.value) {
                                     Log.d("ChatEventOrchestrator", "Sender $senderNick (ignored) sent PM. Sending auto-reply.")
-                                    // Use ircRepository.connectionState.value directly
-                                    if (ircRepository.connectionState.value) {
-                                        ircRepository.sendMessage(senderNick, strings.get(Msg.AUTO_REPLY_IGNORED))
+                                    // Use ircConnection.connectionState.value directly
+                                    if (ircConnection.connectionState.value) {
+                                        ircConnection.sendMessage(senderNick, strings.get(Msg.AUTO_REPLY_IGNORED))
                                     }
                                     _autoRepliedToIgnoredUsersThisSession.value += senderNickLowercase
                                 } else {

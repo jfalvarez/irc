@@ -4,7 +4,7 @@ import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
-import com.jfaf.irc.data.repositories.IrcRepository
+import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -12,7 +12,7 @@ import javax.inject.Inject
 class ConnectUseCase @Inject constructor(
     private val strings: StringProvider,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val ircRepository: IrcRepository,
+    private val ircConnection: IrcConnection,
     private val chatStateManager: ChatStateManager
 ) {
     suspend operator fun invoke(
@@ -45,8 +45,8 @@ class ConnectUseCase @Inject constructor(
             ChatStateManager.SERVER_TARGET_ID, 
             strings.get(Msg.CONNECTING_TO, hostToConnect, nickname)
         )
-        ircRepository.connect(hostToConnect, portToConnect, ssl, nickname)
+        ircConnection.connect(hostToConnect, portToConnect, ssl, nickname)
         // Pestañas de canal restauradas o abiertas antes: el cliente envía los JOIN al recibir el 001.
-        chatStateManager.chatTargets.value.filter { it.startsWith("#") }.forEach { ircRepository.joinChannel(it) }
+        chatStateManager.chatTargets.value.filter { it.startsWith("#") }.forEach { ircConnection.joinChannel(it) }
     }
 }
