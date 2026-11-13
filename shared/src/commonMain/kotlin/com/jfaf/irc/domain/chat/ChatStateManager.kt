@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 
 class ChatStateManager {
 
@@ -26,6 +27,15 @@ class ChatStateManager {
 
     private val _unreadTargets = MutableStateFlow<Set<String>>(emptySet())
     val unreadTargets: StateFlow<Set<String>> = _unreadTargets.asStateFlow()
+
+    private val _unreadPmCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
+
+    /**
+     * Mensajes privados sin leer por conversación. Sólo hay entrada mientras la conversación
+     * está en [unreadTargets]: en cuanto se activa, se cierra o se resetea, desaparece.
+     * Sólo en memoria: no se persiste.
+     */
+    val unreadPmCounts: StateFlow<Map<String, Int>> = _unreadPmCounts.asStateFlow()
 
     private val _usersInChannel = MutableStateFlow<Map<String, List<String>>>(emptyMap())
     val usersInChannel: StateFlow<Map<String, List<String>>> = _usersInChannel.asStateFlow()
@@ -44,6 +54,19 @@ class ChatStateManager {
     }
 
     // --- Funciones privadas de ayuda ---
+
+    /** Único punto que modifica los no leídos: mantiene los contadores de privados en sintonía con el conjunto. */
+    private fun updateUnread(transform: (Set<String>) -> Set<String>) {
+        val updated = _unreadTargets.updateAndGet(transform)
+        _unreadPmCounts.update { counts ->
+            if (counts.keys.all { it in updated }) counts else counts.filterKeys { it in updated }
+        }
+    }
+
+    private fun countUnreadPm(target: String) {
+        _unreadPmCounts.update { counts -> counts + (target to ((counts[target] ?: 0) + 1)) }
+    }
+
     private fun getSortedUserList(users: List<String>): List<String> {
         return users.sortedWith(
             compareBy<String> {
@@ -105,7 +128,7 @@ class ChatStateManager {
     fun setActiveTarget(targetName: String, currentOwnNickname: String) {
         if (_chatTargets.value.any { it.equals(targetName, ignoreCase = true) } || targetName == SERVER_TARGET_ID) {
             _activeTarget.value = targetName
-            _unreadTargets.update { it - targetName } // Mark as read
+            updateUnread { it - targetName } // Mark as read
             Log.d("ChatStateManager", "Target '$targetName' activated and marked as read.")
         } else {
             Log.w("ChatStateManager", "Attempt to activate non-existent target: $targetName. Current targets: ${_chatTargets.value.joinToString()}")
@@ -133,7 +156,7 @@ class ChatStateManager {
             if (currentAll[nick] == null) currentAll + (nick to emptyList()) else currentAll
         }
         _activeTarget.value = nick
-        _unreadTargets.update { it - nick }
+        updateUnread { it - nick }
         Log.d("ChatStateManager", "PM Target opened/activated: '$nick'")
         if (_showUserList.value) { // If the list is currently shown, hide it
             _showUserList.value = false
@@ -186,7 +209,7 @@ class ChatStateManager {
 
         if (!targetName.startsWith("#")) { // Es un PM
             _chatTargets.update { ensureServerTargetIsFirstLocal(it.filterNot { t -> t.equals(targetName, ignoreCase = true) }) }
-            _unreadTargets.update { it - targetName }
+            updateUnread { it - targetName }
             _usersInChannel.update { it - targetName }
             _allMessages.update { it - targetName }
 
@@ -194,7 +217,7 @@ class ChatStateManager {
                 val nextTarget = _chatTargets.value.firstOrNull() ?: SERVER_TARGET_ID
                 _activeTarget.value = nextTarget
                 newActiveTargetToSuggest = nextTarget
-                _unreadTargets.update { it - nextTarget } // Mark new active as read
+                updateUnread { it - nextTarget } // Mark new active as read
                  if (_showUserList.value) { // Also hide user list if active target changed due to closing current PM
                     _showUserList.value = false
                     Log.d("ChatStateManager", "User list hidden due to active target change from closing PM.")
@@ -209,7 +232,7 @@ class ChatStateManager {
                  _showUserList.value = false
                  Log.d("ChatStateManager", "User list hidden because active channel '$targetName' is being closed.")
             }
-             _unreadTargets.update { it - targetName}
+             updateUnread { it - targetName }
              Log.d("ChatStateManager", "Channel target '$targetName' marked as read due to active close initiation.")
         }
         return newActiveTargetToSuggest
@@ -242,7 +265,7 @@ class ChatStateManager {
         if (_chatTargets.value.none { it == _activeTarget.value }) {
             _activeTarget.value = SERVER_TARGET_ID
         }
-        _unreadTargets.value = emptySet()
+        updateUnread { emptySet() }
         _usersInChannel.value = emptyMap()
         _allMessages.update { it + (SERVER_TARGET_ID to emptyList()) }
         _showUserList.value = false
@@ -252,7 +275,7 @@ class ChatStateManager {
     /** Desconexión: se conservan pestañas e historial; los usuarios de los canales dejan de ser válidos. */
     fun resetStateForDisconnection() {
         _chatTargets.update { ensureServerTargetIsFirstLocal(it + SERVER_TARGET_ID) }
-        _unreadTargets.value = emptySet()
+        updateUnread { emptySet() }
         _usersInChannel.value = emptyMap()
         _allMessages.update { current ->
             if (current.containsKey(SERVER_TARGET_ID)) current else current + (SERVER_TARGET_ID to emptyList())
@@ -278,7 +301,15 @@ class ChatStateManager {
             }
         }
         result.newChatTargets?.let { _chatTargets.value = ensureServerTargetIsFirstLocal(it) }
-        result.newUnreadTargets?.let { _unreadTargets.value = it }
+        result.newUnreadTargets?.let { newUnread -> updateUnread { newUnread } }
+        // Un privado recibido que deja la conversación sin leer (no es la activa) suma al contador.
+        val incoming = result.uiMessageToAdd
+        val incomingTarget = result.targetForUiMessage
+        if (incoming?.type == UiMessageType.PRIVATE_MSG_RECEIVED && incomingTarget != null &&
+            incomingTarget in _unreadTargets.value
+        ) {
+            countUnreadPm(incomingTarget)
+        }
         result.newUsersInChannel?.let { newMap ->
             _usersInChannel.value = newMap.mapValues { (_, userList) -> getSortedUserList(userList) }
         }

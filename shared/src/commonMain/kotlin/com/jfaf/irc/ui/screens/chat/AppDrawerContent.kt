@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.Badge
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,10 +39,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jfaf.irc.ui.theme.IRCTheme
+
+private const val MAX_BADGE_COUNT = 99
 
 @Composable
 private fun SectionHeader(
@@ -86,7 +91,9 @@ private fun DrawerListItem(
     isUnread: Boolean,
     onTargetSelected: (String) -> Unit,
     onCloseTargetAction: ((String) -> Unit)?,
-    trailingIcon: @Composable (() -> Unit)? = null
+    trailingIcon: @Composable (() -> Unit)? = null,
+    /** Privados sin leer de esta conversación; 0 = sin insignia. */
+    unreadCount: Int = 0
 ) {
     val fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal
     val textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
@@ -96,13 +103,25 @@ private fun DrawerListItem(
         selected = isSelected,
         onClick = { onTargetSelected(target) },
         badge = {
-            if (onCloseTargetAction != null) {
-                IconButton(onClick = { onCloseTargetAction(target) }) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ExitToApp,
-                        stringResource(Res.string.cd_close_target, target),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (unreadCount > 0) {
+                    val description = stringResource(Res.string.cd_unread_messages, unreadCount)
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                        modifier = Modifier.semantics { contentDescription = description }
+                    ) {
+                        Text(if (unreadCount > MAX_BADGE_COUNT) "$MAX_BADGE_COUNT+" else unreadCount.toString())
+                    }
+                }
+                if (onCloseTargetAction != null) {
+                    IconButton(onClick = { onCloseTargetAction(target) }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ExitToApp,
+                            stringResource(Res.string.cd_close_target, target),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
         },
@@ -120,6 +139,7 @@ fun AppDrawerContent(
     chatTargets: List<String>,
     activeTarget: String?,
     unreadTargets: Set<String>,
+    unreadPmCounts: Map<String, Int>,
     onlineFriends: Set<String>,
     currentNick: String,
     onTargetSelected: (String) -> Unit,
@@ -200,7 +220,8 @@ fun AppDrawerContent(
                                         isUnread = unreadTargets.contains(friend),
                                         onTargetSelected = { onOpenPrivateMessage(friend) },
                                         onCloseTargetAction = null,
-                                        trailingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) }
+                                        trailingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) },
+                                        unreadCount = unreadPmCounts[friend] ?: 0
                                     )
                                 }
                             }
@@ -252,7 +273,8 @@ fun AppDrawerContent(
                                         isSelected = target == activeTarget,
                                         isUnread = unreadTargets.contains(target),
                                         onTargetSelected = onTargetSelected,
-                                        onCloseTargetAction = onCloseTargetAction
+                                        onCloseTargetAction = onCloseTargetAction,
+                                        unreadCount = unreadPmCounts[target] ?: 0
                                     )
                                 }
                             }

@@ -1,7 +1,11 @@
 package com.jfaf.irc.domain.chat
 
+import com.jfaf.irc.data.model.IrcLineParser
 import com.jfaf.irc.domain.chat.model.UiChatMessage
 import com.jfaf.irc.domain.chat.model.UiMessageType
+import com.jfaf.irc.domain.config.AppConfig
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -128,5 +132,105 @@ class ChatStateManagerTest {
         assertEquals(listOf(server, "#chat"), state.chatTargets.value)
         assertEquals("a", state.allMessages.value.getValue("#chat").single().fullText)
         assertTrue(state.usersInChannel.value.isEmpty())
+    }
+
+    // --- Privados sin leer (#28): se recibe una línea real, la procesa el IrcMessageHandler y se aplica al estado
+    private val handler = IrcMessageHandler(
+        object : StringProvider {
+            override fun get(msg: Msg, vararg args: Any) = msg.name
+        },
+        object : AppConfig {
+            override val imageFilterKeywords = emptySet<String>()
+            override val googleSignInClientId = ""
+        }
+    )
+
+    private fun receive(line: String, own: String = "Yo") {
+        val snapshot = ChatUiSnapshot(
+            currentNickname = own,
+            activeTarget = state.activeTarget.value,
+            allMessages = state.allMessages.value,
+            chatTargets = state.chatTargets.value,
+            unreadTargets = state.unreadTargets.value,
+            usersInChannel = state.usersInChannel.value
+        )
+        state.updateStateFromHandlerResult(handler.processMessage(snapshot, IrcLineParser.parse(line)!!)) { own }
+    }
+
+    private fun pm(from: String, text: String = "hola") = receive(":$from!u@h PRIVMSG Yo :$text")
+
+    @Test
+    fun privadosEnPestanaNoActiva_sumanAlContador() {
+        pm("Ana")
+        pm("Ana")
+        pm("Luis")
+        assertEquals(mapOf("Ana" to 2, "Luis" to 1), state.unreadPmCounts.value)
+        assertTrue("Ana" in state.unreadTargets.value)
+    }
+
+    @Test
+    fun privadoEnLaPestanaActiva_noCuenta() {
+        state.openPrivateMessageTarget("Ana", "Yo")
+        pm("Ana")
+        assertTrue(state.unreadPmCounts.value.isEmpty())
+        assertFalse("Ana" in state.unreadTargets.value)
+    }
+
+    @Test
+    fun mensajeDeCanal_noSumaAlContadorDePrivados() {
+        state.addChannelTarget("#chat")
+        receive(":Ana!u@h PRIVMSG #chat :hola a todos")
+        assertTrue(state.unreadPmCounts.value.isEmpty())
+        assertTrue("#chat" in state.unreadTargets.value)
+    }
+
+    @Test
+    fun mensajePropio_noSuma() {
+        state.addChannelTarget("#chat")
+        receive(":Yo!u@h PRIVMSG Ana :hola")
+        assertTrue(state.unreadPmCounts.value.isEmpty())
+    }
+
+    @Test
+    fun activarLaConversacion_poneSuContadorACero() {
+        pm("Ana")
+        pm("Luis")
+        state.setActiveTarget("Ana", "Yo")
+        assertEquals(mapOf("Luis" to 1), state.unreadPmCounts.value)
+    }
+
+    @Test
+    fun abrirLaConversacion_poneSuContadorACero() {
+        pm("Ana")
+        state.openPrivateMessageTarget("Ana", "Yo")
+        assertTrue(state.unreadPmCounts.value.isEmpty())
+    }
+
+    @Test
+    fun despuesDeLeer_losNuevosPrivadosEmpiezanDeCero() {
+        pm("Ana")
+        pm("Ana")
+        state.setActiveTarget("Ana", "Yo")
+        state.setActiveTarget(server, "Yo")
+        pm("Ana")
+        assertEquals(mapOf("Ana" to 1), state.unreadPmCounts.value)
+    }
+
+    @Test
+    fun cerrarLaConversacion_borraSuContador() {
+        pm("Ana")
+        state.closeTarget("Ana", state.activeTarget.value, "Yo")
+        assertTrue(state.unreadPmCounts.value.isEmpty())
+    }
+
+    @Test
+    fun resetPorConexionYDesconexion_borranLosContadores() {
+        pm("Ana")
+        state.resetStateForConnection()
+        assertTrue(state.unreadPmCounts.value.isEmpty())
+
+        pm("Ana")
+        state.resetStateForDisconnection()
+        assertTrue(state.unreadPmCounts.value.isEmpty())
     }
 }

@@ -7,6 +7,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,6 +24,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import org.jetbrains.compose.resources.stringResource
 
 import com.jfaf.irc.ui.screens.chat.InputDialog
@@ -31,6 +35,8 @@ import com.jfaf.irc.ui.theme.IRCTheme
 @Composable
 fun ChatTopAppBar(
     activeTarget: String?,
+    /** Privados sin leer en otras pestañas: se muestra un punto sobre el icono del menú. */
+    unreadPmCount: Int = 0,
     onNavigationIconClick: () -> Unit,
     /** Ventana ancha de escritorio: las pestañas son un panel fijo y no hace falta el botón del cajón. */
     showNavigationIcon: Boolean = true,
@@ -59,7 +65,21 @@ fun ChatTopAppBar(
         title = { Text(activeTarget ?: stringResource(Res.string.app_title_default)) },
         navigationIcon = {
             if (showNavigationIcon) {
-                IconButton(onClick = onNavigationIconClick) { Icon(Icons.Filled.Menu, stringResource(Res.string.cd_open_navigation_menu)) }
+                IconButton(onClick = onNavigationIconClick) {
+                    BadgedBox(
+                        badge = {
+                            if (unreadPmCount > 0) {
+                                val description = stringResource(Res.string.cd_unread_private_messages)
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.semantics { contentDescription = description }
+                                )
+                            }
+                        }
+                    ) {
+                        Icon(Icons.Filled.Menu, stringResource(Res.string.cd_open_navigation_menu))
+                    }
+                }
             }
         },
         actions = {

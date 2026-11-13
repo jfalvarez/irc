@@ -88,6 +88,8 @@
     <string name="drawer_user_connected_as">Conectado como: %1$s</string>    <string name="cd_channel">Canal</string>
     <string name="cd_server">Servidor</string>
     <string name="cd_close_target">Cerrar %1$s</string>
+    <string name="cd_unread_messages">%1$d mensajes sin leer</string>
+    <string name="cd_unread_private_messages">Hay mensajes privados sin leer</string>
     <string name="label_write_message">Escribe un mensaje...</string>
     <string name="cd_send_message">Enviar mensaje</string>
     <string name="cd_navigate_up">Volver</string>

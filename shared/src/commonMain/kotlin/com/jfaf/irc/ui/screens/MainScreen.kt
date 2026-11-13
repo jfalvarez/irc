@@ -99,6 +99,7 @@ fun MainScreen(
     val platformUi = LocalPlatformUi.current
     val chatTargets by viewModel.chatScreenState.chatTargets.collectAsState()
     val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
+    val unreadPmCounts by viewModel.chatScreenState.unreadPmCounts.collectAsState()
 
     // Atajos de teclado: Ctrl+Tab / Ctrl+Mayús+Tab cambian de pestaña y Ctrl+W cierra la activa (menos Servidor).
     val shortcuts = Modifier.chatShortcuts(
@@ -121,6 +122,7 @@ fun MainScreen(
                     if (connectionState) {
                         ChatTopAppBar(
                             activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value,
+                            unreadPmCount = unreadPmCounts.values.sum(),
                             onNavigationIconClick = { scope.launch { drawerState.open() } },
                             showNavigationIcon = !wide,
                             showUserListOption = !wide,
@@ -215,6 +217,7 @@ private fun AppDrawerMainContent(
             chatTargets = viewModel.chatScreenState.chatTargets.collectAsState().value,
             activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value,
             unreadTargets = viewModel.chatScreenState.unreadTargets.collectAsState().value,
+            unreadPmCounts = viewModel.chatScreenState.unreadPmCounts.collectAsState().value,
             onlineFriends = onlineFriends,
             currentNick = viewModel.currentNickname,
             onTargetSelected = {

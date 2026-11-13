@@ -65,6 +65,8 @@ data class ChatScreenState(
     val activeTarget: StateFlow<String?>,
     val chatTargets: StateFlow<List<String>>,
     val unreadTargets: StateFlow<Set<String>>,
+    /** Privados sin leer por conversación (para la insignia del cajón y el punto del menú). */
+    val unreadPmCounts: StateFlow<Map<String, Int>>,
     val uiMessages: StateFlow<List<UiChatMessage>>,
     /** true si está conectado O reconectando (la UI mantiene el chat visible mientras reconecta). */
     val connectionState: StateFlow<Boolean>,
@@ -220,6 +222,7 @@ class MainViewModel(
         activeTarget = chatStateManager.activeTarget,
         chatTargets = chatStateManager.chatTargets,
         unreadTargets = chatStateManager.unreadTargets,
+        unreadPmCounts = chatStateManager.unreadPmCounts,
         uiMessages = combinedUiMessagesFlow,
         connectionState = uiConnectionState,
         isReconnecting = ircConnection.isReconnecting,
