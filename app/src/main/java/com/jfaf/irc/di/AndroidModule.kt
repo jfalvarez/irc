@@ -19,6 +19,7 @@ import com.jfaf.irc.data.prefs.USER_PREFERENCES_FILE
 import com.jfaf.irc.data.prefs.createPreferencesDataStore
 import com.jfaf.irc.data.remote.IrcTransport
 import com.jfaf.irc.data.remote.JvmSocketTransport
+import com.jfaf.irc.data.text.ComposeStringProvider
 import com.jfaf.irc.domain.config.AppConfig
 import com.jfaf.irc.domain.notifications.Notifier
 import com.jfaf.irc.domain.platform.AdProvider
@@ -30,9 +31,9 @@ import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.service.AndroidConnectionHost
 import com.jfaf.irc.service.AndroidNotifier
-import com.jfaf.irc.util.AndroidStringProvider
 import com.jfaf.irc.util.BuildConfigAppConfig
 import org.koin.android.ext.koin.androidContext
+import kotlinx.coroutines.runBlocking
 import org.koin.dsl.module
 
 /** Implementaciones Android: Context, Room, DataStore, Firebase, AdMob y servicio. */
@@ -49,7 +50,8 @@ val androidModule = module {
 
     // Plataforma
     factory<IrcTransport> { JvmSocketTransport() } // uno nuevo por intento de conexión
-    single<StringProvider> { AndroidStringProvider(androidContext()) }
+    // Se crea al primer uso (al crear el ViewModel): lee una vez los textos de Compose Resources.
+    single<StringProvider> { runBlocking { ComposeStringProvider.load() } }
     single<AppConfig> { BuildConfigAppConfig() }
     single<ConnectionHost> { AndroidConnectionHost(androidContext()) }
     single<Notifier> { AndroidNotifier(androidContext()) }

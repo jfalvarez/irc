@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library)
     // Compilador de Compose: el modelo del chat (AnnotatedString) se pinta en :app y debe seguir siendo estable.
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose.multiplatform) // Compose Resources (textos)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
 }
@@ -24,6 +25,7 @@ kotlin {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }
+        androidResources { enable = true } // Compose Resources en Android
         // Ejecuta commonTest también en la JVM del host con el classpath de Android.
         withHostTest {}
     }
@@ -54,12 +56,17 @@ kotlin {
             api(libs.compose.mp.runtime)
             api(libs.compose.mp.ui.text)
             api(libs.compose.mp.ui.graphics)
+            implementation(libs.compose.mp.resources)
             api(libs.androidx.room.runtime)
             api(libs.androidx.sqlite.bundled)
             api(libs.koin.core) // commonModule
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+        // Leer Compose Resources en la JVM de escritorio necesita el runtime nativo de Skia (skiko).
+        named("desktopTest").dependencies {
+            implementation(compose.desktop.currentOs)
         }
     }
 }
@@ -68,6 +75,10 @@ dependencies {
     // Room genera el código de la base de datos para cada target.
     add("kspAndroid", libs.androidx.room.compiler)
     add("kspDesktop", libs.androidx.room.compiler)
+}
+
+compose.resources {
+    packageOfResClass = "com.jfaf.irc.resources"
 }
 
 room {
