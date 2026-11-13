@@ -1,5 +1,7 @@
 package com.jfaf.irc.ui.screens.connection
 
+import com.jfaf.irc.resources.Res
+import com.jfaf.irc.resources.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,7 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -64,7 +66,7 @@ fun ConnectionSetupSection(
         ThemedOutlinedTextField(
             value = nickname,
             onValueChange = onNicknameChange,
-            label = { Text(stringResource(R.string.label_nickname)) },
+            label = { Text(stringResource(Res.string.label_nickname)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
@@ -74,7 +76,7 @@ fun ConnectionSetupSection(
         ThemedOutlinedTextField(
             value = nickServPasswordState.value,
             onValueChange = { nickServPasswordState.value = it },
-            label = { Text(stringResource(R.string.label_nickserv_password)) },
+            label = { Text(stringResource(Res.string.label_nickserv_password)) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
@@ -89,7 +91,7 @@ fun ConnectionSetupSection(
                 checked = rememberNickServPasswordState.value,
                 onCheckedChange = { rememberNickServPasswordState.value = it }
             )
-            Text(stringResource(R.string.label_remember_password), color = MaterialTheme.colorScheme.onBackground)
+            Text(stringResource(Res.string.label_remember_password), color = MaterialTheme.colorScheme.onBackground)
         }
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedButton(
@@ -101,7 +103,7 @@ fun ConnectionSetupSection(
                 contentColor = MaterialTheme.colorScheme.onPrimary
             )
         ) {
-            Text(stringResource(R.string.button_connect))
+            Text(stringResource(Res.string.button_connect))
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -110,18 +112,18 @@ fun ConnectionSetupSection(
 
         if (isUserAuthenticated) {
             Text(
-                text = stringResource(R.string.account_signed_in_as, currentUser?.email ?: ""),
+                text = stringResource(Res.string.account_signed_in_as, currentUser?.email ?: ""),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(16.dp))
             TextButton(onClick = { signInViewModel.signOut() }) {
-                Text(stringResource(R.string.account_sign_out))
+                Text(stringResource(Res.string.account_sign_out))
             }
         } else {
             Text(
-                text = stringResource(R.string.account_sign_in_hint),
+                text = stringResource(Res.string.account_sign_in_hint),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -146,7 +148,7 @@ fun ConnectionSetupSection(
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-                Text(stringResource(R.string.account_sign_in_google))
+                Text(stringResource(Res.string.account_sign_in_google))
             }
         }
     }

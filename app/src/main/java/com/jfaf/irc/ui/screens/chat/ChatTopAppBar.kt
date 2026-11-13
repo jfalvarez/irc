@@ -1,5 +1,7 @@
 package com.jfaf.irc.ui.screens.chat
 
+import com.jfaf.irc.resources.Res
+import com.jfaf.irc.resources.*
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -20,8 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.jfaf.irc.R
+import org.jetbrains.compose.resources.stringResource
 
 import com.jfaf.irc.ui.screens.chat.InputDialog
 import com.jfaf.irc.ui.theme.IRCTheme
@@ -51,13 +52,13 @@ fun ChatTopAppBar(
                activeTarget != "Servidor"
 
     TopAppBar(
-        title = { Text(activeTarget ?: stringResource(R.string.app_title_default)) },
-        navigationIcon = { IconButton(onClick = onNavigationIconClick) { Icon(Icons.Filled.Menu, stringResource(R.string.cd_open_navigation_menu)) } },
+        title = { Text(activeTarget ?: stringResource(Res.string.app_title_default)) },
+        navigationIcon = { IconButton(onClick = onNavigationIconClick) { Icon(Icons.Filled.Menu, stringResource(Res.string.cd_open_navigation_menu)) } },
         actions = {
             if (isChannel) {
-                IconButton(onClick = onToggleUserList) { Icon(Icons.Filled.Person, stringResource(R.string.cd_toggle_user_list)) }
+                IconButton(onClick = onToggleUserList) { Icon(Icons.Filled.Person, stringResource(Res.string.cd_toggle_user_list)) }
             }
-            IconButton(onClick = { showMenu = !showMenu }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.cd_more_options)) }
+            IconButton(onClick = { showMenu = !showMenu }) { Icon(Icons.Filled.MoreVert, stringResource(Res.string.cd_more_options)) }
             DropdownMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false },
@@ -65,21 +66,21 @@ fun ChatTopAppBar(
             ) {
                 if (isPm && activeTarget != null) { // activeTarget null check for safety
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_whois_user, activeTarget), color = MaterialTheme.colorScheme.onSurface) },
+                        text = { Text(stringResource(Res.string.action_whois_user, activeTarget), color = MaterialTheme.colorScheme.onSurface) },
                         onClick = {
                             showMenu = false
                             onWhoisClick(activeTarget)
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.menu_item_add_friend, activeTarget), color = MaterialTheme.colorScheme.onSurface) },
+                        text = { Text(stringResource(Res.string.menu_item_add_friend, activeTarget), color = MaterialTheme.colorScheme.onSurface) },
                         onClick = {
                             showMenu = false
                             onAddFriendInPm(activeTarget)
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.menu_item_ignore_user, activeTarget), color = MaterialTheme.colorScheme.onSurface) },
+                        text = { Text(stringResource(Res.string.menu_item_ignore_user, activeTarget), color = MaterialTheme.colorScheme.onSurface) },
                         onClick = {
                             showMenu = false
                             onIgnoreUserInPm(activeTarget)
@@ -87,7 +88,7 @@ fun ChatTopAppBar(
                     )
                 } else {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.menu_item_private_message_to), color = MaterialTheme.colorScheme.onSurface) },
+                        text = { Text(stringResource(Res.string.menu_item_private_message_to), color = MaterialTheme.colorScheme.onSurface) },
                         onClick = {
                             showMenu = false
                             showOpenPmDialog = true
@@ -95,14 +96,14 @@ fun ChatTopAppBar(
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_item_join_channel), color = MaterialTheme.colorScheme.onSurface) },
+                    text = { Text(stringResource(Res.string.menu_item_join_channel), color = MaterialTheme.colorScheme.onSurface) },
                     onClick = {
                         showMenu = false
                         showJoinChannelDialog = true
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_item_disconnect), color = MaterialTheme.colorScheme.onSurface) },
+                    text = { Text(stringResource(Res.string.menu_item_disconnect), color = MaterialTheme.colorScheme.onSurface) },
                     onClick = {
                         showMenu = false
                         onDisconnectClick()
@@ -120,8 +121,8 @@ fun ChatTopAppBar(
 
     if (showJoinChannelDialog) {
         InputDialog(
-            title = stringResource(R.string.dialog_title_join_channel),
-            label = stringResource(R.string.dialog_label_channel_name),
+            title = stringResource(Res.string.dialog_title_join_channel),
+            label = stringResource(Res.string.dialog_label_channel_name),
             onDismiss = { showJoinChannelDialog = false },
             onConfirm = { channelName ->
                 if (channelName.isNotBlank()) {
@@ -134,8 +135,8 @@ fun ChatTopAppBar(
 
     if (showOpenPmDialog) {
         InputDialog(
-            title = stringResource(R.string.dialog_title_open_private_message),
-            label = stringResource(R.string.dialog_label_user_nickname),
+            title = stringResource(Res.string.dialog_title_open_private_message),
+            label = stringResource(Res.string.dialog_label_user_nickname),
             onDismiss = { showOpenPmDialog = false },
             onConfirm = { nick ->
                 if (nick.isNotBlank()) {

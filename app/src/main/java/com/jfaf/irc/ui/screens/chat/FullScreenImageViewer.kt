@@ -1,5 +1,7 @@
 package com.jfaf.irc.ui.screens.chat
 
+import com.jfaf.irc.resources.Res
+import com.jfaf.irc.resources.*
 import com.jfaf.irc.log.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,7 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -39,7 +41,6 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.decode.ImageDecoderDecoder // Added import
 import coil.request.ImageRequest     // Added import
-import com.jfaf.irc.R
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 
 @Composable
@@ -75,7 +76,7 @@ fun FullScreenImageViewer(
                             .decoderFactory(ImageDecoderDecoder.Factory()) // For animated GIFs
                             .crossfade(true) // Optional smooth transition
                             .build(), 
-                        contentDescription = stringResource(R.string.cd_full_screen_image),
+                        contentDescription = stringResource(Res.string.cd_full_screen_image),
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxWidth(0.95f)
@@ -101,7 +102,7 @@ fun FullScreenImageViewer(
                         }
                         is AsyncImagePainter.State.Error -> {
                             Text(
-                                text = stringResource(R.string.error_loading_image),
+                                text = stringResource(Res.string.error_loading_image),
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier
                                     .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(4.dp))
@@ -153,7 +154,7 @@ fun FullScreenImageViewer(
                 }
                 MediaTypeEnum.NONE -> {
                     Text(
-                        text = stringResource(R.string.error_unsupported_media),
+                        text = stringResource(Res.string.error_unsupported_media),
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(4.dp))

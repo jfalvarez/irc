@@ -6,41 +6,19 @@
     <string name="notification_status_connected_to">Estado: Conectado a %1$s</string>
     <string name="notification_status_connecting">Iniciando conexión IRC...</string>
     <string name="notification_status_disconnected">Estado: Desconectado</string>
-    <string name="status_reconnecting">Reconectando…</string>
     <string name="notification_status_reconnecting">Estado: Reconectando (intento %1$d de %2$d)…</string>
     <string name="notification_channel_name_irc_service">IRC Service Channel</string>
     <string name="notification_title_irc_client">Cliente IRC</string>
     <string name="status_connected_to_host">Conectado a %1$s</string>
     <string name="status_disconnected_short">Desconectado</string>
 
-    <string name="status_not_connected">No conectado</string>
     <string name="prompt_select_channel_or_conversation">Selecciona un canal o conversación para empezar.</string>
     <string name="connection_setup_title_simplified">CONEXIÓN IRC - VERSIÓN SIMPLIFICADA</string>
-    <string name="label_nickname">Nickname</string>
     <string name="checkbox_label_connect_securely">Conectar de forma segura (SSL/TLS)</string>
-    <string name="button_connect">Conectar</string>
 
-    <string name="app_title_default">IRC App</string>
-    <string name="cd_open_navigation_menu">Abrir menú lateral</string>
-    <string name="cd_more_options">Más opciones</string><string name="menu_item_join_channel">Unirse a canal</string>
-    <string name="menu_item_private_message_to">Mensaje privado a…</string>
-    <string name="menu_item_disconnect">Desconectar</string>
-    <string name="dialog_title_join_channel">Unirse a Canal</string>
-    <string name="dialog_label_channel_name">Nombre del canal (ej: #canal)</string>
-    <string name="dialog_title_open_private_message">Abrir Mensaje Privado</string>
-    <string name="dialog_label_user_nickname">Nickname del usuario</string>
     <string name="app_title_disconnected">IRC App - Desconectado</string>
-    <string name="button_accept">Aceptar</string>
-    <string name="button_cancel">Cancelar</string>
-    <string name="menu_item_settings">Configuración</string>
 
-    <string name="drawer_title_channels_chats">Canales y Chats</string>
-    <string name="drawer_user_connected_as">Conectado como: %1$s</string>    <string name="cd_channel">Canal</string>
-    <string name="cd_server">Servidor</string>
     <string name="cd_private_message">Privado</string>
-    <string name="cd_close_target">Cerrar %1$s</string>
-    <string name="label_write_message">Escribe un mensaje...</string>
-    <string name="cd_send_message">Enviar mensaje</string>
 
     <string name="pm_notification_title">Nuevo Mensaje Privado</string>
     <string name="pm_notification_content_single">Has recibido un nuevo mensaje.</string>
@@ -56,83 +34,27 @@
     <string name="notification_channel_description_irc_service">Notificación persistente que indica el estado de conexión del servicio IRC.</string> <!-- %1$s será el nick del remitente -->
 
     <!-- Settings Screen -->
-    <string name="cd_navigate_up">Volver</string>
-    <string name="settings_section_server">Servidor</string>
-    <string name="settings_server_host_label">Servidor (host)</string>
-    <string name="settings_server_plain_port_label">Puerto sin SSL</string>
-    <string name="settings_server_ssl_port_label">Puerto SSL</string>
-    <string name="settings_server_save">Guardar</string>
-    <string name="settings_server_reset">Restaurar</string>
-    <string name="settings_server_saved">Servidor guardado. Se usará en la próxima conexión.</string>
-    <string name="settings_server_invalid">Servidor o puertos no válidos (puertos: 1-65535).</string>
-    <string name="settings_section_message_preferences">Preferencias de Mensajes</string>
-    <string name="settings_option_show_join_part_quit">Mostrar mensajes de JOIN/PART/QUIT</string>
-    <string name="settings_option_show_nick_changes">Mostrar cambios de Nick</string>
-    <string name="settings_option_show_mode_changes">Mostrar cambios de Modo</string>
-    <string name="settings_option_show_ping_messages">Mostrar mensajes PING del servidor</string>
 
     <!-- Settings Screen - Ignored Users -->
-    <string name="settings_section_ignored_users">Usuarios Ignorados</string>
     <string name="settings_ignore_user_dialog_title">Ignorar Usuario</string>
-    <string name="settings_ignore_user_dialog_label">Nick del usuario a ignorar</string>
-    <string name="settings_button_add_ignored">Añadir a Ignorados</string>
-    <string name="settings_button_unignore">Dejar de Ignorar</string>
-    <string name="settings_no_ignored_users">No hay usuarios ignorados.</string>
     <string name="settings_ignored_user_added">"Usuario '%1$s' añadido a ignorados."</string>
     <string name="settings_ignored_user_removed">"Usuario '%1$s' eliminado de ignorados."</string>
 
     <!-- Settings Screen - Friends -->
-    <string name="settings_section_friends">Amigos</string>
-    <string name="settings_friend_user_dialog_label">Nick del amigo</string>
-    <string name="settings_button_add_friend">Añadir</string>
-    <string name="settings_button_remove_friend">Quitar</string>
-    <string name="settings_no_friends">No tienes amigos en tu lista.</string>
 
     <string name="settings_error_nick_empty">El nick no puede estar vacío.</string>
-    <string name="cd_toggle_user_list">Mostrar/ocultar lista de usuarios</string>
-    <string name="cd_full_screen_image">Imagen a pantalla completa</string>
-    <string name="error_loading_image">Error al cargar la imagen</string>
-    <string name="error_unsupported_media">Tipo de medio no soportado o enlace inválido.</string>
     <!-- ... tus otros strings ... -->
-    <string name="no_users_in_channel">No hay usuarios en este canal o la lista aún no se ha cargado.</string>
     <string name="cd_user_options">Opciones para %s</string>
-    <string name="action_send_private_message">Mandar privado</string>
-    <string name="action_ignore_user">Ignorar</string>
-    <string name="select_channel_to_see_users">Selecciona un canal para ver la lista de usuarios.
-    </string>
 
-    <string name="force_update_title">Actualización Requerida</string>
-    <string name="force_update_message">Hay una nueva versión de la aplicación disponible con mejoras importantes y correcciones de errores. Por favor, actualiza para continuar.</string>
-    <string name="force_update_button_text">Actualizar Ahora</string>
 
-    <string name="dialog_exit_title">Confirmar Salida</string>
-    <string name="dialog_exit_message">¿Estás seguro de que quieres desconectar y salir?</string>
-    <string name="dialog_exit_confirm_button">Salir</string>
-    <string name="dialog_exit_cancel_button">Cancelar</string>
-    <string name="action_whois">Whois</string>
-    <string name="action_whois_user">Whois a %1$s</string>
 
     <!-- Nuevas strings para AppDrawerContent -->
-    <string name="drawer_section_channels">Canales</string>
-    <string name="drawer_section_conversations">Conversaciones</string>
-    <string name="drawer_section_online_friends">Amigos Conectados</string>
     <string name="drawer_no_online_friends">Ningún amigo conectado.</string>
-    <string name="cd_expand">Expandir</string>
-    <string name="cd_collapse">Colapsar</string>
 
     <string name="checkbox_label_remember_nickserv_password">Recordar contraseña de NickServ</string>
     <string name="label_nickserv_password_optional">Contraseña de NickServ (opcional)</string>
-    <string name="settings_option_show_media_previews">Mostrar previsualizaciones de medios en el chat</string>
-    <string name="menu_item_ignore_user">Ignorar a %1$s</string>
-    <string name="menu_item_add_friend">Añadir a amigos a %1$s</string>
-    <string name="label_nickserv_password">Contraseña de NickServ</string>
     <string name="label_use_ssl">Usar SSL</string>
-    <string name="label_remember_password">Recordar contraseña</string>
 
     <string name="friend_online_notification_title">Amigo conectado</string>
     <string name="friend_online_notification_text">%1$s se ha conectado.</string>
-    <string name="account_signed_in_as">Has iniciado sesión como: %1$s</string>
-    <string name="account_sign_out">Cerrar sesión</string>
-    <string name="account_sign_in_hint">Inicia sesión con Google para sincronizar tu configuración (ej. lista de ignorados) entre dispositivos.</string>
-    <string name="account_sign_in_google">Iniciar sesión con Google</string>
 </resources>

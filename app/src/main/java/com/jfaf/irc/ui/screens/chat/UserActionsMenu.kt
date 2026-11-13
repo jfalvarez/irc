@@ -1,5 +1,7 @@
 package com.jfaf.irc.ui.screens.chat
 
+import com.jfaf.irc.resources.Res
+import com.jfaf.irc.resources.*
 import androidx.compose.foundation.background
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -7,8 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.jfaf.irc.R
+import org.jetbrains.compose.resources.stringResource
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 
@@ -36,7 +37,7 @@ fun UserActionsMenu(
         DropdownMenuItem(
             text = {
                 Text(
-                    stringResource(R.string.action_send_private_message),
+                    stringResource(Res.string.action_send_private_message),
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             },
@@ -48,7 +49,7 @@ fun UserActionsMenu(
         DropdownMenuItem(
             text = {
                 Text(
-                    stringResource(R.string.action_ignore_user),
+                    stringResource(Res.string.action_ignore_user),
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             },
@@ -60,7 +61,7 @@ fun UserActionsMenu(
         DropdownMenuItem(
             text = {
                 Text(
-                    stringResource(R.string.action_whois),
+                    stringResource(Res.string.action_whois),
                     color = MaterialTheme.colorScheme.onPrimary
                 )
             },

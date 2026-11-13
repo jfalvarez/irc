@@ -1,5 +1,7 @@
 package com.jfaf.irc.ui.screens.settings
 
+import com.jfaf.irc.resources.Res
+import com.jfaf.irc.resources.*
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,11 +23,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
-import com.jfaf.irc.R
 import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
@@ -48,12 +50,12 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.menu_item_settings)) },
+                title = { Text(stringResource(Res.string.menu_item_settings)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.cd_navigate_up)
+                            contentDescription = stringResource(Res.string.cd_navigate_up)
                         )
                     }
                 },
@@ -86,7 +88,7 @@ fun SettingsScreen(
 
             item {
                 Text(
-                    text = stringResource(R.string.settings_section_message_preferences),
+                    text = stringResource(Res.string.settings_section_message_preferences),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(vertical = 16.dp)
@@ -94,35 +96,35 @@ fun SettingsScreen(
             }
             item {
                 SettingRowWithCheckbox(
-                    text = stringResource(R.string.settings_option_show_join_part_quit),
+                    text = stringResource(Res.string.settings_option_show_join_part_quit),
                     checked = showJoinPartQuitMessages,
                     onCheckedChange = { viewModel.setShowJoinPartQuitMessages(it) }
                 )
             }
             item {
                 SettingRowWithCheckbox(
-                    text = stringResource(R.string.settings_option_show_nick_changes),
+                    text = stringResource(Res.string.settings_option_show_nick_changes),
                     checked = showNickChanges,
                     onCheckedChange = { viewModel.setShowNickChanges(it) }
                 )
             }
             item {
                 SettingRowWithCheckbox(
-                    text = stringResource(R.string.settings_option_show_mode_changes),
+                    text = stringResource(Res.string.settings_option_show_mode_changes),
                     checked = showModeChanges,
                     onCheckedChange = { viewModel.setShowModeChanges(it) }
                 )
             }
             item {
                 SettingRowWithCheckbox(
-                    text = stringResource(R.string.settings_option_show_ping_messages),
+                    text = stringResource(Res.string.settings_option_show_ping_messages),
                     checked = showPingPongMessages,
                     onCheckedChange = { viewModel.setShowPingPongMessages(it) }
                 )
             }
             item {
                 SettingRowWithCheckbox(
-                    text = stringResource(R.string.settings_option_show_media_previews),
+                    text = stringResource(Res.string.settings_option_show_media_previews),
                     checked = showMediaPreviews,
                     onCheckedChange = { viewModel.setShowMediaPreviews(it) }
                 )
@@ -137,14 +139,14 @@ fun SettingsScreen(
 
             item {
                 CollapsibleUserListSection(
-                    sectionTitle = stringResource(R.string.settings_section_friends),
+                    sectionTitle = stringResource(Res.string.settings_section_friends),
                     users = friends,
                     onAddUser = { viewModel.addFriend(it) },
                     onRemoveUser = { viewModel.removeFriend(it) },
-                    addUserInputLabel = stringResource(R.string.settings_friend_user_dialog_label),
-                    addButtonText = stringResource(R.string.settings_button_add_friend),
-                    removeButtonText = stringResource(R.string.settings_button_remove_friend),
-                    noUsersText = stringResource(R.string.settings_no_friends)
+                    addUserInputLabel = stringResource(Res.string.settings_friend_user_dialog_label),
+                    addButtonText = stringResource(Res.string.settings_button_add_friend),
+                    removeButtonText = stringResource(Res.string.settings_button_remove_friend),
+                    noUsersText = stringResource(Res.string.settings_no_friends)
                 )
             }
 
@@ -157,14 +159,14 @@ fun SettingsScreen(
 
             item {
                 CollapsibleUserListSection(
-                    sectionTitle = stringResource(R.string.settings_section_ignored_users),
+                    sectionTitle = stringResource(Res.string.settings_section_ignored_users),
                     users = ignoredUsers,
                     onAddUser = { viewModel.addIgnoredUser(it) },
                     onRemoveUser = { viewModel.removeIgnoredUser(it) },
-                    addUserInputLabel = stringResource(R.string.settings_ignore_user_dialog_label),
-                    addButtonText = stringResource(R.string.settings_button_add_ignored),
-                    removeButtonText = stringResource(R.string.settings_button_unignore),
-                    noUsersText = stringResource(R.string.settings_no_ignored_users)
+                    addUserInputLabel = stringResource(Res.string.settings_ignore_user_dialog_label),
+                    addButtonText = stringResource(Res.string.settings_button_add_ignored),
+                    removeButtonText = stringResource(Res.string.settings_button_unignore),
+                    noUsersText = stringResource(Res.string.settings_no_ignored_users)
                 )
             }
 
@@ -321,13 +323,13 @@ private fun ServerConfigSection(
     var host by remember(config) { mutableStateOf(config.host) }
     var plainPort by remember(config) { mutableStateOf(config.plainPort.toString()) }
     var sslPort by remember(config) { mutableStateOf(config.sslPort.toString()) }
-    var feedback by remember { mutableStateOf<Int?>(null) }
+    var feedback by remember { mutableStateOf<StringResource?>(null) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = stringResource(R.string.settings_section_server),
+            text = stringResource(Res.string.settings_section_server),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(top = 16.dp)
@@ -335,7 +337,7 @@ private fun ServerConfigSection(
         ThemedOutlinedTextField(
             value = host,
             onValueChange = { host = it; feedback = null },
-            label = { Text(stringResource(R.string.settings_server_host_label)) },
+            label = { Text(stringResource(Res.string.settings_server_host_label)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
@@ -344,7 +346,7 @@ private fun ServerConfigSection(
             ThemedOutlinedTextField(
                 value = plainPort,
                 onValueChange = { plainPort = it; feedback = null },
-                label = { Text(stringResource(R.string.settings_server_plain_port_label)) },
+                label = { Text(stringResource(Res.string.settings_server_plain_port_label)) },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -352,7 +354,7 @@ private fun ServerConfigSection(
             ThemedOutlinedTextField(
                 value = sslPort,
                 onValueChange = { sslPort = it; feedback = null },
-                label = { Text(stringResource(R.string.settings_server_ssl_port_label)) },
+                label = { Text(stringResource(Res.string.settings_server_ssl_port_label)) },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -361,23 +363,23 @@ private fun ServerConfigSection(
         feedback?.let {
             Text(
                 text = stringResource(it),
-                color = if (it == R.string.settings_server_invalid) MaterialTheme.colorScheme.error
+                color = if (it == Res.string.settings_server_invalid) MaterialTheme.colorScheme.error
                 else MaterialTheme.colorScheme.onBackground
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
                 val ok = onSave(host, plainPort, sslPort)
-                feedback = if (ok) R.string.settings_server_saved else R.string.settings_server_invalid
+                feedback = if (ok) Res.string.settings_server_saved else Res.string.settings_server_invalid
                 if (ok) {
                     keyboardController?.hide()
                     focusManager.clearFocus()
                 }
-            }) { Text(stringResource(R.string.settings_server_save)) }
+            }) { Text(stringResource(Res.string.settings_server_save)) }
             OutlinedButton(onClick = {
                 onReset()
                 feedback = null
-            }) { Text(stringResource(R.string.settings_server_reset)) }
+            }) { Text(stringResource(Res.string.settings_server_reset)) }
         }
     }
 }

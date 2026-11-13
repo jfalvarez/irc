@@ -1,5 +1,7 @@
 package com.jfaf.irc.ui.screens.chat
 
+import com.jfaf.irc.resources.Res
+import com.jfaf.irc.resources.*
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -13,8 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.jfaf.irc.R
+import org.jetbrains.compose.resources.stringResource
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
 import com.jfaf.irc.ui.theme.IRCTheme
 
@@ -41,12 +42,12 @@ fun InputDialog(title: String, label: String, onDismiss: () -> Unit, onConfirm: 
                     contentColor = MaterialTheme.colorScheme.primary
                 )
             ) { 
-                Text(stringResource(R.string.button_accept)) 
+                Text(stringResource(Res.string.button_accept)) 
             }
         },
         dismissButton = { 
             TextButton(onClick = onDismiss) { 
-                Text(stringResource(R.string.button_cancel), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)) 
+                Text(stringResource(Res.string.button_cancel), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)) 
             }
         },
         containerColor = IRCTheme.dialogContainerOpaque

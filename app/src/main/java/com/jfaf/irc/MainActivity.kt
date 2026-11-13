@@ -1,5 +1,7 @@
 package com.jfaf.irc
 
+import com.jfaf.irc.resources.Res
+import com.jfaf.irc.resources.*
 import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Context
@@ -39,7 +41,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.core.content.ContextCompat
 import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.Lifecycle
@@ -210,14 +212,14 @@ class MainActivity : ComponentActivity() {
                     AlertDialog(
                         onDismissRequest = { /* No hacer nada */ },
                         containerColor = MaterialTheme.colorScheme.surface,
-                        title = { Text(stringResource(R.string.force_update_title)) },
-                        text = { Text(stringResource(R.string.force_update_message)) },
+                        title = { Text(stringResource(Res.string.force_update_title)) },
+                        text = { Text(stringResource(Res.string.force_update_message)) },
                         confirmButton = {
                             TextButton(
                                 onClick = { redirectToPlayStore(this@MainActivity) },
                                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                             ) {
-                                Text(stringResource(R.string.force_update_button_text))
+                                Text(stringResource(Res.string.force_update_button_text))
                             }
                         }
                     )
@@ -227,8 +229,8 @@ class MainActivity : ComponentActivity() {
                     AlertDialog(
                         onDismissRequest = { showExitConfirmationDialog = false },
                         containerColor = MaterialTheme.colorScheme.surface,
-                        title = { Text(stringResource(R.string.dialog_exit_title)) },
-                        text = { Text(stringResource(R.string.dialog_exit_message)) },
+                        title = { Text(stringResource(Res.string.dialog_exit_title)) },
+                        text = { Text(stringResource(Res.string.dialog_exit_message)) },
                         confirmButton = {
                             TextButton(
                                 onClick = {
@@ -239,7 +241,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                             ) {
-                                Text(stringResource(R.string.dialog_exit_confirm_button))
+                                Text(stringResource(Res.string.dialog_exit_confirm_button))
                             }
                         },
                         dismissButton = {
@@ -247,7 +249,7 @@ class MainActivity : ComponentActivity() {
                                 onClick = { showExitConfirmationDialog = false },
                                 colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                             ) {
-                                Text(stringResource(R.string.dialog_exit_cancel_button))
+                                Text(stringResource(Res.string.dialog_exit_cancel_button))
                             }
                         }
                     )

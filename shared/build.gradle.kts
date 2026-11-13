@@ -56,7 +56,7 @@ kotlin {
             api(libs.compose.mp.runtime)
             api(libs.compose.mp.ui.text)
             api(libs.compose.mp.ui.graphics)
-            implementation(libs.compose.mp.resources)
+            api(libs.compose.mp.resources) // :app usa stringResource(Res.string.…)
             api(libs.androidx.room.runtime)
             api(libs.androidx.sqlite.bundled)
             api(libs.koin.core) // commonModule
@@ -79,6 +79,7 @@ dependencies {
 
 compose.resources {
     packageOfResClass = "com.jfaf.irc.resources"
+    publicResClass = true // :app usa Res.string en sus composables
 }
 
 room {

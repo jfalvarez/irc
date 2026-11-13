@@ -1,5 +1,7 @@
 package com.jfaf.irc.ui.screens.chat
 
+import com.jfaf.irc.resources.Res
+import com.jfaf.irc.resources.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,13 +35,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
-import com.jfaf.irc.R
 import com.jfaf.irc.ui.theme.IRCTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,7 +77,7 @@ fun MessageInputSection(
                             onTextInputChanged(it.text, it.selection.start)
                         }
                     },
-                    placeholder = { Text(stringResource(R.string.label_write_message), color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)) },
+                    placeholder = { Text(stringResource(Res.string.label_write_message), color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)) },
                     trailingIcon = {
                         IconButton(onClick = {
                             if (textFieldValue.text.isNotBlank()) {
@@ -88,7 +89,7 @@ fun MessageInputSection(
                         }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.Send,
-                                stringResource(R.string.cd_send_message),
+                                stringResource(Res.string.cd_send_message),
                                 tint = MaterialTheme.colorScheme.onPrimary
                             )
                         }

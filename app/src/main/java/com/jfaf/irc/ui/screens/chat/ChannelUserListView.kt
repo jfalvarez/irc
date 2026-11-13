@@ -1,5 +1,7 @@
 package com.jfaf.irc.ui.screens.chat
 
+import com.jfaf.irc.resources.Res
+import com.jfaf.irc.resources.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,9 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
-import com.jfaf.irc.R
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 
 @Composable
@@ -41,7 +42,7 @@ fun ChannelUserListView(
     if (activeTarget?.startsWith("#") == true) {
         if (filteredUserList.isEmpty()) {
             Text(
-                text = stringResource(R.string.no_users_in_channel),
+                text = stringResource(Res.string.no_users_in_channel),
                 modifier = Modifier.padding(16.dp),
                 color = MaterialTheme.colorScheme.onPrimary
             )
@@ -79,7 +80,7 @@ fun ChannelUserListView(
         }
     } else {
         Text(
-            text = stringResource(R.string.select_channel_to_see_users),
+            text = stringResource(Res.string.select_channel_to_see_users),
             modifier = Modifier.padding(16.dp),
             color = MaterialTheme.colorScheme.onPrimary
         )
