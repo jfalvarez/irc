@@ -1,5 +1,7 @@
 package com.jfaf.irc.ui.viewmodels
 
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.ui.model.MediaTypeEnum
 import com.jfaf.irc.ui.model.UiChatMessage
 import com.jfaf.irc.ui.model.UiMessageType
@@ -56,7 +58,9 @@ data class NickChangeInternalResult(
 
 data class FiveTuple<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
 
-class IrcMessageHandler @Inject constructor() {
+class IrcMessageHandler @Inject constructor(
+    private val strings: StringProvider
+) {
 
     private val SERVER_TARGET_ID = "Servidor"
     private val maxUiMessagesPerTarget = 150
@@ -451,7 +455,7 @@ class IrcMessageHandler @Inject constructor() {
                 updatedUnreadTargets = currentUnreadTargets - channel
             }
         }
-        val messageText = "* $userJoining ha entrado a $channel"
+        val messageText = strings.get(Msg.EVT_JOIN, userJoining, channel)
         val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.JOIN_PART_QUIT, sender = userJoining)
         return ChannelEventResult(channel, newUiMsg, newActiveTarget, updatedChatTargets, updatedUnreadTargets, mutableUsersMap.toMap())
     }
@@ -491,7 +495,7 @@ class IrcMessageHandler @Inject constructor() {
         val reasonPart = if (trailing != channelName) trailing?.substringAfter(channelName)?.trim() else null
         val reasonMsgContent = reasonPart?.let { if (it.startsWith(":")) it.substring(1) else it } ?: ""
         val reasonMsg = if (reasonMsgContent.isNotBlank()) " ($reasonMsgContent)" else ""
-        val messageText = "* $userParting ha salido de $channelName$reasonMsg"
+        val messageText = strings.get(Msg.EVT_PART, userParting, channelName, reasonMsg)
         val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.JOIN_PART_QUIT, sender = userParting)
 
         if (userParting.equals(currentNickname, ignoreCase = true)) {
@@ -517,7 +521,7 @@ class IrcMessageHandler @Inject constructor() {
         val userQuitting = parsedMessage.senderNickname
         val trailing = parsedMessage.trailing
         val reason = trailing?.let { " ($it)" } ?: ""
-        val quitMessageText = "* ${userQuitting ?: "Alguien"} ha salido del IRC$reason"
+        val quitMessageText = strings.get(Msg.EVT_QUIT, userQuitting ?: strings.get(Msg.EVT_SOMEONE), reason)
         val quitMessage = UiChatMessage(quitMessageText, annotatedString = AnnotatedString(quitMessageText), type = UiMessageType.JOIN_PART_QUIT, sender = userQuitting)
         
         val mutableUsersMap = currentUsersInChannel.toMutableMap()
@@ -572,7 +576,7 @@ class IrcMessageHandler @Inject constructor() {
             }
         }
 
-        val messageText = "* $oldNick ahora es conocido como $newNick"
+        val messageText = strings.get(Msg.EVT_NICK_CHANGE, oldNick, newNick)
         val nickChangeMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.NICK_CHANGE, sender = oldNick)
         
         val currentMessageKeys = allMessages.keys.toList()
@@ -634,7 +638,7 @@ class IrcMessageHandler @Inject constructor() {
         }
         val by = sender ?: parsedMessage.prefix ?: "Server"
         val modes = params.drop(1).joinToString(" ") + (trailing?.let { " :$it" } ?: "")
-        val messageText = "* $by establece modo $modes en $determinedTargetKey"
+        val messageText = strings.get(Msg.EVT_MODE, by, modes, determinedTargetKey)
         val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.MODE_CHANGE, sender = by)
         return Pair(determinedTargetKey, newUiMsg)
     }
@@ -684,17 +688,18 @@ class IrcMessageHandler @Inject constructor() {
 
         if (command == "401") { // ERR_NOSUCHNICK
             targetKey = SERVER_TARGET_ID
-            val nickWithError = params.getOrNull(1) ?: "Usuario desconocido"
-            errorMessageText = "[WHOIS Error] Usuario '$nickWithError' no encontrado."
-            annotatedContentText = "Usuario '$nickWithError' no encontrado."
-            errorPrefix = "[WHOIS Error] "
+            val nickWithError = params.getOrNull(1) ?: strings.get(Msg.ERR_WHOIS_UNKNOWN_USER)
+            val notFound = strings.get(Msg.ERR_WHOIS_NOT_FOUND, nickWithError)
+            errorPrefix = strings.get(Msg.ERR_WHOIS_PREFIX) + " "
+            errorMessageText = errorPrefix + notFound
+            annotatedContentText = notFound
         } else {
             targetKey = activeTarget ?: SERVER_TARGET_ID
             val errorParams = params.joinToString(" ")
             val errorTrailing = trailing ?: ""
-            errorMessageText = "Error $command: $errorParams $errorTrailing"
+            errorMessageText = strings.get(Msg.ERR_NUMERIC, command, "$errorParams $errorTrailing")
             annotatedContentText = "$errorParams $errorTrailing"
-            errorPrefix = "Error $command: "
+            errorPrefix = strings.get(Msg.ERR_NUMERIC_PREFIX, command) + " "
         }
 
         val annotatedContent = MircColorParser.parse(annotatedContentText)
@@ -802,7 +807,7 @@ class IrcMessageHandler @Inject constructor() {
 
         // Create UI message
         val reasonMsg = if (!reason.isNullOrBlank()) " ($reason)" else ""
-        val messageText = "* $kickedUser ha sido expulsado de $channel por ${kicker ?: "alguien"}$reasonMsg"
+        val messageText = strings.get(Msg.EVT_KICK, kickedUser, channel, kicker ?: strings.get(Msg.EVT_SOMEONE_LC), reasonMsg)
         val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.JOIN_PART_QUIT, sender = kicker)
 
         // If the current user was kicked

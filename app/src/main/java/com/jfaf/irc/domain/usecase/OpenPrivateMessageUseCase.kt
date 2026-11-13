@@ -1,5 +1,7 @@
 package com.jfaf.irc.domain.usecase
 
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import androidx.compose.ui.text.AnnotatedString
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
@@ -13,6 +15,7 @@ sealed interface OpenPrivateMessageResult {
 }
 
 class OpenPrivateMessageUseCase @Inject constructor(
+    private val strings: StringProvider,
     private val chatStateManager: ChatStateManager,
     private val ircRepository: IrcRepository // Added IrcRepository
 ) {
@@ -24,7 +27,7 @@ class OpenPrivateMessageUseCase @Inject constructor(
         val targetForErrorMessage = chatStateManager.activeTarget.value ?: ChatStateManager.SERVER_TARGET_ID
 
         if (nick.isBlank() || nick.startsWith("#") || nick.equals(currentOwnNickname, ignoreCase = true)) {
-            val errorMessage = "Nombre de usuario inválido para chat privado: $nick"
+            val errorMessage = strings.get(Msg.PM_INVALID_NICK, nick)
             chatStateManager.addSystemMessageToTarget(targetForErrorMessage, errorMessage, isError = true)
             return OpenPrivateMessageResult.Failure(errorMessage)
         }
@@ -32,14 +35,14 @@ class OpenPrivateMessageUseCase @Inject constructor(
         chatStateManager.openPrivateMessageTarget(nick, currentOwnNickname)
         
         if (chatStateManager.activeTarget.value?.equals(nick, ignoreCase = true) == true) { 
-            chatStateManager.addSystemMessageToTarget(nick, "Chat privado con $nick iniciado.")
+            chatStateManager.addSystemMessageToTarget(nick, strings.get(Msg.PM_STARTED, nick))
         }
 
         if (!initialMessage.isNullOrBlank()) {
             if (!ircRepository.connectionState.value) {
                 chatStateManager.addSystemMessageToTarget(
                     nick, 
-                    "No conectado. No se puede enviar el mensaje inicial a $nick.",
+                    strings.get(Msg.PM_NOT_CONNECTED, nick),
                     isError = true
                 )
                 // Optionally return a specific failure type here, but for now, message is sufficient

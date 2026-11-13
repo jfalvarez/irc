@@ -1,5 +1,7 @@
 package com.jfaf.irc.domain.usecase
 
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import kotlinx.coroutines.Dispatchers
@@ -7,6 +9,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class DisconnectUseCase @Inject constructor(
+    private val strings: StringProvider,
     private val ircRepository: IrcRepository,
     private val chatStateManager: ChatStateManager
 ) {
@@ -21,7 +24,7 @@ class DisconnectUseCase @Inject constructor(
 
         chatStateManager.addSystemMessageToTarget(
             targetForMessage, 
-            "Desconectando y solicitando detener el servicio..."
+            strings.get(Msg.DISCONNECTING_REQUESTED)
         )
         withContext(Dispatchers.IO) {
             ircRepository.disconnectAndStopService(quitMessage)

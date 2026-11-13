@@ -111,18 +111,18 @@ fun ConnectionSetupSection(
 
         if (isUserAuthenticated) {
             Text(
-                text = "Has iniciado sesión como: ${currentUser?.email ?: ""}",
+                text = stringResource(R.string.account_signed_in_as, currentUser?.email ?: ""),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(16.dp))
             TextButton(onClick = { signInViewModel.signOut() }) {
-                Text("Cerrar sesión")
+                Text(stringResource(R.string.account_sign_out))
             }
         } else {
             Text(
-                text = "Inicia sesión con Google para sincronizar tu configuración (ej. lista de ignorados) entre dispositivos.",
+                text = stringResource(R.string.account_sign_in_hint),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -147,7 +147,7 @@ fun ConnectionSetupSection(
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
-                Text("Iniciar sesión con Google")
+                Text(stringResource(R.string.account_sign_in_google))
             }
         }
     }

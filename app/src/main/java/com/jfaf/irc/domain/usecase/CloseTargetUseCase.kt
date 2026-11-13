@@ -1,9 +1,12 @@
 package com.jfaf.irc.domain.usecase
 
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import javax.inject.Inject
 
 class CloseTargetUseCase @Inject constructor(
+    private val strings: StringProvider,
     private val chatStateManager: ChatStateManager,
     private val partChannelUseCase: PartChannelUseCase
 ) {
@@ -17,7 +20,7 @@ class CloseTargetUseCase @Inject constructor(
         if (targetToClose == ChatStateManager.SERVER_TARGET_ID) {
             chatStateManager.addSystemMessageToTarget(
                 targetForSystemMessages, 
-                "La pestaña '${ChatStateManager.SERVER_TARGET_ID}' no se puede cerrar.", 
+                strings.get(Msg.CLOSE_SERVER_TAB_FORBIDDEN, ChatStateManager.SERVER_TARGET_ID), 
                 isError = true
             )
             return

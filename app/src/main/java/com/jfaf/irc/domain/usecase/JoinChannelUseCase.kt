@@ -1,5 +1,7 @@
 package com.jfaf.irc.domain.usecase
 
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import android.util.Log
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
@@ -11,6 +13,7 @@ sealed interface JoinChannelResult {
 }
 
 class JoinChannelUseCase @Inject constructor(
+    private val strings: StringProvider,
     private val ircRepository: IrcRepository,
     private val chatStateManager: ChatStateManager
 ) {
@@ -18,7 +21,7 @@ class JoinChannelUseCase @Inject constructor(
         val currentActiveTargetForMsg = chatStateManager.activeTarget.value ?: ChatStateManager.SERVER_TARGET_ID
 
         if (!channelName.startsWith("#")) {
-            val errorMsg = "Nombre de canal inválido: $channelName. Debe empezar con #."
+            val errorMsg = strings.get(Msg.JOIN_INVALID_CHANNEL, channelName)
             chatStateManager.addSystemMessageToTarget(currentActiveTargetForMsg, errorMsg, isError = true)
             return JoinChannelResult.Failure(errorMsg)
         }
@@ -26,11 +29,11 @@ class JoinChannelUseCase @Inject constructor(
         if (ircRepository.connectionState.value && channelName.isNotBlank()) {
             // Message about attempting to join is good UX, can be kept here or in ViewModel.
             // For consistency with how other messages are handled, let's keep it in the UseCase for now.
-            chatStateManager.addSystemMessageToTarget(currentActiveTargetForMsg, "Solicitando unirse a $channelName...")
+            chatStateManager.addSystemMessageToTarget(currentActiveTargetForMsg, strings.get(Msg.JOIN_REQUESTING, channelName))
             ircRepository.joinChannel(channelName, key)
             return JoinChannelResult.Success
         } else {
-            val errorMsg = "No se puede unir al canal. No conectado."
+            val errorMsg = strings.get(Msg.JOIN_NOT_CONNECTED)
             chatStateManager.addSystemMessageToTarget(currentActiveTargetForMsg, errorMsg, isError = true)
             return JoinChannelResult.Failure(errorMsg)
         }

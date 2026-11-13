@@ -1,5 +1,6 @@
 package com.jfaf.irc.ui.viewmodels
 
+import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.ui.viewmodels.LinkState.CONNECTED
 import com.jfaf.irc.ui.viewmodels.LinkState.DISCONNECTED
 import com.jfaf.irc.ui.viewmodels.LinkState.RECONNECTING
@@ -20,15 +21,15 @@ class LinkTransitionsTest {
 
     @Test
     fun primeraConexion_avisaYReinicia() {
-        assertEquals("Conectado al servidor.", LinkTransitions.noticeFor(null, CONNECTED)?.text)
-        assertEquals("Conectado al servidor.", LinkTransitions.noticeFor(DISCONNECTED, CONNECTED)?.text)
+        assertEquals(Msg.LINK_CONNECTED, LinkTransitions.noticeFor(null, CONNECTED)?.msg)
+        assertEquals(Msg.LINK_CONNECTED, LinkTransitions.noticeFor(DISCONNECTED, CONNECTED)?.msg)
         assertTrue(LinkTransitions.isFreshConnection(null, CONNECTED))
         assertTrue(LinkTransitions.isFreshConnection(DISCONNECTED, CONNECTED))
     }
 
     @Test
     fun reconexion_noReiniciaElEstado() {
-        assertEquals("Reconectado.", LinkTransitions.noticeFor(RECONNECTING, CONNECTED)?.text)
+        assertEquals(Msg.LINK_RECONNECTED, LinkTransitions.noticeFor(RECONNECTING, CONNECTED)?.msg)
         assertFalse(LinkTransitions.isFreshConnection(RECONNECTING, CONNECTED))
     }
 
@@ -36,14 +37,14 @@ class LinkTransitionsTest {
     fun perdidaDeConexion_avisaComoError() {
         val notice = LinkTransitions.noticeFor(CONNECTED, RECONNECTING)!!
         assertTrue(notice.isError)
-        assertTrue(notice.text.startsWith("Conexión perdida"))
+        assertEquals(Msg.LINK_LOST_RECONNECTING, notice.msg)
     }
 
     @Test
     fun desconexion_segunDeDondeVenga() {
         assertNull("sin aviso en el estado inicial", LinkTransitions.noticeFor(null, DISCONNECTED))
-        assertEquals("Desconectado.", LinkTransitions.noticeFor(CONNECTED, DISCONNECTED)?.text)
-        assertTrue(LinkTransitions.noticeFor(RECONNECTING, DISCONNECTED)!!.text.startsWith("No se pudo reconectar"))
+        assertEquals(Msg.LINK_DISCONNECTED, LinkTransitions.noticeFor(CONNECTED, DISCONNECTED)?.msg)
+        assertEquals(Msg.LINK_RECONNECT_FAILED, LinkTransitions.noticeFor(RECONNECTING, DISCONNECTED)!!.msg)
         assertNull(LinkTransitions.noticeFor(DISCONNECTED, DISCONNECTED))
     }
 }

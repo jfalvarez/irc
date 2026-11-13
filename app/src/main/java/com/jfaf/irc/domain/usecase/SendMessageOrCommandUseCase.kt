@@ -1,5 +1,7 @@
 package com.jfaf.irc.domain.usecase
 
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import androidx.compose.ui.text.AnnotatedString
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
@@ -18,6 +20,7 @@ sealed interface SendMessageActionStatus {
 }
 
 class SendMessageOrCommandUseCase @Inject constructor(
+    private val strings: StringProvider,
     private val ircRepository: IrcRepository,
     private val chatStateManager: ChatStateManager,
     private val commandProcessor: CommandProcessor
@@ -31,7 +34,7 @@ class SendMessageOrCommandUseCase @Inject constructor(
         if (!ircRepository.connectionState.value) {
             chatStateManager.addSystemMessageToTarget(
                 currentActiveTargetFromViewModel ?: ChatStateManager.SERVER_TARGET_ID,
-                "No conectado. No se puede enviar el mensaje/comando.",
+                strings.get(Msg.SEND_NOT_CONNECTED),
                 isError = true
             )
             return SendMessageActionStatus.NotConnected
@@ -62,13 +65,13 @@ class SendMessageOrCommandUseCase @Inject constructor(
                 }
                 is CommandResult.ClearWindow -> {
                     chatStateManager.clearMessagesForTarget(commandProcessingResult.targetToClear)
-                    chatStateManager.addSystemMessageToTarget(commandProcessingResult.targetToClear, "Ventana limpiada.")
+                    chatStateManager.addSystemMessageToTarget(commandProcessingResult.targetToClear, strings.get(Msg.SEND_WINDOW_CLEARED))
                     SendMessageActionStatus.Success
                 }
                 is CommandResult.UnknownCommand -> {
                     chatStateManager.addSystemMessageToTarget(
                         targetForCmdSysMsg, 
-                        "Comando '/${commandProcessingResult.command}' desconocido. Escribe /help para ver los comandos disponibles.", 
+                        strings.get(Msg.SEND_UNKNOWN_COMMAND, commandProcessingResult.command), 
                         isError = true
                     )
                     SendMessageActionStatus.Success 
@@ -91,14 +94,14 @@ class SendMessageOrCommandUseCase @Inject constructor(
             if (currentActiveTargetFromViewModel == ChatStateManager.SERVER_TARGET_ID) {
                 chatStateManager.addSystemMessageToTarget(
                     ChatStateManager.SERVER_TARGET_ID,
-                    "No puedes enviar mensajes a la pestaña '${ChatStateManager.SERVER_TARGET_ID}'. Utiliza comandos (ej: /join, /nick) o abre un canal/PM.",
+                    strings.get(Msg.SEND_TO_SERVER_TAB_FORBIDDEN, ChatStateManager.SERVER_TARGET_ID),
                     isError = true
                 )
                 return SendMessageActionStatus.CannotSendToTarget
             } else if (currentActiveTargetFromViewModel.isNullOrBlank()) {
                 chatStateManager.addSystemMessageToTarget(
                     ChatStateManager.SERVER_TARGET_ID, // Default to server if no active target
-                    "No hay un target activo para enviar el mensaje.",
+                    strings.get(Msg.SEND_NO_ACTIVE_TARGET),
                     isError = true
                 )
                 return SendMessageActionStatus.CannotSendToTarget

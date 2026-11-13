@@ -1,6 +1,8 @@
 package com.jfaf.irc.ui.viewmodels.command
 
 import androidx.compose.ui.text.AnnotatedString
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import com.jfaf.irc.ui.model.UiChatMessage
@@ -9,7 +11,8 @@ import javax.inject.Inject
 
 class CommandProcessor @Inject constructor(
     private val ircRepository: IrcRepository,
-    private val chatStateManager: ChatStateManager
+    private val chatStateManager: ChatStateManager,
+    private val strings: StringProvider
 ) {
 
     private fun parseCommandAndArgs(commandLine: String): Pair<String, String?> {
@@ -25,7 +28,7 @@ class CommandProcessor @Inject constructor(
         val targetForSysMsgOnError = currentActiveTarget ?: ChatStateManager.SERVER_TARGET_ID
 
         if (command.isBlank()) {
-            return CommandResult.InvalidArguments("Comando inválido.")
+            return CommandResult.InvalidArguments(strings.get(Msg.CMD_INVALID))
         }
 
         return when (command) {
@@ -46,10 +49,10 @@ class CommandProcessor @Inject constructor(
 
     private fun executeMeCommand(args: String?, currentActiveTarget: String?, currentNickname: String, targetForSysMsgOnError: String): CommandResult {
         if (args.isNullOrBlank()) {
-            return CommandResult.InvalidArguments("Uso: /me <acción>")
+            return CommandResult.InvalidArguments(strings.get(Msg.CMD_ME_USAGE))
         }
         if (currentActiveTarget.isNullOrBlank() || currentActiveTarget == ChatStateManager.SERVER_TARGET_ID) {
-            return CommandResult.ShowSystemMessage(targetForSysMsgOnError, "El comando /me solo se puede usar en canales o privados.", isError = true)
+            return CommandResult.ShowSystemMessage(targetForSysMsgOnError, strings.get(Msg.CMD_ME_WRONG_CONTEXT), isError = true)
         }
         val actionMessage = "* $currentNickname $args"
         val uiMessage = UiChatMessage(
@@ -66,9 +69,9 @@ class CommandProcessor @Inject constructor(
 
     private fun executeNickCommand(args: String?, targetForSysMsgOnError: String): CommandResult {
         if (args.isNullOrBlank()) {
-            return CommandResult.InvalidArguments("Uso: /nick <nuevo_nickname>")
+            return CommandResult.InvalidArguments(strings.get(Msg.CMD_NICK_USAGE))
         }
-        chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "Intentando cambiar nick a '$args'...")
+        chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, strings.get(Msg.CMD_NICK_TRYING, args))
         ircRepository.sendRawCommand("NICK $args")
         return CommandResult.Handled
     }
@@ -78,7 +81,7 @@ class CommandProcessor @Inject constructor(
         val channel = cmdArgs?.getOrNull(0)
         val key = cmdArgs?.getOrNull(1)
         return if (channel.isNullOrBlank()) {
-            CommandResult.InvalidArguments("Uso: /join <#canal> [clave]")
+            CommandResult.InvalidArguments(strings.get(Msg.CMD_JOIN_USAGE))
         } else {
             CommandResult.JoinChannel(channel, key)
         }
@@ -104,10 +107,10 @@ class CommandProcessor @Inject constructor(
     private fun executeAwayCommand(args: String?, targetForSysMsgOnError: String): CommandResult {
         if (args.isNullOrBlank()) {
             ircRepository.sendRawCommand("AWAY")
-            chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "Ya no estás marcado como AUSENTE.")
+            chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, strings.get(Msg.CMD_AWAY_OFF))
         } else {
             ircRepository.sendRawCommand("AWAY :$args")
-            chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, "Ahora estás AUSENTE: $args")
+            chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, strings.get(Msg.CMD_AWAY_ON, args))
         }
         return CommandResult.Handled
     }
@@ -118,13 +121,13 @@ class CommandProcessor @Inject constructor(
         val messageText = msgParts?.getOrNull(1)
 
         if (targetName.isNullOrBlank() || messageText.isNullOrBlank()) {
-            return CommandResult.InvalidArguments("Uso: /msg <nick/canal> <mensaje>")
+            return CommandResult.InvalidArguments(strings.get(Msg.CMD_MSG_USAGE))
         }
         if (targetName.equals(currentNickname, ignoreCase = true)){
-            return CommandResult.ShowSystemMessage(targetForSysMsgOnError, "No puedes enviarte mensajes a ti mismo con /msg.", isError = true)
+            return CommandResult.ShowSystemMessage(targetForSysMsgOnError, strings.get(Msg.CMD_MSG_SELF), isError = true)
         }
         if (targetName.equals(ChatStateManager.SERVER_TARGET_ID, ignoreCase = true)){
-            return CommandResult.ShowSystemMessage(targetForSysMsgOnError, "No puedes enviar mensajes a la pestaña '${ChatStateManager.SERVER_TARGET_ID}' con /msg.", isError = true)
+            return CommandResult.ShowSystemMessage(targetForSysMsgOnError, strings.get(Msg.CMD_MSG_SERVER_TAB, ChatStateManager.SERVER_TARGET_ID), isError = true)
         }
 
         val isChannelMsg = targetName.startsWith("#")
@@ -145,7 +148,7 @@ class CommandProcessor @Inject constructor(
         // For now, keeping it to mimic original behavior closely for commands handled directly here.
         chatStateManager.addLocalUiMessageToTarget(targetName, uiMessage)
         ircRepository.sendMessage(targetName, messageText)
-        chatStateManager.addSystemMessageToTarget(targetName, "Mensaje enviado a $targetName.") // Feedback for /msg
+        chatStateManager.addSystemMessageToTarget(targetName, strings.get(Msg.CMD_MSG_SENT, targetName)) // Feedback for /msg
         return CommandResult.Handled
     }
 
@@ -155,13 +158,13 @@ class CommandProcessor @Inject constructor(
         val initialMessage = queryParts?.getOrNull(1)
 
         if (nick.isNullOrBlank()) {
-            return CommandResult.InvalidArguments("Uso: /query <nick> [mensaje opcional]")
+            return CommandResult.InvalidArguments(strings.get(Msg.CMD_QUERY_USAGE))
         }
         if (nick.equals(currentNickname, ignoreCase = true)){
-             return CommandResult.ShowSystemMessage(targetForSysMsgOnError, "No puedes iniciar /query contigo mismo.", isError = true)
+             return CommandResult.ShowSystemMessage(targetForSysMsgOnError, strings.get(Msg.CMD_QUERY_SELF), isError = true)
         }
         if (nick.startsWith("#")){
-            return CommandResult.ShowSystemMessage(targetForSysMsgOnError, "Usa /join para canales, o /msg para enviar mensajes a canales sin unirte.", isError = true)
+            return CommandResult.ShowSystemMessage(targetForSysMsgOnError, strings.get(Msg.CMD_QUERY_CHANNEL), isError = true)
         }
         return CommandResult.OpenQuery(nick, initialMessage)
     }
@@ -179,19 +182,19 @@ class CommandProcessor @Inject constructor(
             targetChannel = currentActiveTarget
             newTopic = args?.ifEmpty { null } 
         } else {
-            return CommandResult.InvalidArguments("Uso: /topic [#canal] [nuevo tema] o úsalo en una ventana de canal.")
+            return CommandResult.InvalidArguments(strings.get(Msg.CMD_TOPIC_USAGE))
         }
 
         if (targetChannel == null) { 
-             return CommandResult.ShowSystemMessage(targetForSysMsgOnError, "No se pudo determinar el canal para el comando /topic.", isError = true)
+             return CommandResult.ShowSystemMessage(targetForSysMsgOnError, strings.get(Msg.CMD_TOPIC_NO_CHANNEL), isError = true)
         }
 
         if (newTopic != null) {
             ircRepository.sendRawCommand("TOPIC $targetChannel :$newTopic")
-            chatStateManager.addSystemMessageToTarget(targetChannel, "Intentando cambiar el tema a: $newTopic")
+            chatStateManager.addSystemMessageToTarget(targetChannel, strings.get(Msg.CMD_TOPIC_TRYING, newTopic))
         } else {
             ircRepository.sendRawCommand("TOPIC $targetChannel")
-            chatStateManager.addSystemMessageToTarget(targetChannel, "Solicitando el tema de $targetChannel...")
+            chatStateManager.addSystemMessageToTarget(targetChannel, strings.get(Msg.CMD_TOPIC_REQUESTING, targetChannel))
         }
         return CommandResult.Handled
     }
@@ -200,22 +203,12 @@ class CommandProcessor @Inject constructor(
         return if (!currentActiveTarget.isNullOrBlank()) {
             CommandResult.ClearWindow(currentActiveTarget)
         } else {
-            CommandResult.ShowSystemMessage(targetForSysMsgOnError, "No hay ventana activa para limpiar.", isError = true)
+            CommandResult.ShowSystemMessage(targetForSysMsgOnError, strings.get(Msg.CMD_CLEAR_NO_WINDOW), isError = true)
         }
     }
 
     private fun processHelpCommand(targetForSysMsgOnError: String): CommandResult {
-        val helpMessage = "Comandos disponibles:\n" +
-                        "/me <acción> - Envía una acción.\n" +
-                        "/nick <nuevo_nick> - Cambia tu nickname.\n" +
-                        "/join <#canal> [clave] - Únete a un canal.\n" +
-                        "/part [#canal] [mensaje] - Sal de un canal.\n" +
-                        "/msg <nick/canal> <mensaje> - Envía un mensaje privado o a canal.\n" +
-                        "/query <nick> [mensaje] - Abre una ventana de chat privado.\n" +
-                        "/away [mensaje] - Márcate como ausente.\n" +
-                        "/topic [#canal] [nuevo_tema] - Ve o cambia el tema del canal.\n" +
-                        "/quit [mensaje] - Desconéctate del servidor.\n" +
-                        "/clear - Limpia los mensajes de la ventana actual."
+        val helpMessage = strings.get(Msg.CMD_HELP)
         return CommandResult.ShowSystemMessage(targetForSysMsgOnError, helpMessage)
     }
 }

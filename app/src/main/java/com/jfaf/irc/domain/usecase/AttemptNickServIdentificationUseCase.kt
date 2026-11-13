@@ -1,5 +1,7 @@
 package com.jfaf.irc.domain.usecase
 
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import android.util.Log
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
@@ -9,6 +11,7 @@ import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 class AttemptNickServIdentificationUseCase @Inject constructor(
+    private val strings: StringProvider,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val ircRepository: IrcRepository,
     private val chatStateManager: ChatStateManager
@@ -39,7 +42,7 @@ class AttemptNickServIdentificationUseCase @Inject constructor(
                 Log.i("AttemptNickServUseCase", "Attempting NickServ identification for $currentNickname.")
                 chatStateManager.addSystemMessageToTarget(
                     ChatStateManager.SERVER_TARGET_ID, 
-                    "Intentando identificarse con NickServ como $currentNickname..."
+                    strings.get(Msg.NICKSERV_IDENTIFYING, currentNickname)
                 )
                 ircRepository.sendRawCommand(command)
             } else if (!passwordToUse.isNullOrBlank()) {

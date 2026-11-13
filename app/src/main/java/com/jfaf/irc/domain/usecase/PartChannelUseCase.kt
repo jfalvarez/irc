@@ -1,5 +1,7 @@
 package com.jfaf.irc.domain.usecase
 
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.ui.viewmodels.ChatStateManager
 import javax.inject.Inject
@@ -10,6 +12,7 @@ sealed interface PartChannelResult {
 }
 
 class PartChannelUseCase @Inject constructor(
+    private val strings: StringProvider,
     private val ircRepository: IrcRepository,
     private val chatStateManager: ChatStateManager
 ) {
@@ -22,7 +25,7 @@ class PartChannelUseCase @Inject constructor(
         val targetForErrorMessage = currentActiveTarget ?: ChatStateManager.SERVER_TARGET_ID
 
         if (targetToPart == null || !targetToPart.startsWith("#")) {
-            val errorMessage = "No se puede salir: no es un canal válido o no hay canal activo."
+            val errorMessage = strings.get(Msg.PART_INVALID)
             chatStateManager.addSystemMessageToTarget(
                 targetForErrorMessage,
                 errorMessage, 

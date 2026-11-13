@@ -14,6 +14,8 @@ import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
 import com.jfaf.irc.data.repositories.UserMetadataRepository
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.usecase.AttemptNickServIdentificationUseCase
 import com.jfaf.irc.domain.usecase.CloseTargetUseCase
 import com.jfaf.irc.domain.usecase.ConnectUseCase
@@ -87,6 +89,7 @@ class MainViewModel @Inject constructor(
     private val sendMessageOrCommandUseCase: SendMessageOrCommandUseCase,
     private val handleIncomingMessageUseCase: HandleIncomingMessageUseCase,
     private val silentWhoisCompletionSignal: SilentWhoisCompletionSignal,
+    private val strings: StringProvider,
     val nativeAdManager: NativeAdManager
 ) : ViewModel(), ChatEventListener {
 
@@ -94,7 +97,8 @@ class MainViewModel @Inject constructor(
         ircRepository,
         userMetadataRepository,
         this,
-        viewModelScope
+        viewModelScope,
+        strings
     )
 
     var currentNickname: String = ""
@@ -240,7 +244,7 @@ class MainViewModel @Inject constructor(
 
         userMetadataRepository.friendCameOnlineEvent.onEach { nick ->
             _friendCameOnlineEvent.emit(nick)
-            _snackbarEvents.emit("Tu amigo $nick se ha conectado.")
+            _snackbarEvents.emit(strings.get(Msg.SNACK_FRIEND_ONLINE, nick))
         }.launchIn(viewModelScope)
     }
 
@@ -322,7 +326,7 @@ class MainViewModel @Inject constructor(
         }
 
         LinkTransitions.noticeFor(previous, state)?.let {
-            chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, it.text, it.isError)
+            chatStateManager.addSystemMessageToTarget(ChatStateManager.SERVER_TARGET_ID, strings.get(it.msg), it.isError)
         }
 
         when (state) {
@@ -422,7 +426,7 @@ class MainViewModel @Inject constructor(
     fun disconnectFromServerAndStopService(quitMessage: String? = null) {
         viewModelScope.launch {
             disconnectUseCase(quitMessage)
-            _userMessageEvents.emit("Desconectado del servidor.")
+            _userMessageEvents.emit(strings.get(Msg.SNACK_DISCONNECTED))
         }
         clearNickSuggestions()
     }
@@ -430,7 +434,7 @@ class MainViewModel @Inject constructor(
     fun ignoreUser(userName: String) {
         viewModelScope.launch {
             ignoreUserUseCase(userName)
-            _snackbarEvents.tryEmit("Usuario '$userName' añadido a ignorados.")
+            _snackbarEvents.tryEmit(strings.get(Msg.SNACK_IGNORED_ADDED, userName))
 
             if (chatStateManager.activeTarget.value?.equals(userName, ignoreCase = true) == true) {
                 closeTarget(userName)
@@ -447,10 +451,10 @@ class MainViewModel @Inject constructor(
             isFriendCheckPaused.set(true)
             when (performWhoisUseCase(nick)) {
                 is WhoisRequestResult.Success -> {
-                    _snackbarEvents.tryEmit("WHOIS para '$nick' solicitado. Ver pestaña 'Servidor'.")
+                    _snackbarEvents.tryEmit(strings.get(Msg.SNACK_WHOIS_REQUESTED, nick))
                 }
                 is WhoisRequestResult.NotConnected -> {
-                    _snackbarEvents.tryEmit("Error: No conectado al servidor para enviar WHOIS.")
+                    _snackbarEvents.tryEmit(strings.get(Msg.SNACK_WHOIS_NOT_CONNECTED))
                 }
                 is WhoisRequestResult.InvalidNickInput -> {
                     Log.w("MainViewModel", "performWhoisUseCase reported InvalidNickInput for: $nick")

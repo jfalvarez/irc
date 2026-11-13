@@ -1,5 +1,7 @@
 package com.jfaf.irc.ui.viewmodels
 
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import android.util.Log
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.repositories.IrcRepository
@@ -20,7 +22,8 @@ class ChatEventOrchestrator(
     private val ircRepository: IrcRepository,
     private val userMetadataRepository: UserMetadataRepository,
     private val eventListener: ChatEventListener,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val strings: StringProvider
 ) {
 
     private val _autoRepliedToIgnoredUsersThisSession = MutableStateFlow<Set<String>>(emptySet())
@@ -48,7 +51,7 @@ class ChatEventOrchestrator(
                                     Log.d("ChatEventOrchestrator", "Sender $senderNick (ignored) sent PM. Sending auto-reply.")
                                     // Use ircRepository.connectionState.value directly
                                     if (ircRepository.connectionState.value) {
-                                        ircRepository.sendMessage(senderNick, "Estás siendo ignorado por este usuario.")
+                                        ircRepository.sendMessage(senderNick, strings.get(Msg.AUTO_REPLY_IGNORED))
                                     }
                                     _autoRepliedToIgnoredUsersThisSession.value += senderNickLowercase
                                 } else {

@@ -1,5 +1,7 @@
 package com.jfaf.irc.domain.usecase
 
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import android.os.Bundle
 import android.util.Log
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -14,6 +16,7 @@ sealed interface WhoisRequestResult {
 }
 
 class PerformWhoisUseCase @Inject constructor(
+    private val strings: StringProvider,
     private val ircRepository: IrcRepository,
     private val chatStateManager: ChatStateManager,
     private val firebaseAnalytics: FirebaseAnalytics
@@ -33,7 +36,7 @@ class PerformWhoisUseCase @Inject constructor(
             Log.w("PerformWhoisUseCase", "performWhois called but not connected to the server.")
             chatStateManager.addSystemMessageToTarget(
                 ChatStateManager.SERVER_TARGET_ID, 
-                "No conectado. No se puede enviar WHOIS.", 
+                strings.get(Msg.WHOIS_NOT_CONNECTED), 
                 isError = true
             )
             return WhoisRequestResult.NotConnected
@@ -42,7 +45,7 @@ class PerformWhoisUseCase @Inject constructor(
         Log.i("PerformWhoisUseCase", "Enviando comando WHOIS para $nick")
         chatStateManager.addSystemMessageToTarget(
             ChatStateManager.SERVER_TARGET_ID, 
-            "[WHOIS] Solicitando información para $nick..."
+            strings.get(Msg.WHOIS_REQUESTING, nick)
         )
         ircRepository.sendRawCommand("WHOIS $nick", isSilent = false)
         return WhoisRequestResult.Success

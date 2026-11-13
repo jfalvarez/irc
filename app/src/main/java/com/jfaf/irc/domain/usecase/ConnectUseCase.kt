@@ -1,5 +1,7 @@
 package com.jfaf.irc.domain.usecase
 
+import com.jfaf.irc.domain.text.Msg
+import com.jfaf.irc.domain.text.StringProvider
 import android.util.Log
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.repositories.IrcRepository
@@ -8,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 class ConnectUseCase @Inject constructor(
+    private val strings: StringProvider,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val ircRepository: IrcRepository,
     private val chatStateManager: ChatStateManager
@@ -40,7 +43,7 @@ class ConnectUseCase @Inject constructor(
         // The use case is responsible for the connection *process*.
         chatStateManager.addSystemMessageToTarget(
             ChatStateManager.SERVER_TARGET_ID, 
-            "Conectando a $hostToConnect como $nickname..."
+            strings.get(Msg.CONNECTING_TO, hostToConnect, nickname)
         )
         ircRepository.connect(hostToConnect, portToConnect, ssl, nickname)
     }
