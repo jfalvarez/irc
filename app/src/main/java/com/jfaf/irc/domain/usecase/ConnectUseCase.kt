@@ -46,5 +46,7 @@ class ConnectUseCase @Inject constructor(
             strings.get(Msg.CONNECTING_TO, hostToConnect, nickname)
         )
         ircRepository.connect(hostToConnect, portToConnect, ssl, nickname)
+        // Pestañas de canal restauradas o abiertas antes: el cliente envía los JOIN al recibir el 001.
+        chatStateManager.chatTargets.value.filter { it.startsWith("#") }.forEach { ircRepository.joinChannel(it) }
     }
 }

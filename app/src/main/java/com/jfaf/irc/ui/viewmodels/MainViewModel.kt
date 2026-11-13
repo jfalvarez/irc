@@ -77,6 +77,7 @@ class MainViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val userMetadataRepository: UserMetadataRepository,
     private val chatStateManager: ChatStateManager,
+    private val chatHistoryPersister: ChatHistoryPersister,
     private val connectUseCase: ConnectUseCase,
     private val attemptNickServIdentificationUseCase: AttemptNickServIdentificationUseCase,
     private val disconnectUseCase: DisconnectUseCase,
@@ -222,6 +223,7 @@ class MainViewModel @Inject constructor(
 
     init {
         chatEventOrchestrator.startObservingRawMessages()
+        chatHistoryPersister.start(viewModelScope)
         // El debounce evita ver el "desconectado" transitorio que ocurre justo antes de que
         // el servicio marque isReconnecting = true.
         combine(ircRepository.connectionState, ircRepository.isReconnecting, LinkState::of)

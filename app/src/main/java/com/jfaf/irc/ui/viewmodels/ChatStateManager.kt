@@ -224,29 +224,44 @@ class ChatStateManager @Inject constructor() {
         Log.d("ChatStateManager", "Users updated for channel '$channel': ${sortedUsers.size} users.")
     }
 
-    fun resetStateForConnection() {
-        _chatTargets.value = ensureServerTargetIsFirstLocal(listOf(SERVER_TARGET_ID))
-        _activeTarget.value = SERVER_TARGET_ID
-        _unreadTargets.value = emptySet()
-        _usersInChannel.value = emptyMap()
-        _allMessages.value = mapOf(SERVER_TARGET_ID to emptyList()) 
-        _showUserList.value = false // Also hide on new connection
-        Log.d("ChatStateManager", "State reset for new connection.")
+    /** Restaura pestañas e historial guardados; sólo si el estado sigue "virgen" (nada abierto todavía). */
+    fun restore(tabs: List<String>, active: String?, messages: Map<String, List<UiChatMessage>>) {
+        val pristine = _chatTargets.value.all { it == SERVER_TARGET_ID } &&
+            _allMessages.value.values.all { it.isEmpty() }
+        if (!pristine || tabs.isEmpty()) return
+        val restoredTargets = ensureServerTargetIsFirstLocal(listOf(SERVER_TARGET_ID) + tabs)
+        _chatTargets.value = restoredTargets
+        _allMessages.value = restoredTargets.associateWith { messages[it].orEmpty().takeLast(MAX_MESSAGES_PER_TARGET) }
+        _activeTarget.value = active?.takeIf { a -> restoredTargets.any { it == a } } ?: SERVER_TARGET_ID
+        Log.d("ChatStateManager", "Restored ${restoredTargets.size - 1} tabs from history.")
     }
 
-    fun resetStateForDisconnection() {
-        _chatTargets.value = ensureServerTargetIsFirstLocal(listOf(SERVER_TARGET_ID))
-        _activeTarget.value = SERVER_TARGET_ID
+    /**
+     * Nueva conexión: se conservan pestañas e historial (al conectar se vuelve a entrar en los canales);
+     * se limpian la pestaña Servidor (MOTD), los usuarios, los no leídos y la lista de usuarios.
+     */
+    fun resetStateForConnection() {
+        _chatTargets.update { ensureServerTargetIsFirstLocal(it + SERVER_TARGET_ID) }
+        if (_chatTargets.value.none { it == _activeTarget.value }) {
+            _activeTarget.value = SERVER_TARGET_ID
+        }
         _unreadTargets.value = emptySet()
         _usersInChannel.value = emptyMap()
-        val serverMessages = _allMessages.value[SERVER_TARGET_ID]
-        _allMessages.value = if (serverMessages != null) {
-            mapOf(SERVER_TARGET_ID to serverMessages)
-        } else {
-            mapOf(SERVER_TARGET_ID to emptyList())
+        _allMessages.update { it + (SERVER_TARGET_ID to emptyList()) }
+        _showUserList.value = false
+        Log.d("ChatStateManager", "State reset for new connection (tabs and history kept).")
+    }
+
+    /** Desconexión: se conservan pestañas e historial; los usuarios de los canales dejan de ser válidos. */
+    fun resetStateForDisconnection() {
+        _chatTargets.update { ensureServerTargetIsFirstLocal(it + SERVER_TARGET_ID) }
+        _unreadTargets.value = emptySet()
+        _usersInChannel.value = emptyMap()
+        _allMessages.update { current ->
+            if (current.containsKey(SERVER_TARGET_ID)) current else current + (SERVER_TARGET_ID to emptyList())
         }
-        _showUserList.value = false // Also hide on disconnection
-        Log.d("ChatStateManager", "State reset for disconnection, server messages preserved if any.")
+        _showUserList.value = false
+        Log.d("ChatStateManager", "State reset for disconnection, tabs and history kept.")
     }
 
     fun updateStateFromHandlerResult(result: ChatUpdateResult, currentOwnNickProvider: () -> String) {
