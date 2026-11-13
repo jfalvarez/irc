@@ -12,6 +12,7 @@ import kotlin.random.Random
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PreferencesDataStoreTest {
@@ -36,6 +37,23 @@ class PreferencesDataStoreTest {
         val second = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job2)))
         assertEquals("ana", second.userPreferencesFlow.first().nickname)
         assertEquals(ServerConfig("irc.example.org", 6668, 6698), second.serverConfigFlow.first())
+        job2.cancelAndJoin()
+    }
+
+    @Test
+    fun sonidoDeAviso_estaActivadoPorDefectoYSeConservaAlSilenciarlo() = runBlocking {
+        val job1 = Job()
+        val first = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job1)))
+        assertTrue(first.soundAlertsFlow.first(), "Por defecto debe sonar")
+        first.updateSoundAlerts(false)
+        assertFalse(first.soundAlertsFlow.first())
+        job1.cancelAndJoin()
+
+        val job2 = Job()
+        val second = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job2)))
+        assertFalse(second.soundAlertsFlow.first(), "El silencio debe conservarse al reabrir")
+        second.updateSoundAlerts(true)
+        assertTrue(second.soundAlertsFlow.first())
         job2.cancelAndJoin()
     }
 

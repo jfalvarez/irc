@@ -11,6 +11,7 @@ import com.jfaf.irc.ui.platform.PlatformUi
 object DesktopPlatformUi : PlatformUi {
     override val supportsGoogleSignIn = false
     override val isDesktop = true
+    override val supportsSoundAlerts = true
 
     @Composable
     override fun GoogleSignInButton(onClick: () -> Unit) {}

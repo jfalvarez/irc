@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
+import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,6 +44,8 @@ fun SettingsScreen(
     val showModeChanges by viewModel.showModeChanges.collectAsState()
     val showPingPongMessages by viewModel.showPingPongMessages.collectAsState()
     val showMediaPreviews by viewModel.showMediaPreviews.collectAsState()
+    val soundAlerts by viewModel.soundAlerts.collectAsState()
+    val supportsSoundAlerts = LocalPlatformUi.current.supportsSoundAlerts
     val ignoredUsers by viewModel.ignoredUsers.collectAsState()
     val friends by viewModel.friends.collectAsState()
     val serverConfig by viewModel.serverConfig.collectAsState()
@@ -128,6 +131,15 @@ fun SettingsScreen(
                     checked = showMediaPreviews,
                     onCheckedChange = { viewModel.setShowMediaPreviews(it) }
                 )
+            }
+            if (supportsSoundAlerts) {
+                item {
+                    SettingRowWithCheckbox(
+                        text = stringResource(Res.string.settings_option_sound_alerts),
+                        checked = soundAlerts,
+                        onCheckedChange = { viewModel.setSoundAlerts(it) }
+                    )
+                }
             }
 
             item {

@@ -75,6 +75,7 @@ class DesktopModuleTest {
         assertNotNull(koin.get<IrcConnection>())
         assertNotNull(koin.get<IrcSender>())
         assertTrue(koin.get<Notifier>() === koin.get<DesktopNotifier>(), "El Notifier debe ser el DesktopNotifier")
+        assertTrue(koin.get<Haptics>() is DesktopHaptics, "En escritorio el aviso con la ventana a la vista es un sonido")
     }
 
     @Test

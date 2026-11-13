@@ -21,6 +21,8 @@ import com.jfaf.irc.domain.platform.Haptics
 import com.jfaf.irc.domain.platform.UpdateChecker
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.user.UserMetadataStore
+import com.jfaf.irc.di.ApplicationScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -28,9 +30,10 @@ import java.io.File
 
 /**
  * Implementaciones de escritorio. Junto con `commonModule` y `viewModelModule` (de `:shared`)
- * completa el grafo de Koin. [dataDir] es la carpeta de datos del usuario.
+ * completa el grafo de Koin. [dataDir] es la carpeta de datos del usuario y [soundOutput] el que emite el sonido
+ * de aviso (las pruebas ponen uno que sólo cuenta).
  */
-fun desktopModule(dataDir: File) = module {
+fun desktopModule(dataDir: File, soundOutput: SoundPlayer = ToneSoundPlayer()) = module {
     // Persistencia: las mismas funciones comunes que Android, con rutas de archivo
     single {
         buildChatDatabase(Room.databaseBuilder<ChatDatabase>(name = File(dataDir, CHAT_DATABASE_NAME).absolutePath))
@@ -45,8 +48,14 @@ fun desktopModule(dataDir: File) = module {
     single<StringProvider> { runBlocking { ComposeStringProvider.load() } }
     single<AppConfig> { DesktopAppConfig() }
     single<ConnectionHost> { DesktopConnectionHost() }
-    single { DesktopNotifier() } bind Notifier::class
-    single<Haptics> { NoOpHaptics() }
+    single { SoundAlertsSetting(get(), get<CoroutineScope>(ApplicationScope)) }
+    single<SoundPlayer> {
+        val setting = get<SoundAlertsSetting>()
+        // Primero el interruptor y luego el limitador: un aviso silenciado no gasta el intervalo.
+        PreferenceGatedSoundPlayer(RateLimitedSoundPlayer(soundOutput)) { setting.enabled.value }
+    }
+    single { DesktopNotifier(get()) } bind Notifier::class
+    single<Haptics> { DesktopHaptics(get()) }
     single<AdProvider> { NoAdProvider() }
     single<AnalyticsTracker> { NoOpAnalyticsTracker() }
     single<AuthSession> { NoAuthSession() }

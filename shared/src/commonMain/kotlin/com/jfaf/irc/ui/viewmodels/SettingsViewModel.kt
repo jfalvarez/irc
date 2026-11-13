@@ -82,6 +82,20 @@ class SettingsViewModel(
     }
     // --- Fin Preferencia para Previsualizaciones de Medios ---
 
+    // --- Sonido de aviso (sólo se muestra en las plataformas que lo soportan: escritorio) ---
+    val soundAlerts: StateFlow<Boolean> =
+        userPreferencesRepository.soundAlertsFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true // Coincide con el predeterminado en el repositorio
+        )
+
+    fun setSoundAlerts(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.updateSoundAlerts(enabled)
+        }
+    }
+
     val ignoredUsers: StateFlow<Set<String>> =
         userMetadataStore.ignoredUsersFlow.stateIn(
             scope = viewModelScope,

@@ -139,6 +139,7 @@
     <string name="cd_expand">Expandir</string>
     <string name="cd_collapse">Colapsar</string>
     <string name="settings_option_show_media_previews">Mostrar previsualizaciones de medios en el chat</string>
+    <string name="settings_option_sound_alerts">Sonido al recibir un privado o al conectarse un amigo</string>
     <string name="menu_item_ignore_user">Ignorar a %1$s</string>
     <string name="menu_item_add_friend">Añadir a amigos a %1$s</string>
     <string name="label_nickserv_password">Contraseña de NickServ</string>

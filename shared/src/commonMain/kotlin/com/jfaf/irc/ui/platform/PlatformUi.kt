@@ -15,6 +15,9 @@ interface PlatformUi {
     /** Si es la versión de escritorio: ventana ancha con paneles fijos y foco automático en el campo de texto. */
     val isDesktop: Boolean get() = false
 
+    /** Si el aviso de mensajes es un sonido de la app que se puede silenciar desde Ajustes (escritorio; en Android vibra). */
+    val supportsSoundAlerts: Boolean get() = false
+
     @Composable
     fun GoogleSignInButton(onClick: () -> Unit)
 

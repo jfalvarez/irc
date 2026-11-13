@@ -36,6 +36,8 @@ class UserPreferencesRepository(
         val SHOW_MEDIA_PREVIEWS = booleanPreferencesKey(SHOW_MEDIA_PREVIEWS_KEY_NAME)
         val NICKNAME = stringPreferencesKey(NICKNAME_KEY_NAME)
 
+        val SOUND_ALERTS = booleanPreferencesKey("sound_alerts")
+
         val SERVER_HOST = stringPreferencesKey("server_host")
         val SERVER_PLAIN_PORT = intPreferencesKey("server_plain_port")
         val SERVER_SSL_PORT = intPreferencesKey("server_ssl_port")
@@ -79,6 +81,17 @@ class UserPreferencesRepository(
     suspend fun updateNickname(nickname: String) {
         dataStore.edit { preferences ->
             preferences[NICKNAME] = nickname
+        }
+    }
+
+    /** Sonido de aviso de privados y amigos conectados (sólo escritorio; en Android lo decide el sistema). Activado por defecto. */
+    val soundAlertsFlow: Flow<Boolean> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { it[SOUND_ALERTS] ?: true }
+
+    suspend fun updateSoundAlerts(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[SOUND_ALERTS] = enabled
         }
     }
 

@@ -8,7 +8,6 @@ import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.domain.platform.AuthSession
 import com.jfaf.irc.domain.platform.AuthUser
 import com.jfaf.irc.domain.platform.ConnectionHost
-import com.jfaf.irc.domain.platform.Haptics
 import com.jfaf.irc.domain.platform.UpdateChecker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,8 +50,4 @@ class NoUpdateChecker : UpdateChecker {
 class DesktopConnectionHost : ConnectionHost {
     override fun start() {}
     override fun stop() {}
-}
-
-class NoOpHaptics : Haptics {
-    override fun vibrate() {}
 }

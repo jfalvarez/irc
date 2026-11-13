@@ -9,8 +9,11 @@ import kotlin.concurrent.Volatile
 /**
  * Avisos por la bandeja del sistema. Compose Desktop sólo notifica desde un [TrayState] que vive
  * dentro de `application { }`, así que `main` lo registra con [attach] cuando existe.
+ *
+ * Además suena [sound]: así el aviso en segundo plano se oye aunque Windows tenga mudas las notificaciones o no
+ * haya bandeja. Sólo se llama a este notificador con la ventana sin foco; con la ventana a la vista suena `Haptics`.
  */
-class DesktopNotifier : Notifier {
+class DesktopNotifier(private val sound: SoundPlayer) : Notifier {
 
     @Volatile
     private var trayState: TrayState? = null
@@ -28,6 +31,7 @@ class DesktopNotifier : Notifier {
     }
 
     private fun send(notification: Notification) {
+        sound.play()
         val state = trayState
         if (state == null) {
             Log.d("DesktopNotifier", "Sin bandeja disponible: no se muestra \"${notification.title}\"")
