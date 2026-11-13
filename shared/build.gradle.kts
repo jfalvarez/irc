@@ -60,6 +60,8 @@ kotlin {
             api(libs.androidx.room.runtime)
             api(libs.androidx.sqlite.bundled)
             api(libs.koin.core) // commonModule
+            api(libs.koin.compose.viewmodel) // viewModel { } y koinViewModel()
+            api(libs.jetbrains.lifecycle.viewmodel) // ViewModel multiplataforma (K10)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

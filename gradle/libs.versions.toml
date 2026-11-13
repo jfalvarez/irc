@@ -6,7 +6,7 @@ coreKtx = "1.10.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"
 espressoCore = "3.5.1"
-lifecycle = "2.9.4"
+lifecycle = "2.11.0" # androidx y JetBrains comparten número (Android resolvía ya 2.11.0)
 room = "2.8.5"
 sqlite = "2.7.1"
 ksp = "2.3.13"
@@ -19,7 +19,7 @@ coil = "2.7.0"
 playServicesAds = "23.0.0"
 datastorePreferences = "1.3.0"
 koin = "4.2.2"
-navigationCompose = "2.9.4"
+jetbrainsNavigation = "2.10.0"
 composeMultiplatform = "1.12.2"
 
 # Versiones explícitas para Firebase KTX
@@ -75,7 +75,8 @@ androidx-datastore-preferences-core = { group = "androidx.datastore", name = "da
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
-androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+jetbrains-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
+jetbrains-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "jetbrainsNavigation" }
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3Exoplayer" }
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3Ui" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }

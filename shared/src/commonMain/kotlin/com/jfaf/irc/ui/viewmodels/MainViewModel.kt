@@ -59,7 +59,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.Volatile
 
 data class ChatScreenState(
     val activeTarget: StateFlow<String?>,
@@ -123,7 +123,7 @@ class MainViewModel(
 
     private val _isRegistered = MutableStateFlow(false)
     private var friendCheckJob: Job? = null
-    private val isFriendCheckPaused = AtomicBoolean(false)
+    @Volatile private var isFriendCheckPaused = false
 
     private val _friendCameOnlineEvent = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val friendCameOnlineEvent = _friendCameOnlineEvent.asSharedFlow()
@@ -265,11 +265,11 @@ class MainViewModel(
         friendCheckJob?.cancel()
         friendCheckJob = viewModelScope.launch {
             while (true) {
-                if (!isFriendCheckPaused.get()) {
+                if (!isFriendCheckPaused) {
                     val friends = userMetadataStore.friendsFlow.first()
                     if (friends.isNotEmpty()) {
                         for (friend in friends) {
-                            if (!isFriendCheckPaused.get()) {
+                            if (!isFriendCheckPaused) {
                                 ircConnection.sendRawCommand("WHOIS $friend", isSilent = true)
                                 silentWhoisCompletionSignal.awaitCompletion()
                             }
@@ -461,7 +461,7 @@ class MainViewModel(
             return
         }
         viewModelScope.launch {
-            isFriendCheckPaused.set(true)
+            isFriendCheckPaused = true
             when (performWhoisUseCase(nick)) {
                 is WhoisRequestResult.Success -> {
                     _snackbarEvents.tryEmit(strings.get(Msg.SNACK_WHOIS_REQUESTED, nick))
@@ -474,7 +474,7 @@ class MainViewModel(
                 }
             }
             delay(5000) // 5 seconds
-            isFriendCheckPaused.set(false)
+            isFriendCheckPaused = false
         }
     }
 

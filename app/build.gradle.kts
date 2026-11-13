@@ -95,11 +95,10 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     implementation(libs.koin.android)
-    implementation(libs.koin.compose.viewmodel)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
 
-    implementation(libs.androidx.navigation.compose)
+    implementation(libs.jetbrains.navigation.compose)
 
     // Firebase - Asegúrate de que el BoM (Bill of Materials) esté presente
     implementation(platform(libs.firebase.bom))
