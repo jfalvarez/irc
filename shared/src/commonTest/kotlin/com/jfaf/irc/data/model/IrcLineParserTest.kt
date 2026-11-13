@@ -1,16 +1,16 @@
 package com.jfaf.irc.data.model
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.Test
 
 class IrcLineParserTest {
 
     private fun parse(line: String): ParsedIrcMessage {
         val msg = IrcLineParser.parse(line)
-        assertNotNull("Se esperaba un mensaje para: $line", msg)
-        return msg!!
+        assertNotNull(msg, "Se esperaba un mensaje para: $line")
+        return msg
     }
 
     @Test

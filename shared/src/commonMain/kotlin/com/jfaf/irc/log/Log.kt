@@ -4,6 +4,7 @@ import co.touchlab.kermit.CommonWriter
 import co.touchlab.kermit.LogWriter
 import co.touchlab.kermit.Logger
 import co.touchlab.kermit.loggerConfigInit
+import kotlin.concurrent.Volatile
 
 /**
  * Fachada de log multiplataforma sobre Kermit, con la misma firma que android.util.Log
