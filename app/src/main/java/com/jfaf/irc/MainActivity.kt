@@ -53,7 +53,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 import com.jfaf.irc.domain.platform.UpdateChecker
 import com.jfaf.irc.service.IrcService
-import com.jfaf.irc.service.IrcServiceApi
+import com.jfaf.irc.domain.platform.AppVisibility
 import com.jfaf.irc.ui.screens.MainScreen
 import com.jfaf.irc.ui.screens.settings.SettingsScreen
 import com.jfaf.irc.ui.theme.IRCAppTheme
@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
     lateinit var updateChecker: UpdateChecker
 
     @Inject
-    lateinit var ircServiceApi: IrcServiceApi
+    lateinit var appVisibility: AppVisibility
 
     private lateinit var mainViewModel: MainViewModel
     private lateinit var signInViewModel: SignInViewModel
@@ -107,13 +107,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        ircServiceApi.appEnteredForeground()
+        appVisibility.enteredForeground()
         Log.d(TAG_ACTIVITY, "App en primer plano.")
     }
 
     override fun onStop() {
         super.onStop()
-        ircServiceApi.appEnteredBackground()
+        appVisibility.enteredBackground()
         Log.d(TAG_ACTIVITY, "App en segundo plano.")
     }
 
@@ -134,7 +134,7 @@ class MainActivity : ComponentActivity() {
 
             val context = LocalContext.current
             val navController = rememberNavController()
-            val connectionState by ircServiceApi.connectionState.collectAsState()
+            val connectionState by mainViewModel.chatScreenState.connectionState.collectAsState()
             var showExitConfirmationDialog by remember { mutableStateOf(false) }
 
             val currentActiveTarget by mainViewModel.chatScreenState.activeTarget.collectAsState()

@@ -17,9 +17,9 @@ import com.jfaf.irc.AppConstants
 import com.jfaf.irc.MainActivity
 import com.jfaf.irc.R
 import com.jfaf.irc.data.model.ParsedIrcMessage
-import com.jfaf.irc.data.remote.ConnectParams
 import com.jfaf.irc.data.remote.IrcSession
 import com.jfaf.irc.data.remote.SessionStatus
+import com.jfaf.irc.domain.platform.AppVisibility
 import com.jfaf.irc.util.NotificationHelper
 import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.domain.user.FriendPresenceTracker
@@ -48,7 +48,7 @@ class IrcService : Service() {
     lateinit var friendPresence: FriendPresenceTracker
 
     @Inject
-    lateinit var ircServiceApi: IrcServiceApi
+    lateinit var appVisibility: AppVisibility
 
     @Inject
     lateinit var session: IrcSession
@@ -67,27 +67,13 @@ class IrcService : Service() {
     private var sessionObserversJob: Job? = null
 
     companion object {
-        const val ACTION_CONNECT = "com.jfaf.irc.service.ACTION_CONNECT"
-        const val ACTION_DISCONNECT = "com.jfaf.irc.service.ACTION_DISCONNECT"
-        const val ACTION_SEND_MESSAGE = "com.jfaf.irc.service.ACTION_SEND_MESSAGE"
-        const val ACTION_JOIN_CHANNEL = "com.jfaf.irc.service.ACTION_JOIN_CHANNEL"
-        const val ACTION_PART_CHANNEL = "com.jfaf.irc.service.ACTION_PART_CHANNEL"
-        const val ACTION_DISCONNECT_AND_STOP_SERVICE = "com.jfaf.irc.service.ACTION_DISCONNECT_AND_STOP_SERVICE"
-        const val ACTION_SEND_RAW_COMMAND = "com.jfaf.irc.service.ACTION_SEND_RAW_COMMAND"
+        /** Mantener viva la sesión: primer plano, observarla y notificar. */
+        const val ACTION_START = "com.jfaf.irc.service.ACTION_START"
+        /** La sesión ya está desconectada: retirar notificaciones y pararse. */
+        const val ACTION_STOP = "com.jfaf.irc.service.ACTION_STOP"
 
-        const val EXTRA_NICKNAME = "nickname"
-        const val EXTRA_SERVER_HOST = "server_host"
-        const val EXTRA_SERVER_PORT = "server_port"
-        const val EXTRA_USE_SSL = "use_ssl"
-        const val EXTRA_TARGET = "target"
-        const val EXTRA_MESSAGE = "message"
-        const val EXTRA_CHANNEL_NAME = "channel_name"
+        /** Extra del `PendingIntent` de una notificación de mensaje: pestaña a abrir (lo lee MainActivity). */
         const val EXTRA_TARGET_FOR_NOTIFICATION = "target_for_notification"
-        const val EXTRA_RAW_COMMAND = "raw_command"
-        // Nuevos Extras
-        const val EXTRA_CHANNEL_KEY = "channel_key"
-        const val EXTRA_PART_MESSAGE = "part_message"
-        const val EXTRA_QUIT_MESSAGE = "quit_message"
     }
 
     override fun onCreate() {
@@ -105,65 +91,15 @@ class IrcService : Service() {
             isFriendObserverStarted = true
         }
 
-        // Siempre, también para ACTION_DISCONNECT_AND_STOP_SERVICE: el servicio llega aquí vía
-        // startForegroundService y debe llamar a startForeground en 5 s aunque vaya a detenerse.
-        val initialNotificationText = when {
-            action == ACTION_CONNECT -> getString(R.string.notification_status_connecting)
-            else -> statusText(session.status.value)
-        }
-        startAsForeground(createForegroundServiceNotification(initialNotificationText))
+        // Siempre, también para ACTION_STOP: el servicio llega aquí vía startForegroundService
+        // y debe llamar a startForeground en 5 s aunque vaya a detenerse.
+        startAsForeground(createForegroundServiceNotification(statusText(session.status.value)))
         if (sessionObserversJob == null) observeSession() // tras startForeground: nunca antes
 
         when (action) {
-            ACTION_CONNECT -> {
-                val nickname = intent.getStringExtra(EXTRA_NICKNAME) ?: AppConstants.DEFAULT_NICKNAME
-                val serverHost = intent.getStringExtra(EXTRA_SERVER_HOST) ?: AppConstants.DEFAULT_SERVER_HOST
-                val serverPort = intent.getIntExtra(EXTRA_SERVER_PORT, 6667)
-                val useSsl = intent.getBooleanExtra(EXTRA_USE_SSL, false)
-                session.connect(ConnectParams(nickname, serverHost, serverPort, useSsl))
-            }
-            ACTION_DISCONNECT -> {
-                Log.i(TAG, "Acción DISCONNECT recibida. Desconectando socket, servicio permanece en foreground.")
-                serviceScope.launch { session.disconnect() }
-            }
-            ACTION_DISCONNECT_AND_STOP_SERVICE -> {
-                Log.i(TAG, "Acción DISCONNECT_AND_STOP_SERVICE recibida. Desconectando y deteniendo el servicio.")
-                val quitMessage = intent.getStringExtra(EXTRA_QUIT_MESSAGE)
-                disconnect(quitMessage)
-            }
-            ACTION_SEND_MESSAGE -> {
-                val target = intent.getStringExtra(EXTRA_TARGET)
-                val message = intent.getStringExtra(EXTRA_MESSAGE)
-                if (target != null && message != null) {
-                    session.sendMessage(target, message)
-                }
-            }
-            ACTION_JOIN_CHANNEL -> {
-                val channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME)
-                val channelKey = intent.getStringExtra(EXTRA_CHANNEL_KEY)
-                if (channelName != null) {
-                    session.joinChannel(channelName, channelKey)
-                }
-            }
-            ACTION_PART_CHANNEL -> {
-                val channelName = intent.getStringExtra(EXTRA_CHANNEL_NAME)
-                val partMessage = intent.getStringExtra(EXTRA_PART_MESSAGE)
-                if (channelName != null) {
-                    session.partChannel(channelName, partMessage)
-                }
-            }
-            ACTION_SEND_RAW_COMMAND -> {
-                val rawCommand = intent.getStringExtra(EXTRA_RAW_COMMAND)
-                if (!rawCommand.isNullOrBlank()) {
-                    Log.d(TAG, "Enviando comando crudo al cliente IRC: $rawCommand")
-                    session.sendRaw(rawCommand)
-                } else {
-                    Log.w(TAG, "ACTION_SEND_RAW_COMMAND recibido con comando nulo o vacío.")
-                }
-            }
-            else -> {
-                Log.w(TAG, "Acción desconocida o nula: $action")
-            }
+            ACTION_START -> Log.i(TAG, "Servicio en primer plano: manteniendo viva la sesión IRC.")
+            ACTION_STOP -> stopHosting(quitMessage = null) // la sesión ya la desconectó IrcRepository
+            else -> Log.w(TAG, "Acción desconocida o nula: $action")
         }
         return START_NOT_STICKY
     }
@@ -178,17 +114,13 @@ class IrcService : Service() {
         )
     }
 
-    /** Refleja la sesión en IrcServiceApi (hasta 1.5c), la notificación persistente y las de privados. */
+    /** Refleja la sesión en la notificación persistente y en las de privados. */
     private fun observeSession() {
         sessionObserversJob = serviceScope.launch {
-            launch { session.connectionState.collect { ircServiceApi.updateConnectionState(it) } }
-            launch { session.isReconnecting.collect { ircServiceApi.updateReconnecting(it) } }
             launch { session.status.collect { updateForegroundServiceNotification(statusText(it)) } }
             launch {
                 session.incomingMessages.collect { parsedMessage ->
-                    ircServiceApi.postMessage(parsedMessage)
-
-                    if (!ircServiceApi.isAppInForeground.value) { // App is in background
+                    if (!appVisibility.isInForeground.value) { // App is in background
                         val target = parsedMessage.params.firstOrNull()
                         if (parsedMessage.command == "PRIVMSG" && target != null && !target.startsWith("#")) {
                             val senderNick = parsedMessage.senderNickname
@@ -226,22 +158,25 @@ class IrcService : Service() {
     private fun observeFriendOnlineStatus() {
         serviceScope.launch {
             friendPresence.friendCameOnlineEvent.collectLatest { nick ->
-                if (!ircServiceApi.isAppInForeground.value) {
+                if (!appVisibility.isInForeground.value) {
                     showFriendOnlineNotification(nick)
                 }
             }
         }
     }
 
-    private fun disconnect(quitMessage: String? = null) {
-        Log.i(TAG, "Función disconnect(quitMessage: $quitMessage) llamada. Limpiando cliente, quitando foreground y deteniendo servicio.")
+    /**
+     * Retira las notificaciones y para el servicio. Con [quitMessage] desconecta antes la sesión
+     * (cierre desde recientes); sin él, la sesión ya está desconectada.
+     */
+    private fun stopHosting(quitMessage: String?) {
+        Log.i(TAG, "Deteniendo el servicio (quitMessage: $quitMessage).")
         serviceScope.launch {
             // Un único QUIT, que se espera a que salga antes de cerrar
-            session.disconnect(quitMessage?.takeIf { it.isNotBlank() } ?: AppConstants.QUIT_MSG_CLIENT_SHUTDOWN)
+            if (quitMessage != null) session.disconnect(quitMessage)
             // Deja de observar ANTES de quitar el foreground: que el "Desconectado" no repinte una notificación huérfana
             sessionObserversJob?.cancelAndJoin()
             sessionObserversJob = null
-            ircServiceApi.updateConnectionState(false)
             stopForeground(STOP_FOREGROUND_REMOVE)
             // Después de parar el foreground para que ninguna notificación (conexión, mensajes, amigos) quede huérfana.
             NotificationHelper.clearAllNotifications(this@IrcService)
@@ -379,7 +314,7 @@ class IrcService : Service() {
      */
     override fun onTaskRemoved(rootIntent: Intent?) {
         Log.i(TAG, "Tarea eliminada por el usuario: desconectando y deteniendo el servicio.")
-        disconnect(AppConstants.DEFAULT_QUIT_MESSAGE)
+        stopHosting(AppConstants.DEFAULT_QUIT_MESSAGE)
         super.onTaskRemoved(rootIntent)
     }
 
@@ -389,8 +324,5 @@ class IrcService : Service() {
         // Corre en el scope de la sesión: serviceJob.cancel() no impide enviar el QUIT y cerrar
         session.disconnectInBackground()
         serviceJob.cancel()
-        if (ircServiceApi.connectionState.value) {
-            ircServiceApi.updateConnectionState(false)
-        }
     }
 }

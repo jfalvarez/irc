@@ -1,5 +1,8 @@
 package com.jfaf.irc.di
 
+import com.jfaf.irc.domain.platform.ConnectionHost
+import com.jfaf.irc.service.AndroidConnectionHost
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -10,6 +13,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import javax.inject.Qualifier
 import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class ConnectionHostModule {
+    @Binds
+    abstract fun bindConnectionHost(impl: AndroidConnectionHost): ConnectionHost
+}
 
 @Retention(AnnotationRetention.BINARY)
 @Qualifier
