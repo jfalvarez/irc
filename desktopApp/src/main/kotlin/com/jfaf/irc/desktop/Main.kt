@@ -2,8 +2,10 @@ package com.jfaf.irc.desktop
 
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.res.loadImageBitmap
+import androidx.compose.ui.res.useResource
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -66,6 +68,7 @@ fun main() {
             exitApplication()
         }
         val windowState = rememberWindowState(size = DpSize(1000.dp, 700.dp))
+        val appIcon = remember { BitmapPainter(useResource("icon.png", ::loadImageBitmap)) }
 
         // Los avisos de privados salen por la bandeja del sistema.
         val trayState = rememberTrayState()
@@ -74,10 +77,10 @@ fun main() {
                 notifier.attach(trayState)
                 onDispose { notifier.attach(null) }
             }
-            Tray(state = trayState, icon = ColorPainter(Color(0xFF6A4FD6)), tooltip = APP_TITLE)
+            Tray(state = trayState, icon = appIcon, tooltip = APP_TITLE)
         }
 
-        Window(onCloseRequest = exit, title = APP_TITLE, state = windowState) {
+        Window(onCloseRequest = exit, title = APP_TITLE, icon = appIcon, state = windowState) {
             // Visible = con el foco y sin minimizar; si no, BackgroundNotifications avisa por la bandeja.
             val focused = LocalWindowInfo.current.isWindowFocused
             LaunchedEffect(focused, windowState.isMinimized) {
