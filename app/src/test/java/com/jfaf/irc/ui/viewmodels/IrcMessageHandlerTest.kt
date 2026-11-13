@@ -1,6 +1,8 @@
 package com.jfaf.irc.ui.viewmodels
 
 import com.jfaf.irc.data.model.IrcLineParser
+import com.jfaf.irc.domain.config.AppConfig
+import com.jfaf.irc.domain.config.parseKeywordList
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.ui.model.UiChatMessage
@@ -17,7 +19,11 @@ class IrcMessageHandlerTest {
     private val fakeStrings = object : StringProvider {
         override fun get(msg: Msg, vararg args: Any) = (listOf(msg.name) + args.map { it.toString() }).joinToString("|")
     }
-    private val handler = IrcMessageHandler(fakeStrings)
+    private fun config(vararg keywords: String) = object : AppConfig {
+        override val imageFilterKeywords = keywords.toSet()
+        override val googleSignInClientId = ""
+    }
+    private val handler = IrcMessageHandler(fakeStrings, config())
 
     private fun snapshot(
         nick: String = "Yo",
@@ -71,6 +77,22 @@ class IrcMessageHandlerTest {
         val r = process(":Ana!u@h PRIVMSG #chat :mira https://example.com/foto.png", snapshot(targets = listOf("Servidor", "#chat")))
         val msg = r.newAllMessages.getValue("#chat").single()
         assertEquals("https://example.com/foto.png", msg.mediaUrl)
+    }
+
+    @Test
+    fun imagenConPalabraFiltrada_noSePrevisualiza() {
+        val filtering = IrcMessageHandler(fakeStrings, config("nsfw"))
+        val r = filtering.processMessage(
+            snapshot(targets = listOf("Servidor", "#chat")),
+            IrcLineParser.parse(":Ana!u@h PRIVMSG #chat :mira https://example.com/NSFW/foto.png")!!
+        )
+        assertNull(r.newAllMessages.getValue("#chat").single().mediaUrl)
+    }
+
+    @Test
+    fun parseKeywordList_limpiaYNormaliza() {
+        assertEquals(setOf("a", "b", "c"), parseKeywordList(" a, B ,,c "))
+        assertTrue(parseKeywordList("").isEmpty())
     }
 
     @Test

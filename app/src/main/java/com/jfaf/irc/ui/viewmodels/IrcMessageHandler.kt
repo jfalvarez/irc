@@ -1,5 +1,6 @@
 package com.jfaf.irc.ui.viewmodels
 
+import com.jfaf.irc.domain.config.AppConfig
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.ui.model.MediaTypeEnum
@@ -8,7 +9,6 @@ import com.jfaf.irc.ui.model.UiMessageType
 import com.jfaf.irc.log.Log
 import androidx.compose.ui.text.* 
 import androidx.compose.ui.text.font.FontWeight
-import com.jfaf.irc.BuildConfig 
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import java.util.Locale
 import javax.inject.Inject
@@ -59,19 +59,14 @@ data class NickChangeInternalResult(
 data class FiveTuple<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
 
 class IrcMessageHandler @Inject constructor(
-    private val strings: StringProvider
+    private val strings: StringProvider,
+    private val appConfig: AppConfig
 ) {
 
     private val SERVER_TARGET_ID = "Servidor"
     private val maxUiMessagesPerTarget = 150
 
-    private val imageFilterKeywordsSet: Set<String> by lazy {
-        com.jfaf.irc.BuildConfig.IMAGE_FILTER_KEYWORDS
-            .split(',')
-            .map { it.trim().lowercase(Locale.getDefault()) }
-            .filter { it.isNotEmpty() }
-            .toSet()
-    }
+    private val imageFilterKeywordsSet: Set<String> get() = appConfig.imageFilterKeywords
 
     private val supportedImageExtensions = setOf("png", "jpg", "jpeg", "gif", "webp")
     private val supportedVideoExtensions = setOf("webm") // Can add "mp4" etc. later

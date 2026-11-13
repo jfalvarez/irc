@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseUser
 import com.jfaf.irc.data.repositories.SignInRepository
+import com.jfaf.irc.domain.config.AppConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,8 +14,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SignInViewModel @Inject constructor(
-    private val signInRepository: SignInRepository
+    private val signInRepository: SignInRepository,
+    appConfig: AppConfig
 ) : ViewModel() {
+
+    /** Client ID de OAuth para pedir el idToken de Google. */
+    val googleSignInClientId: String = appConfig.googleSignInClientId
 
     private val _isUserAuthenticated = MutableStateFlow(signInRepository.currentUser != null)
     val isUserAuthenticated = _isUserAuthenticated.asStateFlow()

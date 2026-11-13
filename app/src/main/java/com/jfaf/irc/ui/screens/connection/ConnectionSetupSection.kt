@@ -35,7 +35,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.jfaf.irc.BuildConfig
 import com.jfaf.irc.MainActivity
 import com.jfaf.irc.R
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
@@ -131,7 +130,7 @@ fun ConnectionSetupSection(
             Button(
                 onClick = {
                     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestIdToken(BuildConfig.GOOGLE_SIGN_IN_CLIENT_ID)
+                        .requestIdToken(signInViewModel.googleSignInClientId)
                         .requestEmail()
                         .build()
                     val googleSignInClient = GoogleSignIn.getClient(mainActivity, gso)
