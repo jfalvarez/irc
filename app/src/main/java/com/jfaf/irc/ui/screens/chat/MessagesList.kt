@@ -5,12 +5,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.google.android.gms.ads.nativead.NativeAd
-import com.jfaf.irc.ads.NativeAdManager
+import com.jfaf.irc.ads.AdMobAd
+import com.jfaf.irc.domain.platform.AdHandle
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.model.MediaTypeEnum
 import com.jfaf.irc.ui.model.UiChatMessage
@@ -22,11 +20,9 @@ fun MessagesList(
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit,
     modifier: Modifier = Modifier,
     showMediaPreviews: Boolean,
-    nativeAdManager: NativeAdManager,
+    ad: AdHandle?,
     mainViewModel: MainViewModel
 ) {
-    val nativeAd by nativeAdManager.nativeAd.collectAsState()
-
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         reverseLayout = true,
@@ -34,9 +30,8 @@ fun MessagesList(
     ) {
         items(messages.reversed()) { msg ->
             if (msg.type == UiMessageType.AD_MESSAGE) {
-                nativeAd?.let { ad ->
-                    NativeAdMessage(nativeAd = ad)
-                }
+                // En 3.2 esto pasa a un slot de plataforma; en escritorio no hay anuncios.
+                (ad as? AdMobAd)?.let { NativeAdMessage(nativeAd = it.nativeAd) }
             } else {
                 MessageRow(
                     message = msg,

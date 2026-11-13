@@ -3,11 +3,11 @@ package com.jfaf.irc.ui.viewmodels
 import com.jfaf.irc.ui.model.MediaTypeEnum
 import com.jfaf.irc.ui.model.UiChatMessage
 import com.jfaf.irc.ui.model.UiMessageType
-import android.content.Context
 import com.jfaf.irc.log.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jfaf.irc.ads.NativeAdManager
+import com.jfaf.irc.domain.platform.AdHandle
+import com.jfaf.irc.domain.platform.AdProvider
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferences
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
@@ -93,7 +93,7 @@ class MainViewModel @Inject constructor(
     private val handleIncomingMessageUseCase: HandleIncomingMessageUseCase,
     private val silentWhoisCompletionSignal: SilentWhoisCompletionSignal,
     private val strings: StringProvider,
-    val nativeAdManager: NativeAdManager
+    private val adProvider: AdProvider
 ) : ViewModel(), ChatEventListener {
 
     private var chatEventOrchestrator = ChatEventOrchestrator(
@@ -157,8 +157,11 @@ class MainViewModel @Inject constructor(
     private val onlineFriendsState: StateFlow<Set<String>> = friendPresence.onlineFriendsFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    fun loadNativeAd(context: Context) {
-        nativeAdManager.loadAd(context)
+    /** Anuncio actual, para que la UI de la plataforma lo pinte. */
+    val currentAd: StateFlow<AdHandle?> = adProvider.currentAd
+
+    fun loadNativeAd() {
+        adProvider.load()
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -170,7 +173,7 @@ class MainViewModel @Inject constructor(
             showNickChangesPref,
             showModeChangesPref,
             ignoredUsersPref,
-            nativeAdManager.nativeAd
+            adProvider.currentAd
         )
     ) { values ->
         val activeTarget = values[0] as String?

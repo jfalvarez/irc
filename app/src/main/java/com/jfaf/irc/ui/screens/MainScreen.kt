@@ -41,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -72,7 +71,6 @@ fun MainScreen(
     navController: NavHostController,
     snackbarHostState: SnackbarHostState
 ) {
-    val context = LocalContext.current
     val connectionState by viewModel.chatScreenState.connectionState.collectAsState()
     val isReconnecting by viewModel.chatScreenState.isReconnecting.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -82,7 +80,7 @@ fun MainScreen(
 
     LaunchedEffect(connectionState) {
         if (connectionState) {
-            viewModel.loadNativeAd(context)
+            viewModel.loadNativeAd()
             if (drawerState.currentValue == DrawerValue.Open) {
                 scope.launch { drawerState.close() }
             }
@@ -289,8 +287,7 @@ private fun MainScreenScaffoldContent(
         } else {
             ConnectedStateView(
                 viewModel = viewModel,
-                onMediaClick = onMediaClick,
-                nativeAdManager = viewModel.nativeAdManager
+                onMediaClick = onMediaClick
             )
         }
     }
@@ -299,9 +296,9 @@ private fun MainScreenScaffoldContent(
 @Composable
 private fun ConnectedStateView(
     viewModel: MainViewModel,
-    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit,
-    nativeAdManager: com.jfaf.irc.ads.NativeAdManager
+    onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
+    val currentAd by viewModel.currentAd.collectAsState()
     val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
     val messages by viewModel.chatScreenState.uiMessages.collectAsState()
     val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
@@ -333,7 +330,7 @@ private fun ConnectedStateView(
             onMediaClick = onMediaClick,
             modifier = Modifier.weight(if (shouldShowUserListComposite) 0.6f else 1f),
             showMediaPreviews = showMediaPreviews,
-            nativeAdManager = nativeAdManager,
+            ad = currentAd,
             mainViewModel = viewModel
         )
 

@@ -5,26 +5,35 @@ import com.jfaf.irc.log.Log
 import com.google.android.gms.ads.AdLoader
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.nativead.NativeAd
+import com.jfaf.irc.domain.platform.AdHandle
+import com.jfaf.irc.domain.platform.AdProvider
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Anuncio nativo de AdMob; lo desenvuelve `MessagesList` para pintarlo. */
+class AdMobAd(val nativeAd: NativeAd) : AdHandle
+
 @Singleton
-class NativeAdManager @Inject constructor() {
+class NativeAdManager @Inject constructor(
+    @ApplicationContext private val context: Context
+) : AdProvider {
 
-    private val _nativeAd = MutableStateFlow<NativeAd?>(null)
-    val nativeAd: StateFlow<NativeAd?> = _nativeAd
+    private val _currentAd = MutableStateFlow<AdHandle?>(null)
+    override val currentAd: StateFlow<AdHandle?> = _currentAd.asStateFlow()
 
-    fun loadAd(context: Context) {
+    override fun load() {
         val adLoader = AdLoader.Builder(context, "ca-app-pub-3940256099942544/2247696110") // TEST NATIVE ID
             .forNativeAd { ad: NativeAd ->
-                _nativeAd.value = ad
+                _currentAd.value = AdMobAd(ad)
             }
             .withAdListener(object : com.google.android.gms.ads.AdListener() {
                 override fun onAdFailedToLoad(adError: com.google.android.gms.ads.LoadAdError) {
                     Log.e("NativeAdManager", "Ad failed to load: ${adError.message}")
-                    _nativeAd.value = null
+                    _currentAd.value = null
                 }
             })
             .build()
