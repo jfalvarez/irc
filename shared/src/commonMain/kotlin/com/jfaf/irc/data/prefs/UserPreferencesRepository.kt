@@ -1,5 +1,6 @@
 package com.jfaf.irc.data.prefs
 
+import com.jfaf.irc.domain.chat.RecentEmojis
 import com.jfaf.irc.log.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -37,6 +38,7 @@ class UserPreferencesRepository(
         val NICKNAME = stringPreferencesKey(NICKNAME_KEY_NAME)
 
         val SOUND_ALERTS = booleanPreferencesKey("sound_alerts")
+        val RECENT_EMOJIS = stringPreferencesKey("recent_emojis")
 
         val SERVER_HOST = stringPreferencesKey("server_host")
         val SERVER_PLAIN_PORT = intPreferencesKey("server_plain_port")
@@ -92,6 +94,17 @@ class UserPreferencesRepository(
     suspend fun updateSoundAlerts(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[SOUND_ALERTS] = enabled
+        }
+    }
+
+    /** Los emoticonos usados últimamente (selector de escritorio): el más reciente primero. */
+    val recentEmojisFlow: Flow<List<String>> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { RecentEmojis.decode(it[RECENT_EMOJIS]) }
+
+    suspend fun addRecentEmoji(emoji: String) {
+        dataStore.edit { preferences ->
+            preferences[RECENT_EMOJIS] = RecentEmojis.encode(RecentEmojis.add(RecentEmojis.decode(preferences[RECENT_EMOJIS]), emoji))
         }
     }
 

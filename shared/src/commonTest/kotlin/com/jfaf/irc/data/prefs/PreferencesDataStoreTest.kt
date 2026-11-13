@@ -58,6 +58,28 @@ class PreferencesDataStoreTest {
     }
 
     @Test
+    fun emoticonosRecientes_seGuardanEnOrdenYSeConservanAlReabrir() = runBlocking {
+        val smile = "😀"
+        val heart = "❤\uFE0F" // lleva selector de variante: no debe perderse al guardar
+        val fire = "🔥"
+
+        val job1 = Job()
+        val first = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job1)))
+        assertEquals(emptyList(), first.recentEmojisFlow.first(), "Sin uso previo no hay recientes")
+        first.addRecentEmoji(smile)
+        first.addRecentEmoji(heart)
+        first.addRecentEmoji(fire)
+        first.addRecentEmoji(smile) // vuelve a usarse: pasa al principio, sin repetirse
+        assertEquals(listOf(smile, fire, heart), first.recentEmojisFlow.first())
+        job1.cancelAndJoin()
+
+        val job2 = Job()
+        val second = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job2)))
+        assertEquals(listOf(smile, fire, heart), second.recentEmojisFlow.first(), "Deben conservarse al reabrir")
+        job2.cancelAndJoin()
+    }
+
+    @Test
     fun sinArchivo_valoresPorDefecto() = runBlocking {
         val job = Job()
         val repo = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job)))

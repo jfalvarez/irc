@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.outlined.EmojiEmotions
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -47,7 +49,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
+import com.jfaf.irc.domain.chat.EmojiInsertion
 import com.jfaf.irc.domain.chat.NickAutocomplete
+import com.jfaf.irc.ui.emoji.EmojiPicker
+import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.ui.theme.IRCTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,6 +64,9 @@ fun MessageInputSection(
     onTextInputChanged: (text: String, cursorPosition: Int) -> Unit,
     onSuggestionSelected: (suggestion: String, currentFullText: String, cursorPosition: Int) -> String,
     onClearSuggestions: () -> Unit,
+    /** Escritorio: los emoticonos usados últimamente, para la categoría «Recientes» del selector. */
+    recentEmojis: List<String> = emptyList(),
+    onEmojiPicked: (String) -> Unit = {},
     /** Pone el foco en el campo al aparecer y cada vez que cambia [focusKey] (escritorio; en el móvil abriría el teclado). */
     autoFocus: Boolean = false,
     focusKey: Any? = null
@@ -67,6 +75,9 @@ fun MessageInputSection(
         var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
         val keyboardController = LocalSoftwareKeyboardController.current
         var showSuggestions by remember { mutableStateOf(false) }
+        var showEmojiPicker by remember { mutableStateOf(false) }
+        // En el móvil el teclado ya trae sus emoticonos; en escritorio, no.
+        val showEmojiButton = LocalPlatformUi.current.isDesktop
         val focusRequester = remember { FocusRequester() }
 
         LaunchedEffect(nickSuggestions) {
@@ -94,6 +105,17 @@ fun MessageInputSection(
             focusRequester.requestFocus()
         }
 
+        // Inserta el emoticono donde está el cursor (o sustituye la selección) y devuelve el foco al campo.
+        fun insertEmoji(emoji: String) {
+            val value = textFieldValue
+            val result = EmojiInsertion.insert(value.text, value.selection.start, value.selection.end, emoji)
+            textFieldValue = TextFieldValue(text = result.text, selection = TextRange(result.cursor))
+            onTextInputChanged(result.text, result.cursor)
+            onEmojiPicked(emoji)
+            showEmojiPicker = false
+            focusRequester.requestFocus()
+        }
+
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(modifier = Modifier
                 .fillMaxWidth()
@@ -109,6 +131,19 @@ fun MessageInputSection(
                         }
                     },
                     placeholder = { Text(stringResource(Res.string.label_write_message), color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)) },
+                    leadingIcon = if (showEmojiButton) {
+                        {
+                            // Sin foco propio: el campo lo conserva y con él lo que hubiera seleccionado
+                            IconButton(
+                                onClick = { showEmojiPicker = !showEmojiPicker },
+                                modifier = Modifier.focusProperties { canFocus = false }
+                            ) {
+                                Icon(Icons.Outlined.EmojiEmotions, stringResource(Res.string.cd_insert_emoji))
+                            }
+                        }
+                    } else {
+                        null
+                    },
                     trailingIcon = {
                         IconButton(onClick = {
                             if (textFieldValue.text.isNotBlank()) {
@@ -129,6 +164,11 @@ fun MessageInputSection(
                         .fillMaxWidth()
                         .focusRequester(focusRequester)
                         .onPreviewKeyEvent { event ->
+                            // Esc cierra el selector de emoticonos (no tiene foco propio)
+                            if (event.type == KeyEventType.KeyDown && event.key == Key.Escape && showEmojiPicker) {
+                                showEmojiPicker = false
+                                return@onPreviewKeyEvent true
+                            }
                             // Tab acepta la primera sugerencia de nick (autocompletado)
                             if (event.type == KeyEventType.KeyDown && event.key == Key.Tab && !event.isCtrlPressed &&
                                 showSuggestions && nickSuggestions.isNotEmpty()
@@ -163,6 +203,8 @@ fun MessageInputSection(
                         unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
                         disabledContainerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.1f),
                         cursorColor = MaterialTheme.colorScheme.onPrimary,
+                        focusedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                        unfocusedLeadingIconColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,
@@ -193,6 +235,14 @@ fun MessageInputSection(
                             )
                         }
                     }
+                }
+
+                if (showEmojiPicker) {
+                    EmojiPicker(
+                        recents = recentEmojis,
+                        onPick = ::insertEmoji,
+                        onDismiss = { showEmojiPicker = false }
+                    )
                 }
             }
         }

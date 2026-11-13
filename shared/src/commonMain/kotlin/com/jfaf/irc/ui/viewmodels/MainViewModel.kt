@@ -155,6 +155,14 @@ class MainViewModel(
     private val ignoredUsersPref: StateFlow<Set<String>> =
         userMetadataStore.ignoredUsersFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
+    /** Emoticonos usados últimamente, para la categoría «Recientes» del selector de escritorio. */
+    val recentEmojis: StateFlow<List<String>> =
+        userPreferencesRepository.recentEmojisFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun onEmojiPicked(emoji: String) {
+        viewModelScope.launch { userPreferencesRepository.addRecentEmoji(emoji) }
+    }
+
     private val showMediaPreviewsPref: StateFlow<Boolean> =
         userPreferencesRepository.showMediaPreviewsFlow.stateIn(
             viewModelScope,

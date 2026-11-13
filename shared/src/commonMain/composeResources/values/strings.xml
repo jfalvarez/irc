@@ -90,6 +90,15 @@
     <string name="cd_close_target">Cerrar %1$s</string>
     <string name="cd_unread_messages">%1$d mensajes sin leer</string>
     <string name="cd_unread_private_messages">Hay mensajes privados sin leer</string>
+    <string name="cd_insert_emoji">Insertar emoticono</string>
+    <string name="emoji_category_recent">Recientes</string>
+    <string name="emoji_category_faces">Caras</string>
+    <string name="emoji_category_gestures">Gestos y personas</string>
+    <string name="emoji_category_symbols">Corazones y símbolos</string>
+    <string name="emoji_category_animals">Animales y naturaleza</string>
+    <string name="emoji_category_food">Comida y bebida</string>
+    <string name="emoji_category_activities">Actividades y objetos</string>
+    <string name="emoji_category_travel">Viajes y tiempo</string>
     <string name="label_write_message">Escribe un mensaje...</string>
     <string name="cd_send_message">Enviar mensaje</string>
     <string name="cd_navigate_up">Volver</string>

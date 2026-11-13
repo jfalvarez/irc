@@ -276,6 +276,8 @@ private fun MainScreenBottomBar(
                     viewModel.onNickSuggestionSelected(suggestion, currentText, cursorPos)
                 },
                 onClearSuggestions = { viewModel.clearNickSuggestions() },
+                recentEmojis = viewModel.recentEmojis.collectAsState().value,
+                onEmojiPicked = { viewModel.onEmojiPicked(it) },
                 autoFocus = autoFocusInput,
                 focusKey = activeTargetValue
             )
