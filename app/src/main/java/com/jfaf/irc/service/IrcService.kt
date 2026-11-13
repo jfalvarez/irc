@@ -25,6 +25,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -287,10 +288,10 @@ class IrcService : Service() {
         cancelReconnect()
         serviceScope.launch {
             val wasConnected = ircServiceApi.connectionState.value
-            if (wasConnected && !quitMessage.isNullOrBlank()) {
-                manualIrcClient?.sendRaw("QUIT :$quitMessage")
-            }
-            manualIrcClient?.disconnectAndCleanup()
+            // Un único QUIT, que se espera a que salga antes de cerrar (antes se enviaban dos y se perdían)
+            manualIrcClient?.disconnectAndCleanup(
+                quitMessage?.takeIf { it.isNotBlank() } ?: AppConstants.QUIT_MSG_CLIENT_SHUTDOWN
+            )
             if (wasConnected) {
                 ircServiceApi.updateConnectionState(false)
             }
@@ -497,7 +498,8 @@ class IrcService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "IrcService onDestroy")
-        serviceScope.launch{
+        // NonCancellable: serviceJob.cancel() de la línea siguiente no debe impedir enviar el QUIT y cerrar
+        serviceScope.launch(NonCancellable) {
             manualIrcClient?.disconnectAndCleanup()
         }
         serviceJob.cancel()

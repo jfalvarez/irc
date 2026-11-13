@@ -12,16 +12,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.net.InetSocketAddress
-import java.net.Socket
-import javax.net.ssl.HttpsURLConnection
-import javax.net.ssl.SSLPeerUnverifiedException
-import javax.net.ssl.SSLSocket
-import javax.net.ssl.SSLSocketFactory
 
 class ManualIrcClient(
     val host: String,
@@ -30,17 +20,15 @@ class ManualIrcClient(
     private val coroutineScope: CoroutineScope,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     /** Se invoca cuando la conexión se cierra sin que el usuario lo haya pedido. */
-    private val onConnectionLost: () -> Unit = {}
+    private val onConnectionLost: () -> Unit = {},
+    private val transport: IrcTransport = JvmSocketTransport()
 ) {
     private val TAG = "ManualIrcClient"
 
     private companion object {
-        const val CONNECT_TIMEOUT_MS = 10_000
+        /** Tiempo máximo esperando a que salga el QUIT antes de cerrar la conexión. */
+        const val QUIT_TIMEOUT_MS = 2_000L
     }
-
-    private var socket: Socket? = null
-    private var writer: BufferedWriter? = null
-    private var reader: BufferedReader? = null
 
     // Buffer para que un colector lento no bloquee el bucle de lectura (ni retrase los PONG).
     private val _incomingMessages = MutableSharedFlow<ParsedIrcMessage>(extraBufferCapacity = 256)
@@ -61,7 +49,7 @@ class ManualIrcClient(
     private val channelsToRejoin = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     val isConnected: Boolean
-        get() = _connectionState.value && socket?.isConnected == true
+        get() = _connectionState.value && transport.isOpen
 
     private val isActive: Boolean
         get() = coroutineScope.isActive
@@ -80,13 +68,11 @@ class ManualIrcClient(
             _isRegistered.value = false
             try {
                 Log.d(TAG, "Intentando conectar a $host:$port (SSL: $useSsl), Nick: $currentNickname")
-                openSocket()
+                transport.open(host, port, useSsl)
 
-                if (socket?.isConnected == true) {
-                    writer = BufferedWriter(OutputStreamWriter(socket!!.getOutputStream(), Charsets.UTF_8))
-                    reader = BufferedReader(InputStreamReader(socket!!.getInputStream(), Charsets.UTF_8))
+                if (transport.isOpen) {
                     _connectionState.value = true
-                    Log.i(TAG, "Socket conectado a $host:$port.")
+                    Log.i(TAG, "Conectado a $host:$port.")
 
                     sendRawInternal("NICK $currentNickname")
                     sendRawInternal("USER $user 0 * :$real")
@@ -103,36 +89,11 @@ class ManualIrcClient(
         }
     }
 
-    /**
-     * Abre [socket]. Con TLS hace el handshake y comprueba que el certificado corresponde a [host]:
-     * un `SSLSocket` crudo valida la cadena de confianza pero NO el nombre del servidor.
-     */
-    private fun openSocket() {
-        val plain = Socket()
-        socket = plain // para que cleanupConnection() pueda cerrarlo si algo falla a mitad
-        plain.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT_MS)
-        if (!useSsl) return
-
-        val factory = SSLSocketFactory.getDefault() as SSLSocketFactory
-        // Envuelve el socket ya conectado: así se envía SNI y el handshake conoce el nombre de host.
-        val ssl = factory.createSocket(plain, host, port, true) as SSLSocket
-        socket = ssl
-        ssl.soTimeout = CONNECT_TIMEOUT_MS // límite también para el handshake
-        ssl.startHandshake()
-        val verifier = HttpsURLConnection.getDefaultHostnameVerifier()
-        val names = TlsHostPolicy.acceptedCertificateHosts(host)
-        if (names.none { verifier.verify(it, ssl.session) }) {
-            throw SSLPeerUnverifiedException("El certificado del servidor no corresponde a $host (se esperaba: ${names.joinToString()})")
-        }
-        ssl.soTimeout = 0
-    }
-
     private suspend fun listenForMessages() {
         try {
             while (isActive && _connectionState.value) {
-                val currentReader = reader ?: break
-                // readLine() bloquea: se ejecuta explícitamente en el dispatcher de IO
-                val line = withContext(ioDispatcher) { currentReader.readLine() }
+                if (!transport.isOpen) break
+                val line = withContext(ioDispatcher) { transport.readLine() }
                 if (line != null) {
                     Log.d(TAG, "<<< $line")
                     val parsedMessage = IrcLineParser.parse(line)
@@ -150,8 +111,10 @@ class ManualIrcClient(
                 }
             }
         } catch (e: Exception) {
-            if (isActive) {
-                Log.e(TAG, "Error leyendo del socket: ${e.message}", e)
+            when {
+                // Cierre pedido por nosotros: cerrar el socket es lo que desbloquea readLine(), no es un error.
+                closedByUser -> Log.d(TAG, "Lectura interrumpida por el cierre local de la conexión.")
+                isActive -> Log.e(TAG, "Error leyendo del socket: ${e.message}", e)
             }
             cleanupConnection()
             notifyConnectionLost()
@@ -189,7 +152,7 @@ class ManualIrcClient(
     }
 
     fun sendRaw(message: String) {
-        if (!_connectionState.value || writer == null) {
+        if (!_connectionState.value || !transport.isOpen) {
             Log.w(TAG, "No conectado, no se puede enviar: $message")
             return
         }
@@ -199,16 +162,12 @@ class ManualIrcClient(
     }
 
     private suspend fun sendRawInternal(message: String) {
-        if (!_connectionState.value || writer == null) {
+        if (!_connectionState.value || !transport.isOpen) {
             Log.w(TAG, "No conectado, no se puede enviar (internal): $message")
             return
         }
         try {
-            // write/flush bloquean: se ejecutan explícitamente en el dispatcher de IO
-            withContext(ioDispatcher) {
-                writer?.write("$message\r\n")
-                writer?.flush()
-            }
+            withContext(ioDispatcher) { transport.writeLine(message) }
             Log.d(TAG, ">>> $message")
         } catch (e: Exception) {
             Log.e(TAG, "Error enviando mensaje: ${e.message}", e)
@@ -242,37 +201,33 @@ class ManualIrcClient(
         sendRaw("PRIVMSG $channel :$message")
     }
 
-    fun quitServer(quitMessage: String = AppConstants.DEFAULT_QUIT_MESSAGE) {
-        sendRaw("QUIT :$quitMessage")
-    }
-
     private fun cleanupConnection() {
-        if (!_connectionState.value && socket == null && !_isRegistered.value) return
+        if (!_connectionState.value && !transport.isOpen && !_isRegistered.value) return
 
         Log.i(TAG, "Limpiando conexión...")
         _isRegistered.value = false
         _connectionState.value = false
-        try { writer?.close() } catch (e: Exception) { Log.e(TAG, "Error cerrando writer", e) }
-        try { reader?.close() } catch (e: Exception) { Log.e(TAG, "Error cerrando reader", e) }
-        try { socket?.close() } catch (e: Exception) { Log.e(TAG, "Error cerrando socket", e) }
-        writer = null
-        reader = null
-        socket = null
+        transport.close()
     }
 
     private fun notifyConnectionLost() {
         if (!closedByUser && isActive) onConnectionLost()
     }
 
-    fun disconnectAndCleanup() {
+    /**
+     * Envía `QUIT` y cierra la conexión. Espera a que el QUIT salga (como mucho [QUIT_TIMEOUT_MS])
+     * antes de cerrar; antes se lanzaba en otra corrutina y la conexión se cerraba sin enviarlo.
+     * No se puede cancelar a medias: una cancelación del llamante no deja la conexión abierta.
+     */
+    suspend fun disconnectAndCleanup(quitMessage: String = AppConstants.QUIT_MSG_CLIENT_SHUTDOWN) {
         closedByUser = true
         channelsToRejoin.clear()
-        if (_connectionState.value) {
-            if (writer != null) { 
-                quitServer(AppConstants.QUIT_MSG_CLIENT_SHUTDOWN)
+        withContext(NonCancellable) {
+            if (_connectionState.value && transport.isOpen) {
+                withTimeoutOrNull(QUIT_TIMEOUT_MS) { sendRawInternal("QUIT :$quitMessage") }
             }
+            cleanupConnection()
         }
-        cleanupConnection()
         Log.i(TAG, "ManualIrcClient desconectado y limpiado.")
     }
     
