@@ -2,22 +2,19 @@ package com.jfaf.irc.domain.chat
 
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.data.history.ChatHistoryStore
-import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * Restaura al arrancar y guarda (con debounce) las pestañas y el historial de [ChatStateManager].
  * No se guarda la pestaña Servidor (el MOTD se acumularía en cada conexión).
  */
 @OptIn(FlowPreview::class)
-@ViewModelScoped
-class ChatHistoryPersister @Inject constructor(
+class ChatHistoryPersister(
     private val store: ChatHistoryStore,
     private val chatStateManager: ChatStateManager
 ) {

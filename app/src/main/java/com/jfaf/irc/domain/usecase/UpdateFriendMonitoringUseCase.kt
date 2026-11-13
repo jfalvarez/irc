@@ -1,9 +1,8 @@
 package com.jfaf.irc.domain.usecase
 
 import com.jfaf.irc.domain.IrcConnection
-import javax.inject.Inject
 
-class UpdateFriendMonitoringUseCase @Inject constructor(
+class UpdateFriendMonitoringUseCase(
     private val ircConnection: IrcConnection
 ) {
     suspend operator fun invoke(friends: Set<String>) {

@@ -3,9 +3,8 @@ package com.jfaf.irc.domain.usecase
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.chat.ChatStateManager
-import javax.inject.Inject
 
-class CloseTargetUseCase @Inject constructor(
+class CloseTargetUseCase(
     private val strings: StringProvider,
     private val chatStateManager: ChatStateManager,
     private val partChannelUseCase: PartChannelUseCase

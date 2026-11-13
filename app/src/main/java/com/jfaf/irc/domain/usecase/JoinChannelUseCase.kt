@@ -5,14 +5,13 @@ import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
-import javax.inject.Inject
 
 sealed interface JoinChannelResult {
     object Success : JoinChannelResult
     data class Failure(val message: String, val isError: Boolean = true) : JoinChannelResult
 }
 
-class JoinChannelUseCase @Inject constructor(
+class JoinChannelUseCase(
     private val strings: StringProvider,
     private val ircConnection: IrcConnection,
     private val chatStateManager: ChatStateManager

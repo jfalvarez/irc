@@ -41,7 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.navigation.compose.NavHost
@@ -60,13 +60,11 @@ import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import com.jfaf.irc.util.NotificationHelper
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 import java.util.Arrays
-import javax.inject.Inject
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     companion object {
@@ -74,11 +72,8 @@ class MainActivity : ComponentActivity() {
         private const val VIBRATION_DURATION_MS = 150L
     }
 
-    @Inject
-    lateinit var updateChecker: UpdateChecker
-
-    @Inject
-    lateinit var appVisibility: AppVisibility
+    private val updateChecker: UpdateChecker by inject()
+    private val appVisibility: AppVisibility by inject()
 
     private lateinit var mainViewModel: MainViewModel
     private lateinit var signInViewModel: SignInViewModel
@@ -129,8 +124,8 @@ class MainActivity : ComponentActivity() {
         askNotificationPermission()
 
         setContent {
-            mainViewModel = hiltViewModel()
-            signInViewModel = hiltViewModel()
+            mainViewModel = koinViewModel()
+            signInViewModel = koinViewModel()
 
             val context = LocalContext.current
             val navController = rememberNavController()
@@ -261,7 +256,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         if (::mainViewModel.isInitialized) {

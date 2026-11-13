@@ -4,14 +4,13 @@ import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
-import javax.inject.Inject
 
 sealed interface PartChannelResult {
     object Success : PartChannelResult
     data class Failure(val message: String) : PartChannelResult
 }
 
-class PartChannelUseCase @Inject constructor(
+class PartChannelUseCase(
     private val strings: StringProvider,
     private val ircConnection: IrcConnection,
     private val chatStateManager: ChatStateManager

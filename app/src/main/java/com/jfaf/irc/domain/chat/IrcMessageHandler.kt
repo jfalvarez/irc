@@ -11,7 +11,6 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import java.util.Locale
-import javax.inject.Inject
 
 // Data classes used by IrcMessageHandler (ensure MediaTypeEnum is accessible)
 // Assuming MediaTypeEnum is defined in MainViewModel.kt in the same package or imported.
@@ -58,7 +57,7 @@ data class NickChangeInternalResult(
 
 data class FiveTuple<A, B, C, D, E>(val first: A, val second: B, val third: C, val fourth: D, val fifth: E)
 
-class IrcMessageHandler @Inject constructor(
+class IrcMessageHandler(
     private val strings: StringProvider,
     private val appConfig: AppConfig
 ) {

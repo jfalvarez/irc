@@ -7,9 +7,8 @@ import com.jfaf.irc.domain.IrcSender
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.model.UiChatMessage
 import com.jfaf.irc.domain.chat.model.UiMessageType
-import javax.inject.Inject
 
-class CommandProcessor @Inject constructor(
+class CommandProcessor(
     private val ircRepository: IrcSender,
     private val chatStateManager: ChatStateManager,
     private val strings: StringProvider

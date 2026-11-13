@@ -9,7 +9,6 @@ import com.jfaf.irc.domain.chat.model.UiChatMessage
 import com.jfaf.irc.domain.chat.model.UiMessageType
 import com.jfaf.irc.domain.chat.command.CommandProcessor
 import com.jfaf.irc.domain.chat.command.CommandResult
-import javax.inject.Inject
 
 sealed interface SendMessageActionStatus {
     object Success : SendMessageActionStatus
@@ -19,7 +18,7 @@ sealed interface SendMessageActionStatus {
     object CannotSendToTarget : SendMessageActionStatus
 }
 
-class SendMessageOrCommandUseCase @Inject constructor(
+class SendMessageOrCommandUseCase(
     private val strings: StringProvider,
     private val ircConnection: IrcConnection,
     private val chatStateManager: ChatStateManager,

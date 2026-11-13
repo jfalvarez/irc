@@ -6,9 +6,8 @@ import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.domain.platform.AuthSession
 import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.domain.chat.ChatStateManager
-import javax.inject.Inject
 
-class IgnoreUserUseCase @Inject constructor(
+class IgnoreUserUseCase(
     private val strings: StringProvider,
     private val userMetadataStore: UserMetadataStore,
     private val chatStateManager: ChatStateManager,

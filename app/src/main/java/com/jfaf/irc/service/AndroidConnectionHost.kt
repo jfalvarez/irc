@@ -4,14 +4,10 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
 import com.jfaf.irc.domain.platform.ConnectionHost
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** [ConnectionHost] de Android: el servicio en primer plano `IrcService`. */
-@Singleton
-class AndroidConnectionHost @Inject constructor(
-    @ApplicationContext private val context: Context
+class AndroidConnectionHost(
+    private val context: Context
 ) : ConnectionHost {
     override fun start() = send(IrcService.ACTION_START)
     override fun stop() = send(IrcService.ACTION_STOP)

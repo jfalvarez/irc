@@ -8,14 +8,11 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Amigos vistos recientemente (por WHOIS silencioso) y aviso cuando uno aparece. */
-@Singleton
 class FriendPresenceTracker(private val now: () -> Long) {
 
-    @Inject constructor() : this({ System.currentTimeMillis() })
+    constructor() : this({ System.currentTimeMillis() })
 
     private val lastSeen = MutableStateFlow<Map<String, Long>>(emptyMap())
 

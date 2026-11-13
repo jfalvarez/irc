@@ -5,15 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.domain.user.UserMetadataStore
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-@HiltViewModel
-class SettingsViewModel @Inject constructor(
+class SettingsViewModel(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val userMetadataStore: UserMetadataStore
 ) : ViewModel() {

@@ -10,11 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class FirebaseAuthSession @Inject constructor(
+class FirebaseAuthSession(
     private val firebaseAuth: FirebaseAuth
 ) : AuthSession {
 

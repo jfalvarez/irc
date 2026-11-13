@@ -6,9 +6,8 @@ import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
 
-class DisconnectUseCase @Inject constructor(
+class DisconnectUseCase(
     private val strings: StringProvider,
     private val ircConnection: IrcConnection,
     private val chatStateManager: ChatStateManager

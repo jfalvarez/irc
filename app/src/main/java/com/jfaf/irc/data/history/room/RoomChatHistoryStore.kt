@@ -3,11 +3,8 @@ package com.jfaf.irc.data.history.room
 import com.jfaf.irc.data.history.ChatHistoryStore
 import com.jfaf.irc.data.history.ChatSnapshot
 import com.jfaf.irc.data.history.StoredMessage
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class RoomChatHistoryStore @Inject constructor(
+class RoomChatHistoryStore(
     private val dao: ChatHistoryDao
 ) : ChatHistoryStore {
 

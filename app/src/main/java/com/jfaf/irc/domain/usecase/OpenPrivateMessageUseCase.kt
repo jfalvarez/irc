@@ -7,14 +7,13 @@ import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.model.UiChatMessage
 import com.jfaf.irc.domain.chat.model.UiMessageType
-import javax.inject.Inject
 
 sealed interface OpenPrivateMessageResult {
     object Success : OpenPrivateMessageResult
     data class Failure(val message: String) : OpenPrivateMessageResult
 }
 
-class OpenPrivateMessageUseCase @Inject constructor(
+class OpenPrivateMessageUseCase(
     private val strings: StringProvider,
     private val chatStateManager: ChatStateManager,
     private val ircConnection: IrcConnection

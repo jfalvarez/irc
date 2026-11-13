@@ -7,19 +7,15 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.nativead.NativeAd
 import com.jfaf.irc.domain.platform.AdHandle
 import com.jfaf.irc.domain.platform.AdProvider
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Anuncio nativo de AdMob; lo desenvuelve `MessagesList` para pintarlo. */
 class AdMobAd(val nativeAd: NativeAd) : AdHandle
 
-@Singleton
-class NativeAdManager @Inject constructor(
-    @ApplicationContext private val context: Context
+class NativeAdManager(
+    private val context: Context
 ) : AdProvider {
 
     private val _currentAd = MutableStateFlow<AdHandle?>(null)

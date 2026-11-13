@@ -8,9 +8,8 @@ import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import javax.inject.Inject
 
-class AttemptNickServIdentificationUseCase @Inject constructor(
+class AttemptNickServIdentificationUseCase(
     private val strings: StringProvider,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val ircConnection: IrcConnection,

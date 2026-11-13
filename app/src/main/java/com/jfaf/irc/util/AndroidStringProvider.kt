@@ -4,14 +4,10 @@ import android.content.Context
 import com.jfaf.irc.R
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Implementación Android de [StringProvider] sobre `strings.xml` (capa específica de plataforma). */
-@Singleton
-class AndroidStringProvider @Inject constructor(
-    @ApplicationContext private val context: Context
+class AndroidStringProvider(
+    private val context: Context
 ) : StringProvider {
 
     override fun get(msg: Msg, vararg args: Any): String = context.getString(resId(msg), *args)

@@ -6,7 +6,6 @@ import com.jfaf.irc.log.Log
 import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
-import javax.inject.Inject
 
 sealed interface WhoisRequestResult {
     object Success : WhoisRequestResult
@@ -14,7 +13,7 @@ sealed interface WhoisRequestResult {
     object InvalidNickInput : WhoisRequestResult
 }
 
-class PerformWhoisUseCase @Inject constructor(
+class PerformWhoisUseCase(
     private val strings: StringProvider,
     private val ircConnection: IrcConnection,
     private val chatStateManager: ChatStateManager,

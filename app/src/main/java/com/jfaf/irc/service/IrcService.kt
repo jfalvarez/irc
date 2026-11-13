@@ -20,27 +20,22 @@ import com.jfaf.irc.data.remote.IrcSession
 import com.jfaf.irc.data.remote.SessionStatus
 import com.jfaf.irc.domain.notifications.BackgroundNotifications
 import com.jfaf.irc.util.NotificationHelper
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
-import javax.inject.Inject
+import org.koin.android.ext.android.inject
 
 /**
  * Mantiene viva la [IrcSession] en segundo plano (servicio en primer plano) con su notificación
  * de estado. Qué avisar en segundo plano lo decide [BackgroundNotifications].
  */
-@AndroidEntryPoint
 class IrcService : Service() {
 
-    @Inject
-    lateinit var session: IrcSession
-
-    @Inject
-    lateinit var backgroundNotifications: BackgroundNotifications
+    private val session: IrcSession by inject()
+    private val backgroundNotifications: BackgroundNotifications by inject()
 
     private val TAG = "IrcService"
     private val FOREGROUND_NOTIFICATION_CHANNEL_ID = "IrcServiceChannel"

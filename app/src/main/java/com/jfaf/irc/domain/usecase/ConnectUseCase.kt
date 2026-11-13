@@ -7,9 +7,8 @@ import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import kotlinx.coroutines.flow.first
-import javax.inject.Inject
 
-class ConnectUseCase @Inject constructor(
+class ConnectUseCase(
     private val strings: StringProvider,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val ircConnection: IrcConnection,

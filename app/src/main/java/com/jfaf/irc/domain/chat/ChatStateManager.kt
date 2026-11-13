@@ -4,17 +4,14 @@ import com.jfaf.irc.domain.chat.model.UiChatMessage
 import com.jfaf.irc.domain.chat.model.UiMessageType
 import com.jfaf.irc.log.Log
 import androidx.compose.ui.text.AnnotatedString // Necesario para UiChatMessage
-import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
-import javax.inject.Inject
 
-@ViewModelScoped
-class ChatStateManager @Inject constructor() {
+class ChatStateManager {
 
     companion object {
         const val SERVER_TARGET_ID = "Servidor" // ID constante para el target del servidor

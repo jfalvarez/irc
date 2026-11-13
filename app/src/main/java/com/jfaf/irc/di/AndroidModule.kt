@@ -1,0 +1,62 @@
+package com.jfaf.irc.di
+
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.room.Room
+import com.google.firebase.Firebase
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.firestore
+import com.jfaf.irc.ads.NativeAdManager
+import com.jfaf.irc.config.RemoteConfigManager
+import com.jfaf.irc.data.firebase.FirebaseAnalyticsTracker
+import com.jfaf.irc.data.firebase.FirebaseAuthSession
+import com.jfaf.irc.data.firebase.FirestoreUserMetadataStore
+import com.jfaf.irc.data.history.room.ChatDatabase
+import com.jfaf.irc.domain.config.AppConfig
+import com.jfaf.irc.domain.notifications.Notifier
+import com.jfaf.irc.domain.platform.AdProvider
+import com.jfaf.irc.domain.platform.AnalyticsTracker
+import com.jfaf.irc.domain.platform.AuthSession
+import com.jfaf.irc.domain.platform.ConnectionHost
+import com.jfaf.irc.domain.platform.UpdateChecker
+import com.jfaf.irc.domain.text.StringProvider
+import com.jfaf.irc.domain.user.UserMetadataStore
+import com.jfaf.irc.service.AndroidConnectionHost
+import com.jfaf.irc.service.AndroidNotifier
+import com.jfaf.irc.util.AndroidStringProvider
+import com.jfaf.irc.util.BuildConfigAppConfig
+import org.koin.android.ext.koin.androidContext
+import org.koin.dsl.module
+
+/** Implementaciones Android: Context, Room, DataStore, Firebase, AdMob y servicio. */
+val androidModule = module {
+    // Persistencia
+    single {
+        Room.databaseBuilder(androidContext(), ChatDatabase::class.java, "chat_history.db")
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
+    }
+    factory { get<ChatDatabase>().chatHistoryDao() }
+    single<DataStore<Preferences>> {
+        PreferenceDataStoreFactory.create { androidContext().preferencesDataStoreFile("user_prefs") }
+    }
+
+    // Plataforma
+    single<StringProvider> { AndroidStringProvider(androidContext()) }
+    single<AppConfig> { BuildConfigAppConfig() }
+    single<ConnectionHost> { AndroidConnectionHost(androidContext()) }
+    single<Notifier> { AndroidNotifier(androidContext()) }
+    single<AdProvider> { NativeAdManager(androidContext()) }
+
+    // Firebase
+    single { FirebaseAnalytics.getInstance(androidContext()) }
+    single<AnalyticsTracker> { FirebaseAnalyticsTracker(get()) }
+    single { Firebase.auth }
+    single { Firebase.firestore }
+    single<AuthSession> { FirebaseAuthSession(get()) }
+    single<UserMetadataStore> { FirestoreUserMetadataStore(get(), get()) }
+    single<UpdateChecker> { RemoteConfigManager(androidContext()) }
+}

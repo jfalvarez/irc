@@ -16,8 +16,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
-import javax.inject.Singleton
 
 // Data class que representa la estructura de datos en Firestore
 data class UserMetadata(
@@ -26,8 +24,7 @@ data class UserMetadata(
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@Singleton
-class FirestoreUserMetadataStore @Inject constructor(
+class FirestoreUserMetadataStore(
     private val firestore: FirebaseFirestore,
     private val authSession: AuthSession
 ) : UserMetadataStore {

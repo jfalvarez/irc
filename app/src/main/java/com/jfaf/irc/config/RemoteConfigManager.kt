@@ -12,15 +12,11 @@ import com.google.firebase.remoteconfig.remoteConfig
 import com.jfaf.irc.domain.platform.UNKNOWN_VERSION
 import com.jfaf.irc.domain.platform.UpdateChecker
 import com.jfaf.irc.domain.platform.isUpdateRequired
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class RemoteConfigManager @Inject constructor(
-    @ApplicationContext private val context: Context
+class RemoteConfigManager(
+    private val context: Context
 ) : UpdateChecker {
 
     companion object {

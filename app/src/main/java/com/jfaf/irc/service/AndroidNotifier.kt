@@ -12,14 +12,10 @@ import com.jfaf.irc.R
 import com.jfaf.irc.domain.notifications.Notifier
 import com.jfaf.irc.domain.notifications.PmNotificationPolicy
 import com.jfaf.irc.log.Log
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** [Notifier] de Android: notificaciones del sistema en el canal de mensajes. */
-@Singleton
-class AndroidNotifier @Inject constructor(
-    @ApplicationContext private val context: Context
+class AndroidNotifier(
+    private val context: Context
 ) : Notifier {
 
     companion object {

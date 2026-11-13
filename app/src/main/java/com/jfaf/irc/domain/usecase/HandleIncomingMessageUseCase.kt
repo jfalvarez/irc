@@ -11,9 +11,8 @@ import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.ChatUiSnapshot
 import com.jfaf.irc.domain.chat.IrcMessageHandler
 import kotlinx.coroutines.flow.first
-import javax.inject.Inject
 
-class HandleIncomingMessageUseCase @Inject constructor(
+class HandleIncomingMessageUseCase(
     private val ircMessageHandler: IrcMessageHandler,
     private val chatStateManager: ChatStateManager,
     private val userPreferencesRepository: UserPreferencesRepository,

@@ -17,8 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.min
 
 /** Estado de la sesión para la notificación persistente (o lo que muestre cada plataforma). */
@@ -45,13 +43,12 @@ data class ReconnectPolicy(
  * Sesión IRC del proceso: crea el cliente, reconecta tras una pérdida y publica estado y mensajes.
  * No sabe nada de Android; el servicio (o la app de escritorio) sólo la mantiene viva y la muestra.
  */
-@Singleton
 class IrcSession(
     private val scope: CoroutineScope,
     private val policy: ReconnectPolicy,
     private val clientFactory: (ConnectParams, CoroutineScope, onConnectionLost: () -> Unit) -> ManualIrcClient
 ) {
-    @Inject constructor() : this(
+    constructor() : this(
         CoroutineScope(SupervisorJob() + Dispatchers.IO),
         ReconnectPolicy(),
         { p, s, onLost -> ManualIrcClient(p.host, p.port, p.useSsl, s, Dispatchers.IO, onLost) }

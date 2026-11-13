@@ -8,9 +8,14 @@ import androidx.core.content.ContextCompat // Correct import for getSystemServic
 import com.google.android.gms.ads.MobileAds // Import MobileAds
 import co.touchlab.kermit.platformLogWriter
 import com.jfaf.irc.log.Log
-import dagger.hilt.android.HiltAndroidApp
+import com.jfaf.irc.di.androidModule
+import com.jfaf.irc.di.commonModule
+import com.jfaf.irc.di.viewModelModule
+import org.koin.android.ext.koin.androidContext
+import org.koin.android.ext.koin.androidLogger
+import org.koin.core.context.startKoin
+import org.koin.core.logger.Level
 
-@HiltAndroidApp
 class IrcApplication : Application() {
 
     companion object {
@@ -20,6 +25,11 @@ class IrcApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         Log.install(platformLogWriter()) // Logcat en Android
+        startKoin {
+            androidLogger(Level.ERROR)
+            androidContext(this@IrcApplication)
+            modules(commonModule, viewModelModule, androidModule)
+        }
         
         // Initialize Mobile Ads SDK
         MobileAds.initialize(this) {}

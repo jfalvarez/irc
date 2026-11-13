@@ -4,7 +4,6 @@ import com.jfaf.irc.AppConstants
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.remote.ConnectParams
 import com.jfaf.irc.data.remote.IrcSession
-import com.jfaf.irc.di.ApplicationScope
 import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.platform.ConnectionHost
 import com.jfaf.irc.log.Log
@@ -18,15 +17,12 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** [IrcConnection] sobre la [IrcSession] del proceso; [ConnectionHost] la mantiene viva en segundo plano. */
-@Singleton
-class IrcRepository @Inject constructor(
+class IrcRepository(
     private val session: IrcSession,
     private val connectionHost: ConnectionHost,
-    @ApplicationScope private val appScope: CoroutineScope
+    private val appScope: CoroutineScope
 ) : IrcConnection {
     private val TAG = "IrcRepository"
 

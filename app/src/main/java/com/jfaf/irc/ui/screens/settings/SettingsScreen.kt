@@ -24,7 +24,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import com.jfaf.irc.R
 import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
@@ -34,7 +34,7 @@ import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 @Composable
 fun SettingsScreen(
     onNavigateUp: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = koinViewModel()
 ) {
     val showJoinPartQuitMessages by viewModel.showJoinPartQuitMessages.collectAsState()
     val showNickChanges by viewModel.showNickChanges.collectAsState()

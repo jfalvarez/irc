@@ -10,10 +10,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** Decide qué avisar mientras la app no está a la vista y se lo pide al [Notifier]. */
-class BackgroundNotifications @Inject constructor(
+class BackgroundNotifications(
     private val notifier: Notifier,
     private val appVisibility: AppVisibility,
     private val userMetadataStore: UserMetadataStore,

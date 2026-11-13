@@ -41,7 +41,6 @@ import com.jfaf.irc.domain.usecase.SendMessageOrCommandUseCase
 import com.jfaf.irc.domain.usecase.UpdateFriendMonitoringUseCase
 import com.jfaf.irc.domain.usecase.WhoisRequestResult
 import com.jfaf.irc.domain.chat.command.CommandResult
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
@@ -61,7 +60,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.inject.Inject
 
 data class ChatScreenState(
     val activeTarget: StateFlow<String?>,
@@ -81,8 +79,7 @@ data class ChatScreenState(
 )
 
 @OptIn(kotlinx.coroutines.FlowPreview::class)
-@HiltViewModel
-class MainViewModel @Inject constructor(
+class MainViewModel(
     private val ircConnection: IrcConnection,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val userMetadataStore: UserMetadataStore,
