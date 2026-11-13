@@ -78,6 +78,9 @@ android {
         compose = true
         buildConfig = true // Habilitar BuildConfig
     }
+    testOptions {
+        unitTests.isReturnDefaultValues = true // los tests JVM no tienen android.util.Log (se ira con el logger KMP, K2)
+    }
     packaging {
         resources {
             excludes += "/META-INF/INDEX.LIST"

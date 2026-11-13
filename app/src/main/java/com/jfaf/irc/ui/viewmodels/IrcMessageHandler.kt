@@ -87,8 +87,9 @@ class IrcMessageHandler @Inject constructor(
         val url = rawUrl?.let { if (it.contains("://")) it else "https://$it" }
         if (url != null) {
             try {
-                val uri = android.net.Uri.parse(url)
-                val path = uri.path
+                // Ruta de la URL sin esquema, host, query ni fragmento (Kotlin puro: sin android.net.Uri).
+                val afterScheme = url.substringAfter("://")
+                val path = if ('/' in afterScheme) afterScheme.substring(afterScheme.indexOf('/')).substringBefore('?').substringBefore('#') else null
                 if (path != null) {
                     val extension = path.substringAfterLast('.', "").lowercase(Locale.getDefault())
                     if (supportedImageExtensions.contains(extension)) {

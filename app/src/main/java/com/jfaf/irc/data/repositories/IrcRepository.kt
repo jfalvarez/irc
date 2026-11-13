@@ -5,6 +5,7 @@ import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.jfaf.irc.data.model.ParsedIrcMessage
+import com.jfaf.irc.domain.IrcSender
 import com.jfaf.irc.service.IrcService
 import com.jfaf.irc.service.IrcServiceApi
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -18,7 +19,7 @@ import javax.inject.Singleton
 class IrcRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val ircServiceApi: IrcServiceApi
-) {
+) : IrcSender {
     private val TAG = "IrcRepository"
 
     private val silentWhoisNicks = ConcurrentHashMap.newKeySet<String>()
@@ -77,7 +78,7 @@ class IrcRepository @Inject constructor(
         sendToService(intent)
     }
 
-    fun sendMessage(target: String, message: String) {
+    override fun sendMessage(target: String, message: String) {
         Log.d(TAG, "Solicitando enviar mensaje a $target: '$message' vía servicio")
         val intent = Intent(context, IrcService::class.java).apply {
             action = IrcService.ACTION_SEND_MESSAGE
@@ -87,7 +88,7 @@ class IrcRepository @Inject constructor(
         sendToService(intent)
     }
 
-    fun sendRawCommand(command: String, isSilent: Boolean = false) {
+    override fun sendRawCommand(command: String, isSilent: Boolean) {
         if (isSilent && command.startsWith("WHOIS", ignoreCase = true)) {
             val nick = command.split(" ").getOrNull(1)
             if (nick != null) {

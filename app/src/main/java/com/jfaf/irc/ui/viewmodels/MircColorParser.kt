@@ -89,7 +89,11 @@ object MircColorParser {
                             isUnderline = defaultStyle.textDecoration == TextDecoration.Underline
                         }
                     }
-                } else if (plainText != null) {
+                }
+
+                // El texto que sigue a un código de control (negrita, reset...) llega en el mismo match:
+                // debe añadirse también, no sólo cuando no hubo código.
+                if (plainText != null) {
                     val startOffset = this.length
                     append(plainText)
                     val endOffset = this.length

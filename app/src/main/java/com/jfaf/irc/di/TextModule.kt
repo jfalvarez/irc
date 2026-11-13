@@ -15,3 +15,10 @@ abstract class TextModule {
     @Singleton
     abstract fun bindStringProvider(impl: AndroidStringProvider): StringProvider
 }
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class IrcSenderModule {
+    @Binds
+    abstract fun bindIrcSender(impl: com.jfaf.irc.data.repositories.IrcRepository): com.jfaf.irc.domain.IrcSender
+}
