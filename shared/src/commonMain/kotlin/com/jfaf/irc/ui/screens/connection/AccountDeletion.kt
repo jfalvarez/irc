@@ -47,6 +47,7 @@ fun DeleteAccountButton(signInViewModel: SignInViewModel) {
     if (confirming) {
         AlertDialog(
             onDismissRequest = { confirming = false },
+            containerColor = MaterialTheme.colorScheme.surface,
             title = { Text(stringResource(Res.string.account_delete_confirm_title)) },
             text = { Text(stringResource(Res.string.account_delete_confirm_text)) },
             confirmButton = {
@@ -59,7 +60,7 @@ fun DeleteAccountButton(signInViewModel: SignInViewModel) {
                 ) { Text(stringResource(Res.string.account_delete_confirm_button)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirming = false }) { Text(stringResource(Res.string.button_cancel)) }
+                TextButton(onClick = { confirming = false }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(stringResource(Res.string.button_cancel)) }
             }
         )
     }
@@ -72,9 +73,10 @@ fun AccountDeletionResultDialog(signInViewModel: SignInViewModel) {
     val message = result?.let { messageFor(it) } ?: return
     AlertDialog(
         onDismissRequest = signInViewModel::dismissDeletionResult,
+        containerColor = MaterialTheme.colorScheme.surface,
         text = { Text(stringResource(message)) },
         confirmButton = {
-            TextButton(onClick = signInViewModel::dismissDeletionResult) { Text(stringResource(Res.string.button_accept)) }
+            TextButton(onClick = signInViewModel::dismissDeletionResult, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(stringResource(Res.string.button_accept)) }
         }
     )
 }

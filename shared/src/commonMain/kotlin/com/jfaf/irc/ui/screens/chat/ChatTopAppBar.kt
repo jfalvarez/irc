@@ -53,6 +53,7 @@ fun ChatTopAppBar(
     var showMenu by remember { mutableStateOf(false) }
     var showJoinChannelDialog by remember { mutableStateOf(false) }
     var showOpenPmDialog by remember { mutableStateOf(false) }
+    var reportingNick by remember { mutableStateOf<String?>(null) }
 
     val isChannel = activeTarget?.startsWith("#") == true
     // Exclude SERVER_TARGET_ID (assumed to be "Servidor") from being a PM for the ignore option
@@ -114,6 +115,13 @@ fun ChatTopAppBar(
                             onIgnoreUserInPm(activeTarget)
                         }
                     )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.menu_item_report_user, activeTarget), color = MaterialTheme.colorScheme.onSurface) },
+                        onClick = {
+                            showMenu = false
+                            reportingNick = activeTarget
+                        }
+                    )
                 } else {
                     DropdownMenuItem(
                         text = { Text(stringResource(Res.string.menu_item_private_message_to), color = MaterialTheme.colorScheme.onSurface) },
@@ -159,6 +167,10 @@ fun ChatTopAppBar(
                 showJoinChannelDialog = false
             }
         )
+    }
+
+    reportingNick?.let { nick ->
+        ReportUserDialog(nick, onIgnore = { onIgnoreUserInPm(nick) }, onDismiss = { reportingNick = null })
     }
 
     if (showOpenPmDialog) {

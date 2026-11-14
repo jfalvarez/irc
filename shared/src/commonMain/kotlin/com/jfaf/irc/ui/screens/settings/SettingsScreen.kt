@@ -31,6 +31,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
 import com.jfaf.irc.ui.platform.LocalPlatformUi
+import com.jfaf.irc.ui.screens.terms.TermsDialog
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +48,7 @@ fun SettingsScreen(
     val soundAlerts by viewModel.soundAlerts.collectAsState()
     val platformUi = LocalPlatformUi.current
     val supportsSoundAlerts = platformUi.supportsSoundAlerts
+    var showTerms by remember { mutableStateOf(false) }
     val ignoredUsers by viewModel.ignoredUsers.collectAsState()
     val friends by viewModel.friends.collectAsState()
     val serverConfig by viewModel.serverConfig.collectAsState()
@@ -143,6 +145,16 @@ fun SettingsScreen(
                 }
             }
             item { platformUi.PrivacyOptionsItem() }
+            item {
+                Text(
+                    text = stringResource(Res.string.settings_terms),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showTerms = true }
+                        .padding(vertical = 16.dp)
+                )
+            }
 
             item {
                 HorizontalDivider(
@@ -186,6 +198,10 @@ fun SettingsScreen(
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
         }
+    }
+
+    if (showTerms) {
+        TermsDialog(onDecline = { showTerms = false })
     }
 }
 

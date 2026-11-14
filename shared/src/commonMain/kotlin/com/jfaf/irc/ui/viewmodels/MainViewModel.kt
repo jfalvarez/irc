@@ -19,6 +19,7 @@ import com.jfaf.irc.domain.platform.AdHandle
 import com.jfaf.irc.domain.platform.AdProvider
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferences
+import com.jfaf.irc.data.prefs.DEFAULT_SHOW_MEDIA_PREVIEWS
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
@@ -167,7 +168,7 @@ class MainViewModel(
         userPreferencesRepository.showMediaPreviewsFlow.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
-            true
+            DEFAULT_SHOW_MEDIA_PREVIEWS
         )
 
     private val onlineFriendsState: StateFlow<Set<String>> = friendPresence.onlineFriendsFlow

@@ -5,15 +5,18 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SkikoComposeUiTest
 import androidx.compose.ui.test.runSkikoComposeUiTest
 import com.jfaf.irc.data.history.room.ChatDatabase
+import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.remote.IrcTransport
 import com.jfaf.irc.di.commonModule
 import com.jfaf.irc.di.viewModelModule
+import com.jfaf.irc.domain.terms.TermsOfUse
 import com.jfaf.irc.ui.App
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import org.koin.core.Koin
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -43,6 +46,8 @@ class NickAutocompleteFlowTest {
                 module { factory<IrcTransport> { server } }
             )
         }.koin
+        // Condiciones ya aceptadas: si no, su diálogo taparía la app
+        runBlocking { koin.get<UserPreferencesRepository>().acceptTerms(TermsOfUse.CURRENT_VERSION) }
     }
 
     @AfterTest

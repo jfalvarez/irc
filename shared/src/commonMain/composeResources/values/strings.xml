@@ -173,4 +173,18 @@
     <string name="account_sign_in_hint">Inicia sesión con Google para sincronizar tu configuración (ej. lista de ignorados) entre dispositivos.</string>
     <string name="account_sign_in_google">Iniciar sesión con Google</string>
     <string name="video_open_in_browser">Abrir vídeo en el navegador</string>
+    <!-- Condiciones de uso: las acepta el usuario antes de chatear; ver TermsOfUse -->
+    <string name="terms_title">Condiciones de uso</string>
+    <string name="terms_intro">Para usar la app tienes que leer y aceptar estas condiciones.</string>
+    <string name="terms_accept">Acepto</string>
+    <string name="terms_decline">Salir</string>
+    <string name="terms_close">Cerrar</string>
+    <string name="settings_terms">Condiciones de uso</string>
+    <string name="terms_text">Esta app es un cliente para conectarte a redes de chat IRC públicas, gestionadas por terceros (por defecto, IRC-Hispano). La app no aloja, guarda ni modera las conversaciones de los canales: cada red y cada canal tienen sus propias normas y sus moderadores (operadores).\n\n1. Edad. Tienes que tener al menos %1$d años.\n\n2. Conducta. No está permitido usar la app para:\n• publicar o enlazar contenido ilegal;\n• publicar o enlazar cualquier contenido que sexualice a menores (tolerancia cero);\n• acosar, amenazar o insultar, o incitar al odio o a la violencia;\n• difundir datos personales de otras personas sin su permiso;\n• suplantar a otras personas, enviar spam o enlaces maliciosos.\n\n3. Contenido de otros usuarios. En los canales puedes encontrar contenido ofensivo o para adultos que esta app no controla. Las previsualizaciones de imágenes y vídeos están desactivadas por defecto; si las activas en Ajustes, lo haces bajo tu responsabilidad.\n\n4. Herramientas. Puedes ignorar a cualquier usuario para dejar de ver sus mensajes y, con la opción «Denunciar», ver cómo avisar a los moderadores del canal o de la red. Si algo puede ser un delito, en especial si afecta a menores, denúncialo a las autoridades.\n\n5. Cuenta. Iniciar sesión con Google es opcional.\n\n6. Responsabilidad. La app se ofrece tal cual, sin garantías. Cada usuario es responsable de lo que escribe y comparte. Si incumples estas condiciones o las normas de la red, los operadores pueden expulsarte.\n\n7. Cambios. Si estas condiciones cambian de forma importante, la app te pedirá que las aceptes de nuevo.\n\nCómo se tratan tus datos se explica en la política de privacidad, enlazada en la ficha de la app en Google Play.</string>
+    <!-- Denunciar: la app no modera los canales; explica a quién avisar y ofrece ignorar -->
+    <string name="action_report_user">Denunciar</string>
+    <string name="menu_item_report_user">Denunciar a %1$s</string>
+    <string name="report_title">Denunciar a %1$s</string>
+    <string name="report_text">Esta app sólo te conecta con redes IRC públicas: no aloja los canales ni puede moderarlos. Los moderan los operadores de cada canal (los nicks con @) y de la red.\n\nPara denunciar a %1$s, avisa a un operador del canal o de la red. Si el contenido puede ser un delito, en especial si afecta a menores, denúncialo también a las autoridades.\n\nMientras tanto, puedes ignorarlo para dejar de ver sus mensajes.</string>
+    <string name="report_ignore">Ignorar a %1$s</string>
 </resources>

@@ -47,6 +47,8 @@ import com.jfaf.irc.ui.screens.settings.SettingsScreen
 import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
+import com.jfaf.irc.ui.viewmodels.TermsViewModel
+import com.jfaf.irc.ui.screens.terms.TermsDialog
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -71,6 +73,7 @@ fun App(
     onExit: () -> Unit,
     mainViewModel: MainViewModel = koinViewModel(),
     signInViewModel: SignInViewModel = koinViewModel(),
+    termsViewModel: TermsViewModel = koinViewModel(),
     updateChecker: UpdateChecker = koinInject(),
     haptics: Haptics = koinInject(),
     appVisibility: AppVisibility = koinInject()
@@ -167,6 +170,12 @@ fun App(
                         }
                     }
                 )
+            }
+
+            // Condiciones de uso: hasta aceptarlas no se puede usar la app (null: aún leyendo el ajuste)
+            val termsAccepted by termsViewModel.termsAccepted.collectAsState()
+            if (termsAccepted == false) {
+                TermsDialog(onDecline = onExit, onAccept = termsViewModel::accept)
             }
 
             if (showExitConfirmationDialog) {

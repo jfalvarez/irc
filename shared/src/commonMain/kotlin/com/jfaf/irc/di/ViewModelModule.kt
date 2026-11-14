@@ -18,6 +18,7 @@ import com.jfaf.irc.domain.usecase.SendMessageOrCommandUseCase
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
+import com.jfaf.irc.ui.viewmodels.TermsViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.scope.Scope
 import org.koin.dsl.module
@@ -25,6 +26,7 @@ import org.koin.dsl.module
 val viewModelModule = module {
     viewModel { newMainViewModel() }
     viewModel { SettingsViewModel(get(), get()) }
+    viewModel { TermsViewModel(get()) }
     viewModel { SignInViewModel(get(), get(), DeleteAccountUseCase(get(), get()), get()) }
 }
 

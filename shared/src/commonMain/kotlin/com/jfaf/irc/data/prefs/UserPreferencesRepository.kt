@@ -17,6 +17,12 @@ import okio.IOException
 
 data class UserPreferences(val nickname: String, val nickServPassword: String)
 
+/**
+ * Previsualizaciones de imágenes y vídeos desactivadas si el usuario nunca tocó la opción: en un chat
+ * abierto cualquiera puede enlazar una imagen explícita.
+ */
+const val DEFAULT_SHOW_MEDIA_PREVIEWS = false
+
 class UserPreferencesRepository(
     private val dataStore: DataStore<Preferences>
 ) {
@@ -39,6 +45,7 @@ class UserPreferencesRepository(
 
         val SOUND_ALERTS = booleanPreferencesKey("sound_alerts")
         val RECENT_EMOJIS = stringPreferencesKey("recent_emojis")
+        val TERMS_ACCEPTED_VERSION = intPreferencesKey("terms_accepted_version")
 
         val SERVER_HOST = stringPreferencesKey("server_host")
         val SERVER_PLAIN_PORT = intPreferencesKey("server_plain_port")
@@ -118,8 +125,17 @@ class UserPreferencesRepository(
             }
         }
         .map { preferences ->
-            preferences[SHOW_MEDIA_PREVIEWS] ?: true
+            preferences[SHOW_MEDIA_PREVIEWS] ?: DEFAULT_SHOW_MEDIA_PREVIEWS
         }
+
+    /** Versión de las condiciones de uso que aceptó el usuario; null si nunca (ver `TermsOfUse`). */
+    val termsAcceptedVersionFlow: Flow<Int?> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { it[TERMS_ACCEPTED_VERSION] }
+
+    suspend fun acceptTerms(version: Int) {
+        dataStore.edit { it[TERMS_ACCEPTED_VERSION] = version }
+    }
 
     suspend fun updateShowMediaPreviews(show: Boolean) {
         dataStore.edit { preferences ->

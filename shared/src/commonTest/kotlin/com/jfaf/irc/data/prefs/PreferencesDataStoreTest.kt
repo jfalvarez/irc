@@ -87,4 +87,28 @@ class PreferencesDataStoreTest {
         assertEquals(ServerConfig.DEFAULT_HOST, repo.serverConfigFlow.first().host)
         job.cancelAndJoin()
     }
+
+    @Test
+    fun previsualizacionesDesactivadasSiNuncaSeTocoLaOpcion() = runBlocking {
+        val job = Job()
+        val repo = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job)))
+        assertFalse(repo.showMediaPreviewsFlow.first())
+        repo.updateShowMediaPreviews(true) // quien las activa a mano las conserva
+        assertTrue(repo.showMediaPreviewsFlow.first())
+        job.cancelAndJoin()
+    }
+
+    @Test
+    fun condicionesAceptadasSeConservanAlReabrir() = runBlocking {
+        val job1 = Job()
+        val first = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job1)))
+        assertEquals(null, first.termsAcceptedVersionFlow.first())
+        first.acceptTerms(1)
+        job1.cancelAndJoin()
+
+        val job2 = Job()
+        val second = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job2)))
+        assertEquals(1, second.termsAcceptedVersionFlow.first())
+        job2.cancelAndJoin()
+    }
 }

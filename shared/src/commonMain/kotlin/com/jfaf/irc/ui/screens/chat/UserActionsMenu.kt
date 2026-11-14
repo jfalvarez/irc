@@ -8,6 +8,10 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.stringResource
 import com.jfaf.irc.ui.theme.IRCTheme
@@ -18,7 +22,7 @@ fun cleanNick(nick: String): String =
     if (nick.isNotEmpty() && nick[0] in "@+%&~") nick.substring(1) else nick
 
 /**
- * Menú contextual de acciones sobre un usuario (mensaje privado, ignorar, whois).
+ * Menú contextual de acciones sobre un usuario (mensaje privado, ignorar, whois, denunciar).
  * Compartido por la lista de usuarios del canal y por el nick de los mensajes.
  * Debe colocarse dentro del mismo Box que el elemento al que se ancla.
  */
@@ -29,6 +33,7 @@ fun UserActionsMenu(
     onDismiss: () -> Unit,
     mainViewModel: MainViewModel
 ) {
+    var reporting by remember { mutableStateOf(false) }
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
@@ -70,5 +75,21 @@ fun UserActionsMenu(
                 onDismiss()
             }
         )
+        DropdownMenuItem(
+            text = {
+                Text(
+                    stringResource(Res.string.action_report_user),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            },
+            onClick = {
+                reporting = true
+                onDismiss()
+            }
+        )
+    }
+    if (reporting) {
+        val nick = cleanNick(userName)
+        ReportUserDialog(nick, onIgnore = { mainViewModel.ignoreUser(nick) }, onDismiss = { reporting = false })
     }
 }
