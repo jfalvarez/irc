@@ -79,6 +79,33 @@ class IrcMessageHandlerTest {
         assertEquals("https://example.com/foto.png", msg.mediaUrl)
     }
 
+    private fun mediaOf(url: String): UiChatMessage =
+        process(":Ana!u@h PRIVMSG #chat :mira $url", snapshot(targets = listOf("Servidor", "#chat")))
+            .newAllMessages.getValue("#chat").single()
+
+    @Test
+    fun enlaceDeVideoMp4_seDetectaComoVideo() {
+        val msg = mediaOf("https://example.com/clip.mp4")
+        assertEquals("https://example.com/clip.mp4", msg.mediaUrl)
+        assertEquals(com.jfaf.irc.domain.chat.model.MediaTypeEnum.VIDEO, msg.mediaType)
+    }
+
+    @Test
+    fun enlaceDeVideoMp4_conConsultaYMayusculas_seDetectaComoVideo() {
+        assertEquals(com.jfaf.irc.domain.chat.model.MediaTypeEnum.VIDEO, mediaOf("https://example.com/CLIP.MP4?t=10").mediaType)
+    }
+
+    @Test
+    fun enlaceDeVideoWebm_sigueDetectandoseComoVideo() {
+        assertEquals(com.jfaf.irc.domain.chat.model.MediaTypeEnum.VIDEO, mediaOf("https://example.com/clip.webm").mediaType)
+    }
+
+    @Test
+    fun noConfundeConOtrasExtensionesParecidas() {
+        assertEquals(com.jfaf.irc.domain.chat.model.MediaTypeEnum.NONE, mediaOf("https://example.com/clip.mp4.txt").mediaType)
+        assertEquals(com.jfaf.irc.domain.chat.model.MediaTypeEnum.NONE, mediaOf("https://example.com/clip.mp3").mediaType)
+    }
+
     @Test
     fun imagenConPalabraFiltrada_noSePrevisualiza() {
         val filtering = IrcMessageHandler(fakeStrings, config("nsfw"))

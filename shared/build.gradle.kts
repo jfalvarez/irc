@@ -76,6 +76,10 @@ kotlin {
         named("jvmCommonMain").dependencies {
             implementation(libs.coil.network.okhttp)
         }
+        // Reproductor de vídeo de escritorio: motores nativos del sistema por JNI (Media Foundation, GStreamer, AVPlayer).
+        named("desktopMain").dependencies {
+            implementation(libs.compose.media.player)
+        }
         androidMain.dependencies {
             implementation(libs.androidx.media3.exoplayer)
             implementation(libs.androidx.media3.ui)

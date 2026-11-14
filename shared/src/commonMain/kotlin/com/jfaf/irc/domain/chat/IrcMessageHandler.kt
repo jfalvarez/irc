@@ -67,7 +67,8 @@ class IrcMessageHandler(
     private val imageFilterKeywordsSet: Set<String> get() = appConfig.imageFilterKeywords
 
     private val supportedImageExtensions = setOf("png", "jpg", "jpeg", "gif", "webp")
-    private val supportedVideoExtensions = setOf("webm") // Can add "mp4" etc. later
+    // MP4 lo reproducen ExoPlayer (Android) y los tres motores de escritorio; WebM, ExoPlayer y GStreamer (Linux).
+    private val supportedVideoExtensions = setOf("webm", "mp4")
     // Esquema opcional: muchos usuarios pegan enlaces tipo "host.com/img.gif" sin https://
     private val generalUrlRegex = "((?:https?://)?(?:[A-Za-z0-9-]+\\.)+[A-Za-z]{2,}(?:/[^\\s]*)?)".toRegex()
 

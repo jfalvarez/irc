@@ -91,6 +91,10 @@
     <string name="cd_unread_messages">%1$d mensajes sin leer</string>
     <string name="cd_unread_private_messages">Hay mensajes privados sin leer</string>
     <string name="cd_insert_emoji">Insertar emoticono</string>
+    <string name="video_play">Reproducir</string>
+    <string name="video_pause">Pausar</string>
+    <string name="video_mute">Silenciar</string>
+    <string name="video_unmute">Activar sonido</string>
     <string name="emoji_category_recent">Recientes</string>
     <string name="emoji_category_faces">Caras</string>
     <string name="emoji_category_gestures">Gestos y personas</string>

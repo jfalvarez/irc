@@ -13,6 +13,7 @@ activityCompose = "1.8.0"
 kotlinxCoroutines = "1.11.0"
 kermit = "2.2.0"
 coil = "3.6.3"
+composeMediaPlayer = "0.11.4"
 playServicesAds = "23.0.0"
 datastorePreferences = "1.3.0"
 koin = "4.2.2"
@@ -60,6 +61,7 @@ compose-mp-material3 = { module = "org.jetbrains.compose.material3:material3", v
 compose-mp-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "composeIcons" }
 androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "lifecycle" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+compose-media-player = { module = "io.github.kdroidfilter:composemediaplayer", version.ref = "composeMediaPlayer" }
 coil-gif = { module = "io.coil-kt.coil3:coil-gif", version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
