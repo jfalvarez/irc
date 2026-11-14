@@ -46,7 +46,7 @@ class DesktopLayoutTest {
         // Koin global: App usa koinInject y koinViewModel
         koin = startKoin {
             modules(
-                commonModule, viewModelModule, desktopModule(dataDir),
+                commonModule, viewModelModule, desktopModule(dataDir, google = null),
                 module { factory<IrcTransport> { server } } // sustituye el transporte real
             )
         }.koin
@@ -71,7 +71,7 @@ class DesktopLayoutTest {
     }
 
     private fun SkikoComposeUiTest.showApp(vm: MainViewModel) = setContent {
-        App(platformUi = DesktopPlatformUi, onGoogleSignIn = {}, onRedirectToPlayStore = {}, onExit = {}, mainViewModel = vm)
+        App(platformUi = DesktopPlatformUi(), onGoogleSignIn = {}, onRedirectToPlayStore = {}, onExit = {}, mainViewModel = vm)
     }
 
     private fun SkikoComposeUiTest.count(text: String) = onAllNodesWithText(text, substring = true).fetchSemanticsNodes().size

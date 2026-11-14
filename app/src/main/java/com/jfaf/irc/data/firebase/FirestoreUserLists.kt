@@ -54,10 +54,11 @@ class FirestoreUserLists(
             }
         }
 
-    override fun apply(uid: String, add: UserLists, remove: UserLists) {
+    override suspend fun apply(uid: String, add: UserLists, remove: UserLists): Boolean {
         // Firestore no admite arrayUnion y arrayRemove en el mismo campo de una escritura: van por separado
         write(uid, add) { FieldValue.arrayUnion(*it.toTypedArray()) }
         write(uid, remove) { FieldValue.arrayRemove(*it.toTypedArray()) }
+        return true // el SDK lo guarda en su caché y lo envía cuando haya red
     }
 
     private fun write(uid: String, lists: UserLists, op: (Set<String>) -> FieldValue) {

@@ -2,6 +2,9 @@ package com.jfaf.irc.desktop
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.jfaf.irc.data.auth.RestAuthSession
+import com.jfaf.irc.data.user.LocalUserMetadataStore
+import com.jfaf.irc.data.user.SyncedUserMetadataStore
 import com.jfaf.irc.data.history.room.ChatDatabase
 import com.jfaf.irc.data.remote.IrcSession
 import com.jfaf.irc.di.commonModule
@@ -50,7 +53,7 @@ class DesktopModuleTest {
     @BeforeTest
     fun setUp() {
         dataDir = Files.createTempDirectory("irc-desktop-test").toFile()
-        app = koinApplication { modules(commonModule, viewModelModule, desktopModule(dataDir)) }
+        app = koinApplication { modules(commonModule, viewModelModule, desktopModule(dataDir, google = null)) }
         koin = app.koin
     }
 
@@ -102,6 +105,31 @@ class DesktopModuleTest {
     @Test
     fun sinLoginNoHayUsuario() {
         assertNull(koin.get<AuthSession>().currentUser.value)
+        assertTrue(koin.get<AuthSession>() is NoAuthSession)
+        assertNull(koin.getOrNull<DesktopGoogleSignIn>(), "Sin configuración no se ofrece el login")
+        assertTrue(koin.get<UserMetadataStore>() is LocalUserMetadataStore, "Sin login, listas sólo en local")
+    }
+
+    @Test
+    fun conConfiguracionDeGoogle_resuelveElLoginSinSesionGuardada() {
+        val config = DesktopGoogleConfig.of("cliente", "secreto", "clave", "proyecto")!!
+        val withGoogle = koinApplication { modules(commonModule, viewModelModule, desktopModule(dataDir, google = config)) }
+        try {
+            val auth = withGoogle.koin.get<AuthSession>()
+            assertTrue(auth is RestAuthSession)
+            assertNull(auth.currentUser.value)
+            assertNotNull(withGoogle.koin.get<DesktopGoogleSignIn>())
+            assertTrue(withGoogle.koin.get<UserMetadataStore>() is SyncedUserMetadataStore, "Con login, listas sincronizadas")
+            assertNotNull(withGoogle.koin.get<SignInViewModel>())
+        } finally {
+            runCatching { withGoogle.koin.get<ChatDatabase>().close() }
+            withGoogle.close()
+        }
+    }
+
+    @Test
+    fun configuracionIncompleta_noOfreceLogin() {
+        assertNull(DesktopGoogleConfig.of("cliente", "", "clave", "proyecto"))
     }
 
     @Test

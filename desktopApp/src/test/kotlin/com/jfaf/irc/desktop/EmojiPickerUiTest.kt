@@ -65,7 +65,7 @@ class EmojiPickerUiTest {
 
     @Test
     fun enEscritorioHayUnIconoQueAbreElSelector() = runComposeUiTest {
-        show(DesktopPlatformUi)
+        show(DesktopPlatformUi())
 
         assertEquals(0, count(smile), "El selector no debe verse hasta pulsar el icono")
         onNodeWithContentDescription("Insertar emoticono").performClick()
@@ -83,7 +83,7 @@ class EmojiPickerUiTest {
     @Test
     fun elegirUnoLoInsertaEnElCampoYCierraElSelector() = runComposeUiTest {
         val picked = mutableListOf<String>()
-        show(DesktopPlatformUi, onPicked = { picked += it })
+        show(DesktopPlatformUi(), onPicked = { picked += it })
 
         onNodeWithContentDescription("Insertar emoticono").performClick()
         waitForIdle()
@@ -97,7 +97,7 @@ class EmojiPickerUiTest {
 
     @Test
     fun seInsertaDondeEstaElCursorYNoAlFinal() = runComposeUiTest {
-        show(DesktopPlatformUi)
+        show(DesktopPlatformUi())
         onNode(hasSetTextAction()).performTextInput("ab")
         onNode(hasSetTextAction()).performTextInputSelection(TextRange(1)) // entre la a y la b
 
@@ -111,7 +111,7 @@ class EmojiPickerUiTest {
 
     @Test
     fun sustituyeLoQueEsteSeleccionado() = runComposeUiTest {
-        show(DesktopPlatformUi)
+        show(DesktopPlatformUi())
         onNode(hasSetTextAction()).performTextInput("hola mundo")
         onNode(hasSetTextAction()).performTextInputSelection(TextRange(5, 10)) // «mundo»
 
@@ -125,7 +125,7 @@ class EmojiPickerUiTest {
 
     @Test
     fun escCierraElSelectorSinQuitarleElFocoAlCampo() = runComposeUiTest {
-        show(DesktopPlatformUi)
+        show(DesktopPlatformUi())
         onNodeWithContentDescription("Insertar emoticono").performClick()
         waitForIdle()
         assertEquals(1, count(smile))
@@ -139,7 +139,7 @@ class EmojiPickerUiTest {
 
     @Test
     fun pulsarFueraCierraElSelector() = runComposeUiTest {
-        show(DesktopPlatformUi)
+        show(DesktopPlatformUi())
         onNodeWithContentDescription("Insertar emoticono").performClick()
         waitForIdle()
         assertEquals(1, count(smile))
@@ -153,7 +153,7 @@ class EmojiPickerUiTest {
 
     @Test
     fun seguirEscribiendoConElSelectorAbiertoFunciona() = runComposeUiTest {
-        show(DesktopPlatformUi)
+        show(DesktopPlatformUi())
         onNodeWithContentDescription("Insertar emoticono").performClick()
         waitForIdle()
 
@@ -166,7 +166,7 @@ class EmojiPickerUiTest {
 
     @Test
     fun conRecientesElSelectorEmpiezaPorEllosYSePuedeCambiarDeCategoria() = runComposeUiTest {
-        show(DesktopPlatformUi, recents = listOf(fire))
+        show(DesktopPlatformUi(), recents = listOf(fire))
 
         onNodeWithContentDescription("Insertar emoticono").performClick()
         waitForIdle()

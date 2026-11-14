@@ -55,6 +55,9 @@ fun main() {
     val notifier = koin.get<DesktopNotifier>()
     val appVisibility = koin.get<AppVisibility>()
     val session = koin.get<IrcSession>()
+    // Sólo existe si hay configuración de Google (local.properties al compilar)
+    val googleSignIn = koin.getOrNull<DesktopGoogleSignIn>()
+    val platformUi = DesktopPlatformUi(supportsGoogleSignIn = googleSignIn != null)
 
     // Envía el QUIT antes de salir (hasta SHUTDOWN_TIMEOUT_MS) para no dejar la conexión colgada en el servidor.
     fun shutdown() {
@@ -92,8 +95,8 @@ fun main() {
             }
 
             App(
-                platformUi = DesktopPlatformUi,
-                onGoogleSignIn = {},
+                platformUi = platformUi,
+                onGoogleSignIn = { googleSignIn?.start() },
                 onRedirectToPlayStore = {},
                 onExit = exit
             )

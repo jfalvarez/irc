@@ -13,6 +13,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -51,19 +52,18 @@ class SyncedUserMetadataStore(
             local.update { LocalListsState(snapshot.lists, snapshot.uid) }
             return
         }
-        // Primera respuesta de esta sesión: juntar con lo local
-        var toAdd = UserLists()
-        var toRemove = UserLists()
-        local.update { state ->
-            val result = reconcile(state, snapshot.uid, snapshot.lists)
-            toAdd = result.toAdd
-            toRemove = result.toRemove
-            result.state
-        }
-        if (!toAdd.isEmpty() || !toRemove.isEmpty()) {
+        // Primera respuesta de esta sesión (o tras un fallo): juntar con lo local. Sólo se escribe aquí y
+        // bajo el mutex, así que el estado leído no cambia hasta el update.
+        val result = reconcile(local.stateFlow.first(), snapshot.uid, snapshot.lists)
+        if (!result.toAdd.isEmpty() || !result.toRemove.isEmpty()) {
             Log.d(TAG, "Subiendo a la cuenta lo guardado sin sesión.")
-            remote.apply(snapshot.uid, toAdd, toRemove)
+            if (!remote.apply(snapshot.uid, result.toAdd, result.toRemove)) {
+                // Lo local y sus pendientes quedan como estaban: se reintenta con la siguiente respuesta
+                Log.w(TAG, "No se pudo subir lo pendiente: se reintentará.")
+                return
+            }
         }
+        local.update { result.state }
         _syncAccount.value = snapshot.uid
     }
 
@@ -73,16 +73,24 @@ class SyncedUserMetadataStore(
     override suspend fun removeFriend(nick: String) = change(UserList.FRIENDS, nick, adding = false)
 
     private suspend fun change(list: UserList, nick: String, adding: Boolean) = mutex.withLock {
+        // Primero en local, para que se vea al momento
         val uid = _syncAccount.value
+        local.update { it.change(list, nick, adding, offline = uid == null) }
         if (uid != null) {
             val single = UserLists.of(list, nick)
-            remote.apply(uid, add = if (adding) single else UserLists(), remove = if (adding) UserLists() else single)
+            val saved = remote.apply(uid, add = if (adding) single else UserLists(), remove = if (adding) UserLists() else single)
+            if (!saved) {
+                // Queda pendiente y, hasta la siguiente respuesta de la cuenta, se trabaja como sin sesión:
+                // así esa respuesta no lo pisa y, al juntarla con lo local, se vuelve a subir.
+                Log.w(TAG, "No se pudo guardar en la cuenta: queda pendiente.")
+                local.update { it.change(list, nick, adding, offline = true) }
+                _syncAccount.value = null
+            }
         }
-        local.update {
-            if (adding) it.add(list, nick, offline = uid == null) else it.remove(list, nick, offline = uid == null)
-        }
-        Unit
     }
+
+    private fun LocalListsState.change(list: UserList, nick: String, adding: Boolean, offline: Boolean) =
+        if (adding) add(list, nick, offline) else remove(list, nick, offline)
 
     private companion object {
         const val TAG = "SyncedUserMetadataStore"

@@ -39,7 +39,7 @@ class NickAutocompleteFlowTest {
         server = ScriptedTransport()
         koin = startKoin {
             modules(
-                commonModule, viewModelModule, desktopModule(dataDir),
+                commonModule, viewModelModule, desktopModule(dataDir, google = null),
                 module { factory<IrcTransport> { server } }
             )
         }.koin
@@ -55,7 +55,7 @@ class NickAutocompleteFlowTest {
     /** Conecta, entra en #test y recibe su lista de nombres (con prefijos de modo, como manda un servidor real). */
     private fun SkikoComposeUiTest.connectAndReceiveNames(vm: MainViewModel) {
         setContent {
-            App(platformUi = DesktopPlatformUi, onGoogleSignIn = {}, onRedirectToPlayStore = {}, onExit = {}, mainViewModel = vm)
+            App(platformUi = DesktopPlatformUi(), onGoogleSignIn = {}, onRedirectToPlayStore = {}, onExit = {}, mainViewModel = vm)
         }
         server.serverSays(":srv 001 Tester :Welcome")
         vm.connect("Tester", false, null, false)

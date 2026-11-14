@@ -21,6 +21,9 @@ jetbrainsNavigation = "2.10.0"
 composeMultiplatform = "1.12.2"
 composeMaterial3 = "1.9.0"
 composeIcons = "1.7.3" # material-icons-extended de JetBrains se quedó aquí (sin versiones nuevas)
+ktor = "3.6.1" # cliente HTTP multiplataforma (Firebase REST en escritorio, paso 3 de las listas)
+kotlinxSerialization = "1.12.0"
+jna = "5.19.1" # DPAPI de Windows para guardar la sesión de escritorio
 
 # Versiones explícitas para Firebase KTX
 firebaseCommonKtxVersion = "21.0.0"
@@ -64,6 +67,11 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" 
 compose-media-player = { module = "io.github.kdroidfilter:composemediaplayer", version.ref = "composeMediaPlayer" }
 coil-gif = { module = "io.coil-kt.coil3:coil-gif", version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-sqlite-bundled = { group = "androidx.sqlite", name = "sqlite-bundled", version.ref = "sqlite" }
@@ -83,6 +91,7 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
 compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }

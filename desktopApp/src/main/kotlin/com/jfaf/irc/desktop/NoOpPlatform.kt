@@ -15,7 +15,8 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /*
  * Implementaciones de escritorio de lo que, según la decisión 0.1, no tiene función en el PC:
- * sin anuncios, sin login, sin analítica, sin aviso de actualización y sin vibración.
+ * sin anuncios, sin analítica, sin aviso de actualización y sin vibración. Sin login sólo si falta
+ * la configuración de Google ([NoAuthSession]; con ella, `RestAuthSession`).
  */
 
 /** Palabras del filtro de imágenes: variable de entorno `IRC_IMAGE_FILTER_KEYWORDS`, separadas por comas. */

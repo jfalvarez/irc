@@ -55,7 +55,7 @@ class SoundSettingTest {
     @BeforeTest
     fun setUp() {
         dataDir = Files.createTempDirectory("irc-sound-setting-test").toFile()
-        app = koinApplication { modules(commonModule, viewModelModule, desktopModule(dataDir, output)) }
+        app = koinApplication { modules(commonModule, viewModelModule, desktopModule(dataDir, output, google = null)) }
         koin = app.koin
     }
 
@@ -125,7 +125,7 @@ class SoundSettingTest {
     @Test
     fun laCasillaSoloSeMuestraEnEscritorioYGuardaLaPreferencia() = runSkikoComposeUiTest(size = Size(900f, 1800f)) {
         val settings = koin.get<SettingsViewModel>()
-        var platform: PlatformUi by mutableStateOf(DesktopPlatformUi)
+        var platform: PlatformUi by mutableStateOf(DesktopPlatformUi())
         setContent {
             IRCAppTheme {
                 CompositionLocalProvider(LocalPlatformUi provides platform) {

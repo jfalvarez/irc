@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlin.concurrent.Volatile
 import okio.FileSystem
 import okio.Path
 import kotlin.random.Random
@@ -24,14 +25,22 @@ import kotlin.test.assertTrue
 
 class SyncedUserMetadataStoreTest {
 
-    /** Cuenta de pega: guarda lo que se le envía y deja simular respuestas del servidor. */
+    /** Cuenta de pega: guarda lo que se le envía, deja simular respuestas del servidor y fallos al guardar. */
     private class FakeRemote : RemoteUserLists {
         override val snapshots = MutableStateFlow<RemoteLists?>(null)
+        @Volatile var failWrites = false
         private val applied = MutableStateFlow<List<Triple<String, UserLists, UserLists>>>(emptyList())
-        override fun apply(uid: String, add: UserLists, remove: UserLists) {
+        private val failed = MutableStateFlow(0)
+        override suspend fun apply(uid: String, add: UserLists, remove: UserLists): Boolean {
+            if (failWrites) {
+                failed.update { it + 1 }
+                return false
+            }
             applied.update { it + Triple(uid, add, remove) }
+            return true
         }
         fun appliedNow() = applied.value
+        suspend fun awaitFailures(count: Int) = withTimeout(5_000) { failed.first { it >= count } }
     }
 
     private val dir: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "irc-lists-test-${Random.nextLong().toULong()}"
@@ -120,5 +129,38 @@ class SyncedUserMetadataStoreTest {
         assertEquals(setOf("luis"), store.friendsFlow.first())
         assertEquals(emptySet(), store.ignoredUsersFlow.first())
         assertTrue(remote.appliedNow().isEmpty())
+    }
+
+    @Test
+    fun siNoSePuedeGuardarEnLaCuenta_quedaPendienteYSeSubeConLaSiguienteRespuesta() = runBlocking {
+        store.start(scope)
+        signIn("u1", UserLists(friends = setOf("ana")))
+        remote.failWrites = true
+        store.addIgnoredUser("pepe")
+        assertEquals(setOf("pepe"), store.ignoredUsersFlow.first()) // se ve al momento
+        assertEquals(null, store.syncAccount.value)
+
+        // La siguiente consulta (otro dispositivo añadió a "luis") no lo pisa: se junta y se sube
+        remote.failWrites = false
+        signIn("u1", UserLists(friends = setOf("ana", "luis")))
+        assertEquals(listOf(Triple("u1", UserLists(ignored = setOf("pepe")), UserLists())), remote.appliedNow())
+        assertEquals(setOf("pepe"), store.ignoredUsersFlow.first())
+        assertEquals(setOf("ana", "luis"), store.friendsFlow.first())
+    }
+
+    @Test
+    fun siFallaLaSubidaAlJuntar_seReintentaSinPerderNada() = runBlocking {
+        store.start(scope)
+        store.addFriend("ana")
+        remote.failWrites = true
+        remote.snapshots.value = RemoteLists("u1", UserLists())
+        remote.awaitFailures(1)
+        assertEquals(null, store.syncAccount.value)
+        assertEquals(setOf("ana"), store.friendsFlow.first())
+
+        remote.failWrites = false
+        signIn("u1", UserLists(friends = setOf("luis")))
+        assertEquals(listOf(Triple("u1", UserLists(friends = setOf("ana")), UserLists())), remote.appliedNow())
+        assertEquals(setOf("ana", "luis"), store.friendsFlow.first())
     }
 }
