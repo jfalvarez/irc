@@ -117,6 +117,9 @@ fun ConnectionSetupSection(
                 TextButton(onClick = { signInViewModel.signOut() }) {
                     Text(stringResource(Res.string.account_sign_out))
                 }
+                if (signInViewModel.canDeleteAccount) {
+                    DeleteAccountButton(signInViewModel)
+                }
             } else {
                 Text(
                     text = stringResource(Res.string.account_sign_in_hint),
@@ -127,6 +130,7 @@ fun ConnectionSetupSection(
                 Spacer(modifier = Modifier.height(16.dp))
                 platformUi.GoogleSignInButton(onClick = onGoogleSignIn)
             }
+            AccountDeletionResultDialog(signInViewModel)
         }
     }
 }

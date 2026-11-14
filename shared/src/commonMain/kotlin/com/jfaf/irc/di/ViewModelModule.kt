@@ -6,6 +6,7 @@ import com.jfaf.irc.domain.chat.command.CommandProcessor
 import com.jfaf.irc.domain.usecase.AttemptNickServIdentificationUseCase
 import com.jfaf.irc.domain.usecase.CloseTargetUseCase
 import com.jfaf.irc.domain.usecase.ConnectUseCase
+import com.jfaf.irc.domain.usecase.DeleteAccountUseCase
 import com.jfaf.irc.domain.usecase.DisconnectUseCase
 import com.jfaf.irc.domain.usecase.HandleIncomingMessageUseCase
 import com.jfaf.irc.domain.usecase.IgnoreUserUseCase
@@ -24,7 +25,7 @@ import org.koin.dsl.module
 val viewModelModule = module {
     viewModel { newMainViewModel() }
     viewModel { SettingsViewModel(get(), get()) }
-    viewModel { SignInViewModel(get(), get()) }
+    viewModel { SignInViewModel(get(), get(), DeleteAccountUseCase(get(), get()), get()) }
 }
 
 /**

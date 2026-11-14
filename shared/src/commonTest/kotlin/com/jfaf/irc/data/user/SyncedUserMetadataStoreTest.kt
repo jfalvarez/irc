@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -37,6 +38,13 @@ class SyncedUserMetadataStoreTest {
                 return false
             }
             applied.update { it + Triple(uid, add, remove) }
+            return true
+        }
+        @Volatile var failDelete = false
+        val deleted = mutableListOf<String>()
+        override suspend fun delete(uid: String): Boolean {
+            if (failDelete) return false
+            deleted += uid
             return true
         }
         fun appliedNow() = applied.value
@@ -162,5 +170,40 @@ class SyncedUserMetadataStoreTest {
         signIn("u1", UserLists(friends = setOf("luis")))
         assertEquals(listOf(Triple("u1", UserLists(friends = setOf("ana")), UserLists())), remote.appliedNow())
         assertEquals(setOf("ana", "luis"), store.friendsFlow.first())
+    }
+
+    @Test
+    fun alBorrarLaCuenta_lasListasSeQuedanEnElDispositivoSinCuenta() = runBlocking {
+        store.start(scope)
+        signIn("u1", UserLists(friends = setOf("ana")))
+        assertTrue(store.deleteAccountData("u1"))
+        assertEquals(listOf("u1"), remote.deleted)
+        assertEquals(null, store.syncAccount.value)
+        // Al borrarse el documento, Firestore avisa con la cuenta vacía: no debe vaciar lo local
+        remote.snapshots.value = RemoteLists("u1", UserLists())
+        delay(300)
+        assertEquals(setOf("ana"), store.friendsFlow.first())
+        assertEquals(null, local.stateFlow.first().ownerUid)
+        assertEquals(null, store.syncAccount.value)
+    }
+
+    @Test
+    fun trasBorrarLaCuenta_otraCuentaSeJuntaConLoLocalEnVezDeSustituirlo() = runBlocking {
+        store.start(scope)
+        signIn("u1", UserLists(friends = setOf("ana")))
+        store.deleteAccountData("u1")
+        signIn("u2", UserLists(friends = setOf("luis")))
+        // Sin cuenta asociada cuenta como «nunca sincronizado»: se juntan y se sube lo local
+        assertEquals(setOf("ana", "luis"), store.friendsFlow.first())
+        assertEquals(listOf(Triple("u2", UserLists(friends = setOf("ana")), UserLists())), remote.appliedNow())
+    }
+
+    @Test
+    fun siNoSePuedenBorrarLasListasDeLaCuenta_devuelveFalseSinTocarLasLocales() = runBlocking {
+        store.start(scope)
+        signIn("u1", UserLists(friends = setOf("ana")))
+        remote.failDelete = true
+        assertEquals(false, store.deleteAccountData("u1"))
+        assertEquals(setOf("ana"), store.friendsFlow.first())
     }
 }

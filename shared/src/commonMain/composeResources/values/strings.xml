@@ -159,6 +159,17 @@
     <string name="label_remember_password">Recordar contraseña</string>
     <string name="account_signed_in_as">Has iniciado sesión como: %1$s</string>
     <string name="account_sign_out">Cerrar sesión</string>
+    <string name="account_delete">Eliminar cuenta</string>
+    <string name="account_deleting">Eliminando la cuenta…</string>
+    <string name="account_delete_confirm_title">¿Eliminar tu cuenta?</string>
+    <string name="account_delete_confirm_text">Se borrarán tu cuenta y las listas de ignorados y amigos guardadas en ella. En este dispositivo las listas se conservan. Para confirmarlo se volverá a comprobar tu cuenta de Google (puede pedirte que la elijas). No se puede deshacer.</string>
+    <string name="account_delete_confirm_button">Eliminar</string>
+    <string name="account_delete_done">Tu cuenta se ha eliminado.</string>
+    <string name="account_delete_not_signed_in">No hay ninguna sesión iniciada.</string>
+    <string name="account_delete_wrong_account">Elegiste una cuenta de Google distinta de la de la sesión. No se ha borrado nada.</string>
+    <string name="account_delete_reauth_failed">No se pudo confirmar con Google. Comprueba la conexión e inténtalo de nuevo. No se ha borrado nada.</string>
+    <string name="account_delete_data_failed">No se pudieron borrar tus listas de la cuenta. Comprueba la conexión e inténtalo de nuevo.</string>
+    <string name="account_delete_account_failed">Se borraron tus listas, pero no la cuenta. Inténtalo de nuevo.</string>
     <string name="account_sign_in_hint">Inicia sesión con Google para sincronizar tu configuración (ej. lista de ignorados) entre dispositivos.</string>
     <string name="account_sign_in_google">Iniciar sesión con Google</string>
     <string name="video_open_in_browser">Abrir vídeo en el navegador</string>

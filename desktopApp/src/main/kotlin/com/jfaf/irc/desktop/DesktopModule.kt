@@ -29,6 +29,8 @@ import com.jfaf.irc.domain.notifications.Notifier
 import com.jfaf.irc.domain.platform.AdProvider
 import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.domain.platform.AuthSession
+import com.jfaf.irc.domain.platform.GoogleIdTokenRequester
+import com.jfaf.irc.domain.platform.NoGoogleIdTokenRequester
 import com.jfaf.irc.domain.platform.ConnectionHost
 import com.jfaf.irc.domain.platform.Haptics
 import com.jfaf.irc.domain.platform.UpdateChecker
@@ -100,6 +102,8 @@ fun desktopModule(
         }
     }
     single<UpdateChecker> { NoUpdateChecker() }
+    // Borrar la cuenta desde el escritorio: pendiente (#37b); RestAuthSession aún no lo admite, así que no hay botón
+    single<GoogleIdTokenRequester> { NoGoogleIdTokenRequester }
 }
 
 /** Sesión de Google guardada (cifrada con DPAPI en Windows), en la carpeta de datos. */

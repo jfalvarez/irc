@@ -18,12 +18,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import org.koin.compose.viewmodel.koinViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.jfaf.irc.privacy.AdsConsentManager
 import com.jfaf.irc.service.AndroidNotifier
 import com.jfaf.irc.domain.platform.AppVisibility
 import com.jfaf.irc.ui.App
+import com.jfaf.irc.ui.platform.AndroidGoogleIdTokenRequester
 import com.jfaf.irc.ui.platform.AndroidPlatformUi
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
@@ -42,6 +44,7 @@ class MainActivity : ComponentActivity() {
 
     private val appVisibility: AppVisibility by inject()
     private val adsConsent: AdsConsentManager by inject()
+    private val googleIdTokenRequester: AndroidGoogleIdTokenRequester by inject()
 
     private lateinit var mainViewModel: MainViewModel
     private lateinit var signInViewModel: SignInViewModel
@@ -67,6 +70,21 @@ class MainActivity : ComponentActivity() {
             Log.w(TAG_ACTIVITY, "Google sign in failed", e)
         }
     }
+
+    /** Confirmar con la cuenta de Google antes de borrarla: el idToken va a [googleIdTokenRequester]. */
+    private val reauthLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val idToken = try {
+            GoogleSignIn.getSignedInAccountFromIntent(result.data).getResult(ApiException::class.java)?.idToken
+        } catch (e: ApiException) {
+            Log.w(TAG_ACTIVITY, "Confirmación con Google cancelada o fallida", e)
+            null
+        }
+        googleIdTokenRequester.onResult(idToken)
+    }
+
+    private val launchReauth: () -> Unit = { reauthLauncher.launch(googleSignInClient().signInIntent) }
 
     override fun onStart() {
         super.onStart()
@@ -113,6 +131,13 @@ class MainActivity : ComponentActivity() {
         // Va al final, con la ventana ya montada: antes de enableEdgeToEdge/setContent, UMP la tocaba a
         // la vez que el hilo principal y cerraba la app ("Window couldn't find content container view").
         adsConsent.gatherConsent(this)
+
+        googleIdTokenRequester.attach(launchReauth)
+    }
+
+    override fun onDestroy() {
+        googleIdTokenRequester.detach(launchReauth)
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -136,12 +161,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun launchGoogleSignIn() {
+        signInLauncher.launch(googleSignInClient().signInIntent)
+    }
+
+    private fun googleSignInClient(): GoogleSignInClient {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(signInViewModel.googleSignInClientId)
             .requestEmail()
             .build()
-        val googleSignInClient = GoogleSignIn.getClient(this, gso)
-        signInLauncher.launch(googleSignInClient.signInIntent)
+        return GoogleSignIn.getClient(this, gso)
     }
 
     private fun redirectToPlayStore(context: Context) {

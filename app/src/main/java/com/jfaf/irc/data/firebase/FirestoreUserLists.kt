@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 
 // Data class que representa la estructura de datos en Firestore (users/{uid})
 data class UserMetadata(
@@ -61,6 +63,14 @@ class FirestoreUserLists(
         return true // el SDK lo guarda en su caché y lo envía cuando haya red
     }
 
+    override suspend fun delete(uid: String): Boolean = try {
+        // Aquí sí se espera al servidor: hay que saber que se borró antes de borrar la cuenta
+        withTimeoutOrNull(DELETE_TIMEOUT_MS) { document(uid).delete().await(); true } ?: false
+    } catch (e: Exception) {
+        Log.e(TAG, "Error al borrar las listas en Firestore.", e)
+        false
+    }
+
     private fun write(uid: String, lists: UserLists, op: (Set<String>) -> FieldValue) {
         val data = buildMap {
             if (lists.ignored.isNotEmpty()) put("ignoredNicks", op(lists.ignored))
@@ -70,5 +80,9 @@ class FirestoreUserLists(
         // Sin await: Firestore aplica el cambio en su caché al momento y lo envía cuando haya red
         document(uid).set(data, SetOptions.merge())
             .addOnFailureListener { e -> Log.e(TAG, "Error al guardar las listas en Firestore.", e) }
+    }
+
+    private companion object {
+        const val DELETE_TIMEOUT_MS = 15_000L
     }
 }

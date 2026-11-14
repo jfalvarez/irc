@@ -22,7 +22,8 @@ import kotlinx.coroutines.sync.withLock
  * Primero local, sincronizado con la cuenta si hay sesión. La app siempre lee y escribe en [local],
  * así que las listas funcionan sin login; con sesión, cada cambio va también a [remote] y lo que
  * llega de [remote] sustituye a lo local. Lo cambiado sin sesión se sube al volver a iniciarla
- * (reglas en [reconcile]). Al cerrar sesión las listas se quedan en el dispositivo.
+ * (reglas en [reconcile]). Al cerrar sesión las listas se quedan en el dispositivo, y también al
+ * borrar la cuenta ([deleteAccountData]).
  */
 class SyncedUserMetadataStore(
     private val local: LocalUserMetadataStore,
@@ -31,6 +32,9 @@ class SyncedUserMetadataStore(
 
     private val mutex = Mutex()
     private val _syncAccount = MutableStateFlow<String?>(null)
+
+    /** Cuenta que se está borrando (o ya borrada): lo que llegue de ella se ignora. Sólo bajo [mutex]. */
+    private var deletedAccount: String? = null
 
     /** Cuenta con la que se está sincronizando; null sin sesión o hasta la primera respuesta del servidor. */
     val syncAccount: StateFlow<String?> = _syncAccount.asStateFlow()
@@ -48,6 +52,8 @@ class SyncedUserMetadataStore(
             _syncAccount.value = null
             return
         }
+        // Al borrar el documento llega la cuenta vacía: no debe vaciar las listas del dispositivo
+        if (snapshot.uid == deletedAccount) return
         if (_syncAccount.value == snapshot.uid) {
             local.update { LocalListsState(snapshot.lists, snapshot.uid) }
             return
@@ -65,6 +71,19 @@ class SyncedUserMetadataStore(
         }
         local.update { result.state }
         _syncAccount.value = snapshot.uid
+    }
+
+    override suspend fun deleteAccountData(uid: String): Boolean {
+        mutex.withLock {
+            deletedAccount = uid
+            _syncAccount.value = null
+            // Las listas se quedan en el dispositivo, como al cerrar sesión, pero ya sin cuenta asociada
+            // ni pendientes: si después se entra con otra cuenta, se juntan con ella en vez de perderse.
+            local.update { it.copy(ownerUid = null, pendingAdd = UserLists(), pendingRemove = UserLists()) }
+        }
+        return remote.delete(uid).also { deleted ->
+            if (!deleted) Log.w(TAG, "No se pudieron borrar las listas de la cuenta.")
+        }
     }
 
     override suspend fun addIgnoredUser(nick: String) = change(UserList.IGNORED, nick, adding = true)

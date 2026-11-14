@@ -28,6 +28,7 @@ import com.jfaf.irc.domain.platform.AdProvider
 import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.domain.platform.AuthSession
 import com.jfaf.irc.domain.platform.ConnectionHost
+import com.jfaf.irc.domain.platform.GoogleIdTokenRequester
 import com.jfaf.irc.domain.platform.Haptics
 import com.jfaf.irc.domain.platform.UpdateChecker
 import com.jfaf.irc.domain.text.StringProvider
@@ -35,6 +36,7 @@ import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.privacy.AdsConsentManager
 import com.jfaf.irc.service.AndroidConnectionHost
 import com.jfaf.irc.service.AndroidNotifier
+import com.jfaf.irc.ui.platform.AndroidGoogleIdTokenRequester
 import com.jfaf.irc.util.AndroidHaptics
 import com.jfaf.irc.util.BuildConfigAppConfig
 import org.koin.android.ext.koin.androidContext
@@ -70,6 +72,9 @@ val androidModule = module {
     single { Firebase.auth }
     single { Firebase.firestore }
     single<AuthSession> { FirebaseAuthSession(get()) }
+    // Confirmar con la cuenta de Google antes de borrarla (la pantalla la abre MainActivity)
+    single { AndroidGoogleIdTokenRequester() }
+    single<GoogleIdTokenRequester> { get<AndroidGoogleIdTokenRequester>() }
     // Listas en local, sincronizadas con Firestore si hay sesión
     single<UserMetadataStore> {
         SyncedUserMetadataStore(LocalUserMetadataStore(get()), FirestoreUserLists(get(), get()))

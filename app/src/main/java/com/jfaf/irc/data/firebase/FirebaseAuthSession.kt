@@ -1,10 +1,12 @@
 package com.jfaf.irc.data.firebase
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.jfaf.irc.domain.platform.AuthSession
 import com.jfaf.irc.domain.platform.AuthUser
+import com.jfaf.irc.domain.platform.ReauthResult
 import com.jfaf.irc.log.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +29,7 @@ class FirebaseAuthSession(
         val credential = GoogleAuthProvider.getCredential(idToken, null)
         firebaseAuth.signInWithCredential(credential).await().user?.toAuthUser()
     } catch (e: Exception) {
-        Log.w("FirebaseAuthSession", "Sign-in con Google fallido", e)
+        Log.w(TAG, "Sign-in con Google fallido", e)
         null
     }
 
@@ -35,5 +37,36 @@ class FirebaseAuthSession(
         firebaseAuth.signOut()
     }
 
+    override val supportsAccountDeletion = true
+
+    override suspend fun reauthenticateWithGoogleIdToken(idToken: String): ReauthResult {
+        val user = firebaseAuth.currentUser ?: return ReauthResult.FAILED
+        return try {
+            user.reauthenticate(GoogleAuthProvider.getCredential(idToken, null)).await()
+            ReauthResult.OK
+        } catch (e: FirebaseAuthException) {
+            Log.w(TAG, "No se pudo volver a entrar: ${e.errorCode}", e)
+            if (e.errorCode == "ERROR_USER_MISMATCH") ReauthResult.WRONG_ACCOUNT else ReauthResult.FAILED
+        } catch (e: Exception) {
+            Log.w(TAG, "No se pudo volver a entrar", e)
+            ReauthResult.FAILED
+        }
+    }
+
+    override suspend fun deleteAccount(): Boolean {
+        val user = firebaseAuth.currentUser ?: return false
+        return try {
+            user.delete().await() // también cierra la sesión
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "No se pudo borrar la cuenta", e)
+            false
+        }
+    }
+
     private fun FirebaseUser.toAuthUser() = AuthUser(uid = uid, email = email)
+
+    private companion object {
+        const val TAG = "FirebaseAuthSession"
+    }
 }

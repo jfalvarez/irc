@@ -21,4 +21,7 @@ interface RemoteUserLists {
      * deja pendiente y lo reintenta. Con el SDK siempre es true (sin red, el SDK lo deja en su cola).
      */
     suspend fun apply(uid: String, add: UserLists, remove: UserLists): Boolean
+
+    /** Borra las listas de la cuenta [uid] (antes de borrar la cuenta). false si no se pudo. */
+    suspend fun delete(uid: String): Boolean = false
 }
