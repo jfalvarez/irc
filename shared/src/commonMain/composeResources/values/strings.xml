@@ -26,7 +26,6 @@
     <string name="msg_close_server_tab_forbidden">La pestaña '%1$s' no se puede cerrar.</string>
     <string name="msg_connecting_to">Conectando a %1$s como %2$s...</string>
     <string name="msg_disconnecting_requested">Desconectando y solicitando detener el servicio...</string>
-    <string name="msg_ignore_requires_login">No puedes ignorar usuarios si no has iniciado sesión.</string>
     <string name="msg_user_ignored_system">Usuario '%1$s' ahora está en la lista de ignorados.</string>
     <string name="msg_join_invalid_channel">Nombre de canal inválido: %1$s. Debe empezar con #.</string>
     <string name="msg_join_requesting">Solicitando unirse a %1$s...</string>

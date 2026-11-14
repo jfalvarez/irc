@@ -11,7 +11,7 @@ import com.jfaf.irc.ads.NativeAdManager
 import com.jfaf.irc.config.RemoteConfigManager
 import com.jfaf.irc.data.firebase.FirebaseAnalyticsTracker
 import com.jfaf.irc.data.firebase.FirebaseAuthSession
-import com.jfaf.irc.data.firebase.FirestoreUserMetadataStore
+import com.jfaf.irc.data.firebase.FirestoreUserLists
 import com.jfaf.irc.data.history.room.CHAT_DATABASE_NAME
 import com.jfaf.irc.data.history.room.ChatDatabase
 import com.jfaf.irc.data.history.room.buildChatDatabase
@@ -20,6 +20,8 @@ import com.jfaf.irc.data.prefs.createPreferencesDataStore
 import com.jfaf.irc.data.remote.IrcTransport
 import com.jfaf.irc.data.remote.JvmSocketTransport
 import com.jfaf.irc.data.text.ComposeStringProvider
+import com.jfaf.irc.data.user.LocalUserMetadataStore
+import com.jfaf.irc.data.user.SyncedUserMetadataStore
 import com.jfaf.irc.domain.config.AppConfig
 import com.jfaf.irc.domain.notifications.Notifier
 import com.jfaf.irc.domain.platform.AdProvider
@@ -66,6 +68,10 @@ val androidModule = module {
     single { Firebase.auth }
     single { Firebase.firestore }
     single<AuthSession> { FirebaseAuthSession(get()) }
-    single<UserMetadataStore> { FirestoreUserMetadataStore(get(), get()) }
+    // Listas en local, sincronizadas con Firestore si hay sesión
+    single<UserMetadataStore> {
+        SyncedUserMetadataStore(LocalUserMetadataStore(get()), FirestoreUserLists(get(), get()))
+            .also { it.start(get(ApplicationScope)) }
+    }
     single<UpdateChecker> { RemoteConfigManager(androidContext()) }
 }

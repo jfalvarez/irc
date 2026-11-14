@@ -11,6 +11,7 @@ import com.jfaf.irc.data.prefs.createPreferencesDataStore
 import com.jfaf.irc.data.remote.IrcTransport
 import com.jfaf.irc.data.remote.JvmSocketTransport
 import com.jfaf.irc.data.text.ComposeStringProvider
+import com.jfaf.irc.data.user.LocalUserMetadataStore
 import com.jfaf.irc.domain.config.AppConfig
 import com.jfaf.irc.domain.notifications.Notifier
 import com.jfaf.irc.domain.platform.AdProvider

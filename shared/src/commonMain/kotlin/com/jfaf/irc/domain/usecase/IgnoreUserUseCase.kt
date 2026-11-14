@@ -13,21 +13,9 @@ class IgnoreUserUseCase(
     private val analytics: AnalyticsTracker
 ) {
     suspend operator fun invoke(userName: String) {
-        // Sólo si el almacén puede guardar (Firestore exige sesión; el local, en escritorio, siempre)
-        if (!userMetadataStore.canSave) {
-            val targetForMessage = chatStateManager.activeTarget.value
-                ?: ChatStateManager.SERVER_TARGET_ID
-            chatStateManager.addSystemMessageToTarget(
-                targetForMessage,
-                strings.get(Msg.IGNORE_REQUIRES_LOGIN),
-                isError = true
-            )
-            return
-        }
-
+        // Se guarda siempre en el dispositivo (y en la cuenta, si hay sesión): no hace falta login
         userMetadataStore.addIgnoredUser(userName)
 
-        // El resto de la lógica permanece igual
         val targetForMessage = chatStateManager.activeTarget.value
             ?: ChatStateManager.SERVER_TARGET_ID
 

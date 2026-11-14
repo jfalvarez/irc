@@ -33,7 +33,6 @@ class BackgroundNotificationsTest {
     private val visibility = AppVisibility()
     private val friends = FriendPresenceTracker { 0L }
     private val store = object : UserMetadataStore {
-        override val canSave = true
         override val ignoredUsersFlow: Flow<Set<String>> = flowOf(setOf("pesado"))
         override val friendsFlow: Flow<Set<String>> = flowOf(emptySet())
         override suspend fun addIgnoredUser(nick: String) {}

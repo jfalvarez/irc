@@ -49,7 +49,6 @@ class ComposeStringProvider private constructor(
             Msg.CLOSE_SERVER_TAB_FORBIDDEN -> Res.string.msg_close_server_tab_forbidden
             Msg.CONNECTING_TO -> Res.string.msg_connecting_to
             Msg.DISCONNECTING_REQUESTED -> Res.string.msg_disconnecting_requested
-            Msg.IGNORE_REQUIRES_LOGIN -> Res.string.msg_ignore_requires_login
             Msg.USER_IGNORED_SYSTEM -> Res.string.msg_user_ignored_system
             Msg.JOIN_INVALID_CHANNEL -> Res.string.msg_join_invalid_channel
             Msg.JOIN_REQUESTING -> Res.string.msg_join_requesting

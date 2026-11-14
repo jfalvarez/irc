@@ -18,7 +18,7 @@ class IgnoreUserUseCaseTest {
         override fun logEvent(name: String, params: Map<String, String>) { events += name }
     }
 
-    private class FakeStore(override val canSave: Boolean) : UserMetadataStore {
+    private class FakeStore : UserMetadataStore {
         val ignored = mutableListOf<String>()
         override val ignoredUsersFlow: Flow<Set<String>> = flowOf(emptySet())
         override val friendsFlow: Flow<Set<String>> = flowOf(emptySet())
@@ -31,20 +31,11 @@ class IgnoreUserUseCaseTest {
     private fun serverTexts() = chat.allMessages.value[ChatStateManager.SERVER_TARGET_ID].orEmpty().map { it.fullText }
 
     @Test
-    fun almacenQuePuedeGuardar_ignoraSinSesion() = runBlocking {
-        val store = FakeStore(canSave = true)
+    fun ignora_avisaYRegistraEvento() = runBlocking {
+        val store = FakeStore()
         IgnoreUserUseCase(fakeStrings, store, chat, analytics)("pesado")
         assertEquals(listOf("pesado"), store.ignored)
         assertTrue(serverTexts().contains("USER_IGNORED_SYSTEM|pesado"))
         assertEquals(listOf("ignore_user"), events)
-    }
-
-    @Test
-    fun almacenQueNoPuedeGuardar_avisaYNoIgnora() = runBlocking {
-        val store = FakeStore(canSave = false)
-        IgnoreUserUseCase(fakeStrings, store, chat, analytics)("pesado")
-        assertTrue(store.ignored.isEmpty())
-        assertTrue(serverTexts().contains("IGNORE_REQUIRES_LOGIN"))
-        assertTrue(events.isEmpty())
     }
 }

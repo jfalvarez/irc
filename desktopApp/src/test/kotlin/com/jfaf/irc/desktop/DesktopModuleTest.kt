@@ -107,7 +107,6 @@ class DesktopModuleTest {
     @Test
     fun ignoradosYAmigosSeGuardanEnLocalEnMinusculas() = runBlocking {
         val store = koin.get<UserMetadataStore>()
-        assertTrue(store.canSave, "Sin login se puede guardar en local")
         store.addIgnoredUser("PePe")
         store.addFriend("Ana")
         assertEquals(setOf("pepe"), store.ignoredUsersFlow.first())
