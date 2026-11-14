@@ -34,6 +34,9 @@ class FirestoreUserMetadataStore(
         firestore.collection("users").document(it)
     }
 
+    override val canSave: Boolean
+        get() = authSession.currentUser.value != null
+
     private val uidFlow: Flow<String?> = authSession.currentUser.map { it?.uid }.distinctUntilChanged()
 
     override val ignoredUsersFlow: Flow<Set<String>> = uidFlow.flatMapLatest { uid ->

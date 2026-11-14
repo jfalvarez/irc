@@ -44,7 +44,7 @@ private fun Scope.newMainViewModel(): MainViewModel {
         connectUseCase = ConnectUseCase(get(), get(), get(), chat),
         attemptNickServIdentificationUseCase = AttemptNickServIdentificationUseCase(get(), get(), get(), chat),
         disconnectUseCase = DisconnectUseCase(get(), get(), chat),
-        ignoreUserUseCase = IgnoreUserUseCase(get(), get(), chat, get(), get()),
+        ignoreUserUseCase = IgnoreUserUseCase(get(), get(), chat, get()),
         performWhoisUseCase = PerformWhoisUseCase(get(), get(), chat, get()),
         joinChannelUseCase = JoinChannelUseCase(get(), get(), chat),
         openPrivateMessageUseCase = OpenPrivateMessageUseCase(get(), chat, get()),

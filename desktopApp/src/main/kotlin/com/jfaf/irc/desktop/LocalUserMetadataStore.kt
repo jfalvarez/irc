@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.map
 /** Ignorados y amigos guardados en el DataStore local (sin cuenta, decisión 0.1). Nicks en minúsculas. */
 class LocalUserMetadataStore(private val dataStore: DataStore<Preferences>) : UserMetadataStore {
 
+    override val canSave: Boolean = true
+
     override val ignoredUsersFlow: Flow<Set<String>> = dataStore.data.map { it[IGNORED] ?: emptySet() }
     override val friendsFlow: Flow<Set<String>> = dataStore.data.map { it[FRIENDS] ?: emptySet() }
 
