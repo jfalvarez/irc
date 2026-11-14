@@ -32,6 +32,7 @@ import com.jfaf.irc.domain.platform.Haptics
 import com.jfaf.irc.domain.platform.UpdateChecker
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.user.UserMetadataStore
+import com.jfaf.irc.privacy.AdsConsentManager
 import com.jfaf.irc.service.AndroidConnectionHost
 import com.jfaf.irc.service.AndroidNotifier
 import com.jfaf.irc.util.AndroidHaptics
@@ -60,7 +61,8 @@ val androidModule = module {
     single<ConnectionHost> { AndroidConnectionHost(androidContext()) }
     single<Notifier> { AndroidNotifier(androidContext()) }
     single<Haptics> { AndroidHaptics(androidContext()) }
-    single<AdProvider> { NativeAdManager(androidContext()) }
+    single { AdsConsentManager(androidContext(), get(), get(ApplicationScope)) }
+    single<AdProvider> { NativeAdManager(androidContext(), get<AdsConsentManager>().canRequestAds, get(ApplicationScope)) }
 
     // Firebase
     single { FirebaseAnalytics.getInstance(androidContext()) }

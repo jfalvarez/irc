@@ -23,6 +23,13 @@ interface PlatformUi {
 
     @Composable
     fun AdContent(ad: AdHandle)
+
+    /**
+     * Fila de Ajustes para cambiar el consentimiento de anuncios y analítica. Android la pinta
+     * sólo si el formulario de Google lo exige (RGPD); en escritorio no hay nada que consentir.
+     */
+    @Composable
+    fun PrivacyOptionsItem() {}
 }
 
 /** Valor por defecto: sin anuncios y sin sesión de Google. */

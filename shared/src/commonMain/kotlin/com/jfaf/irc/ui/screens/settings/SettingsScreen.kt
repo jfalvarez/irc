@@ -45,7 +45,8 @@ fun SettingsScreen(
     val showPingPongMessages by viewModel.showPingPongMessages.collectAsState()
     val showMediaPreviews by viewModel.showMediaPreviews.collectAsState()
     val soundAlerts by viewModel.soundAlerts.collectAsState()
-    val supportsSoundAlerts = LocalPlatformUi.current.supportsSoundAlerts
+    val platformUi = LocalPlatformUi.current
+    val supportsSoundAlerts = platformUi.supportsSoundAlerts
     val ignoredUsers by viewModel.ignoredUsers.collectAsState()
     val friends by viewModel.friends.collectAsState()
     val serverConfig by viewModel.serverConfig.collectAsState()
@@ -141,6 +142,7 @@ fun SettingsScreen(
                     )
                 }
             }
+            item { platformUi.PrivacyOptionsItem() }
 
             item {
                 HorizontalDivider(

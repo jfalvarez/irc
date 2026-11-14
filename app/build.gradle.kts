@@ -25,6 +25,9 @@ val imageFilterKeywords = localProperties.getProperty("IMAGE_FILTER_KEYWORDS", "
 
 val googleSignInClientId = localProperties.getProperty("google.signin.clientId")
 
+// Id del dispositivo para probar el formulario de consentimiento como en la UE (sólo debug; lo escribe UMP en Logcat)
+val umpTestDeviceId = localProperties.getProperty("ump.testDeviceHashedId", "")
+
 android {
     namespace = "com.jfaf.irc"
     compileSdk = 37 // Compose 1.12 lo exige; targetSdk sigue en 36
@@ -41,6 +44,7 @@ android {
         // Exponer IMAGE_FILTER_KEYWORDS como un campo en BuildConfig
         buildConfigField("String", "IMAGE_FILTER_KEYWORDS", "\"$imageFilterKeywords\"")
         buildConfigField("String", "GOOGLE_SIGN_IN_CLIENT_ID", "\"$googleSignInClientId\"")
+        buildConfigField("String", "UMP_TEST_DEVICE_ID", "\"$umpTestDeviceId\"")
     }
 
     buildTypes {
@@ -100,6 +104,7 @@ dependencies {
 
     // AdMob
     implementation(libs.play.services.ads)
+    implementation(libs.ump) // consentimiento RGPD (AdsConsentManager)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

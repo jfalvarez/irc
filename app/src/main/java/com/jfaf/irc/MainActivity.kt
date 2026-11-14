@@ -17,11 +17,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import org.koin.compose.viewmodel.koinViewModel
-import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.jfaf.irc.privacy.AdsConsentManager
 import com.jfaf.irc.service.AndroidNotifier
 import com.jfaf.irc.domain.platform.AppVisibility
 import com.jfaf.irc.ui.App
@@ -30,11 +29,10 @@ import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import com.jfaf.irc.util.NotificationHelper
 import org.koin.android.ext.android.inject
-import java.util.Arrays
 
 /**
  * Anfitrión Android de la UI común ([App]): sólo lo exclusivo de la plataforma (permiso de
- * notificaciones, borde a borde, AdMob, Google Sign-In, vibración, intents de las notificaciones).
+ * notificaciones, borde a borde, consentimiento de AdMob, Google Sign-In, vibración, intents de las notificaciones).
  */
 class MainActivity : ComponentActivity() {
 
@@ -43,6 +41,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private val appVisibility: AppVisibility by inject()
+    private val adsConsent: AdsConsentManager by inject()
 
     private lateinit var mainViewModel: MainViewModel
     private lateinit var signInViewModel: SignInViewModel
@@ -84,11 +83,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        MobileAds.initialize(this) {}
-        val testDeviceIds = Arrays.asList("CC7C862030BF02013922527B26AC1285")
-        val configuration = RequestConfiguration.Builder().setTestDeviceIds(testDeviceIds).build()
-        MobileAds.setRequestConfiguration(configuration)
-
         enableEdgeToEdge()
         askNotificationPermission()
 
@@ -114,6 +108,11 @@ class MainActivity : ComponentActivity() {
                 signInViewModel = signInViewModel
             )
         }
+
+        // Formulario de consentimiento (RGPD) si hace falta; AdMob y la analítica esperan a la respuesta.
+        // Va al final, con la ventana ya montada: antes de enableEdgeToEdge/setContent, UMP la tocaba a
+        // la vez que el hilo principal y cerraba la app ("Window couldn't find content container view").
+        adsConsent.gatherConsent(this)
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -7,7 +7,6 @@ import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.gif.AnimatedImageDecoder
-import com.google.android.gms.ads.MobileAds
 import com.jfaf.irc.di.androidModule
 import com.jfaf.irc.di.commonModule
 import com.jfaf.irc.di.viewModelModule
@@ -33,8 +32,7 @@ class IrcApplication : Application(), SingletonImageLoader.Factory {
             modules(commonModule, viewModelModule, androidModule)
         }
 
-        // Initialize Mobile Ads SDK
-        MobileAds.initialize(this) {}
+        // AdMob se inicializa tras el consentimiento (AdsConsentManager, desde MainActivity).
 
         // Quita de los ajustes del sistema el canal de versiones anteriores (si no existe, no hace nada)
         getSystemService(NotificationManager::class.java).deleteNotificationChannel(LEGACY_PRIVATE_MESSAGE_CHANNEL_ID)
