@@ -16,6 +16,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import kotlin.test.Test
 import java.util.Collections
 
@@ -72,5 +74,41 @@ class IrcRepositoryTest {
         val first = withTimeout(2_000) { repo.incomingMessages.first() }
         assertEquals("PRIVMSG", first.command)
         assertEquals("hola", first.trailing)
+    }
+
+    private suspend fun connectedAs(nick: String) {
+        repo.connect("irc.test", 6667, false, nick)
+        transport.awaitOpenAndHandshake()
+        withTimeout(2_000) { repo.connectionState.first { it } }
+    }
+
+    @Test
+    fun responderDesdeNotificacion_enviaYLoPublicaComoPropio() = runBlocking {
+        connectedAs("yo")
+        assertTrue(repo.sendReply("ana", "hola"))
+        assertEquals("PRIVMSG ana :hola", transport.awaitWritten("PRIVMSG"))
+        // El chat lo ve como un mensaje propio en la conversación con ana (el último del flujo)
+        val echo = repo.incomingMessages.replayCache.last()
+        assertEquals("PRIVMSG", echo.command)
+        assertEquals("yo", echo.senderNickname)
+        assertEquals(listOf("ana"), echo.params)
+        assertEquals("hola", echo.trailing)
+    }
+
+    @Test
+    fun responderConVariasLineas_unMensajePorLinea() = runBlocking {
+        connectedAs("yo")
+        assertTrue(repo.sendReply("ana", "uno\n\n  dos  "))
+        assertEquals("PRIVMSG ana :uno", transport.awaitWritten("PRIVMSG"))
+        assertEquals("PRIVMSG ana :dos", transport.awaitWritten("PRIVMSG"))
+        assertEquals(listOf("uno", "dos"), repo.incomingMessages.replayCache.takeLast(2).map { it.trailing })
+    }
+
+    @Test
+    fun responderSinConexionOVacio_noHaceNada() = runBlocking {
+        assertFalse(repo.sendReply("ana", "hola"))
+        connectedAs("yo")
+        assertFalse(repo.sendReply("ana", "  \n "))
+        assertTrue(repo.incomingMessages.replayCache.none { it.command == "PRIVMSG" })
     }
 }

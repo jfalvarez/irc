@@ -364,6 +364,7 @@ private fun ConnectedStateView(
     val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
     val showMediaPreviews by viewModel.chatScreenState.showMediaPreviews.collectAsState()
     val isReconnecting by viewModel.chatScreenState.isReconnecting.collectAsState()
+    val isWaitingForNetwork by viewModel.chatScreenState.isWaitingForNetwork.collectAsState()
 
     val currentTargetIsChannel = activeTarget?.startsWith("#") == true
     // En la ventana ancha los usuarios van en un panel fijo de la derecha, sin depender del botón.
@@ -373,7 +374,9 @@ private fun ConnectedStateView(
     if (isReconnecting) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = stringResource(Res.string.status_reconnecting),
+                text = stringResource(
+                    if (isWaitingForNetwork) Res.string.status_waiting_for_network else Res.string.status_reconnecting
+                ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)

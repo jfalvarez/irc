@@ -30,11 +30,13 @@ import com.jfaf.irc.domain.platform.AuthSession
 import com.jfaf.irc.domain.platform.ConnectionHost
 import com.jfaf.irc.domain.platform.GoogleIdTokenRequester
 import com.jfaf.irc.domain.platform.Haptics
+import com.jfaf.irc.domain.platform.NetworkMonitor
 import com.jfaf.irc.domain.platform.UpdateChecker
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.privacy.AdsConsentManager
 import com.jfaf.irc.service.AndroidConnectionHost
+import com.jfaf.irc.service.AndroidNetworkMonitor
 import com.jfaf.irc.service.AndroidNotifier
 import com.jfaf.irc.ui.platform.AndroidGoogleIdTokenRequester
 import com.jfaf.irc.util.AndroidHaptics
@@ -61,8 +63,10 @@ val androidModule = module {
     single<StringProvider> { runBlocking { ComposeStringProvider.load() } }
     single<AppConfig> { BuildConfigAppConfig() }
     single<ConnectionHost> { AndroidConnectionHost(androidContext()) }
-    single<Notifier> { AndroidNotifier(androidContext()) }
+    single { AndroidNotifier(androidContext()) }
+    single<Notifier> { get<AndroidNotifier>() }
     single<Haptics> { AndroidHaptics(androidContext()) }
+    single<NetworkMonitor> { AndroidNetworkMonitor(androidContext()) }
     single { AdsConsentManager(androidContext(), get(), get(ApplicationScope)) }
     single<AdProvider> { NativeAdManager(androidContext(), get<AdsConsentManager>().canRequestAds, get(ApplicationScope)) }
 

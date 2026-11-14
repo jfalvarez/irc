@@ -72,6 +72,8 @@ data class ChatScreenState(
     /** true si está conectado O reconectando (la UI mantiene el chat visible mientras reconecta). */
     val connectionState: StateFlow<Boolean>,
     val isReconnecting: StateFlow<Boolean>,
+    /** Reconectando pero sin red (la barra lo dice en vez de «Reconectando…»). */
+    val isWaitingForNetwork: StateFlow<Boolean>,
     val usersInChannel: StateFlow<Map<String, List<String>>>,
     val currentChannelUserList: StateFlow<List<String>>,
     val showUserList: StateFlow<Boolean>,
@@ -235,6 +237,7 @@ class MainViewModel(
         uiMessages = combinedUiMessagesFlow,
         connectionState = uiConnectionState,
         isReconnecting = ircConnection.isReconnecting,
+        isWaitingForNetwork = ircConnection.isWaitingForNetwork,
         usersInChannel = chatStateManager.usersInChannel,
         currentChannelUserList = currentChannelUserListState,
         showUserList = chatStateManager.showUserList,

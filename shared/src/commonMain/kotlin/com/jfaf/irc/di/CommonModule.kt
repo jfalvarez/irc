@@ -31,7 +31,7 @@ val ApplicationScope = named("ApplicationScope")
 val commonModule = module {
     single(ApplicationScope) { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
 
-    single { IrcSession(transportFactory = { get<IrcTransport>() }) }
+    single { IrcSession(transportFactory = { get<IrcTransport>() }, network = get()) }
     single { IrcRepository(get(), get(), get(ApplicationScope)) } binds arrayOf(IrcConnection::class, IrcSender::class)
     single { SilentWhoisCompletionSignal() }
     single { AppVisibility() }

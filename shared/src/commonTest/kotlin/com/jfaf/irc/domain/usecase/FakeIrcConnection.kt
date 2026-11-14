@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 class FakeIrcConnection(connected: Boolean = true) : IrcConnection {
     override val connectionState = MutableStateFlow(connected)
     override val isReconnecting = MutableStateFlow(false)
+    override val isWaitingForNetwork = MutableStateFlow(false)
     override val incomingMessages = MutableSharedFlow<ParsedIrcMessage>()
 
     val sent = mutableListOf<String>()
@@ -22,6 +23,11 @@ class FakeIrcConnection(connected: Boolean = true) : IrcConnection {
     override fun joinChannel(channelName: String, key: String?) { sent += "join $channelName ${key.orEmpty()}".trim() }
     override fun partChannel(channelName: String, partMessage: String?) { sent += "part $channelName" }
     override fun sendMessage(target: String, message: String) { sent += "msg $target $message" }
+    override fun sendReply(target: String, message: String): Boolean {
+        if (!connectionState.value) return false
+        sent += "reply $target $message"
+        return true
+    }
     override fun sendRawCommand(command: String, isSilent: Boolean) { sent += "raw $command" }
     override fun isWhoisSilent(nick: String) = false
     override fun completeSilentWhois(nick: String) {}

@@ -2,6 +2,8 @@ package com.jfaf.irc.data.remote
 
 import com.jfaf.irc.AppConstants
 import com.jfaf.irc.data.model.ParsedIrcMessage
+import com.jfaf.irc.domain.platform.AlwaysOnlineNetworkMonitor
+import com.jfaf.irc.domain.platform.NetworkMonitor
 import com.jfaf.irc.log.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +30,8 @@ sealed interface SessionStatus {
     data object Connecting : SessionStatus
     data class Connected(val host: String) : SessionStatus
     data class Reconnecting(val attempt: Int, val maxAttempts: Int) : SessionStatus
+    /** Conexión perdida y sin red: se reconectará en cuanto vuelva, sin gastar intentos. */
+    data object WaitingForNetwork : SessionStatus
 }
 
 data class ConnectParams(val nickname: String, val host: String, val port: Int, val useSsl: Boolean)
@@ -45,16 +49,22 @@ data class ReconnectPolicy(
 /**
  * Sesión IRC del proceso: crea el cliente, reconecta tras una pérdida y publica estado y mensajes.
  * No sabe nada de Android; el servicio (o la app de escritorio) sólo la mantiene viva y la muestra.
+ *
+ * Con [network]: los intentos de reconexión sólo cuentan con red (sin ella se espera a que vuelva, como
+ * [SessionStatus.WaitingForNetwork]) y, si la red se va estando conectado, se corta al momento en vez de
+ * esperar a que el socket muerto dé error (pasa, por ejemplo, al cambiar de wifi a datos).
  */
 class IrcSession(
     private val scope: CoroutineScope,
     private val policy: ReconnectPolicy,
+    private val network: NetworkMonitor = AlwaysOnlineNetworkMonitor,
     private val clientFactory: (ConnectParams, CoroutineScope, onConnectionLost: () -> Unit) -> ManualIrcClient
 ) {
     /** Producción: cada intento de conexión abre un transporte nuevo de [transportFactory]. */
-    constructor(transportFactory: () -> IrcTransport) : this(
+    constructor(transportFactory: () -> IrcTransport, network: NetworkMonitor) : this(
         CoroutineScope(SupervisorJob() + Dispatchers.IO),
         ReconnectPolicy(),
+        network,
         { p, s, onLost -> ManualIrcClient(p.host, p.port, p.useSsl, s, Dispatchers.IO, onLost, transportFactory()) }
     )
 
@@ -70,6 +80,10 @@ class IrcSession(
     private val _isReconnecting = MutableStateFlow(false)
     val isReconnecting: StateFlow<Boolean> = _isReconnecting.asStateFlow()
 
+    private val _isWaitingForNetwork = MutableStateFlow(false)
+    /** Reconectando pero sin red: la UI lo dice en vez de «Reconectando…». */
+    val isWaitingForNetwork: StateFlow<Boolean> = _isWaitingForNetwork.asStateFlow()
+
     private val _status = MutableStateFlow<SessionStatus>(SessionStatus.Disconnected)
     val status: StateFlow<SessionStatus> = _status.asStateFlow()
 
@@ -82,6 +96,26 @@ class IrcSession(
     private val disconnectLock = Mutex()
     private var collectorsJob: Job? = null
     private var reconnectAttempt = 0
+
+    init {
+        // Si la red se va estando conectado, el socket queda muerto y podría tardar minutos en dar error
+        scope.launch { network.isOnline.collect { online -> if (!online) onNetworkLost() } }
+    }
+
+    private fun onNetworkLost() {
+        val c = startReconnectForNetworkLoss() ?: return
+        scope.launch { c.abortAttempt() }
+    }
+
+    /** El cliente a cortar, o null si no hay una conexión en uso (o ya se está reconectando). */
+    @Synchronized
+    private fun startReconnectForNetworkLoss(): ManualIrcClient? {
+        val current = client
+        if (lastParams == null || current == null || !current.isConnected || reconnectJob?.isActive == true) return null
+        Log.i(TAG, "Sin red: se corta la conexión y se espera a que vuelva.")
+        scheduleReconnect() // antes de cortar: así el corte no se publica como «Desconectado»
+        return current
+    }
 
     @Synchronized
     fun connect(params: ConnectParams) {
@@ -131,6 +165,9 @@ class IrcSession(
     fun partChannel(channel: String, partMessage: String?) { client?.partFromChannel(channel, partMessage) }
     fun sendRaw(command: String) { client?.sendRaw(command) }
 
+    /** Nick actual de la conexión; null sin conexión. */
+    val currentNickname: String? get() = client?.takeIf { it.isConnected }?.nickname
+
     private fun observe(c: ManualIrcClient) {
         collectorsJob?.cancel() // que no se acumulen colectores de clientes anteriores
         collectorsJob = scope.launch {
@@ -155,12 +192,24 @@ class IrcSession(
         _isReconnecting.value = true
         reconnectJob = scope.launch {
             try {
-                while (reconnectAttempt < policy.maxAttempts) {
+                while (true) {
+                    if (!network.isOnline.value) {
+                        // Sin red no se gastan intentos: se espera a que vuelva y se empieza de cero
+                        _status.value = SessionStatus.WaitingForNetwork
+                        _isWaitingForNetwork.value = true
+                        Log.i(TAG, "Sin red: se espera a que vuelva para reconectar.")
+                        network.isOnline.first { it }
+                        _isWaitingForNetwork.value = false
+                        reconnectAttempt = 0
+                        continue
+                    }
+                    if (reconnectAttempt >= policy.maxAttempts) break
                     reconnectAttempt++
                     _status.value = SessionStatus.Reconnecting(reconnectAttempt, policy.maxAttempts)
                     val delayMs = policy.delayFor(reconnectAttempt)
                     Log.i(TAG, "Reconexión $reconnectAttempt/${policy.maxAttempts} en ${delayMs}ms")
                     delay(delayMs)
+                    if (!network.isOnline.value) continue // la red se fue mientras se esperaba
                     val c = client ?: return@launch
                     c.connect(params.nickname, user = IRC_USER, real = IRC_REAL_NAME)
                     val registered = withTimeoutOrNull(policy.registerTimeoutMs) { c.isRegistered.first { it } } != null
@@ -176,6 +225,7 @@ class IrcSession(
                 _status.value = SessionStatus.Disconnected
             } finally {
                 _isReconnecting.value = false // éxito, abandono o cancelación
+                _isWaitingForNetwork.value = false
             }
         }
     }
@@ -185,5 +235,8 @@ class IrcSession(
         reconnectJob?.cancel()
         reconnectJob = null
         reconnectAttempt = 0
+        // Al momento: el finally del bucle cancelado puede correr después de que vuelva disconnect()
+        _isReconnecting.value = false
+        _isWaitingForNetwork.value = false
     }
 }

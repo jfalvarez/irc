@@ -30,6 +30,7 @@ import com.jfaf.irc.domain.platform.AdProvider
 import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.domain.platform.AuthSession
 import com.jfaf.irc.domain.platform.GoogleIdTokenRequester
+import com.jfaf.irc.domain.platform.NetworkMonitor
 import com.jfaf.irc.domain.platform.NoGoogleIdTokenRequester
 import com.jfaf.irc.domain.platform.ConnectionHost
 import com.jfaf.irc.domain.platform.Haptics
@@ -76,6 +77,7 @@ fun desktopModule(
     }
     single { DesktopNotifier(get()) } bind Notifier::class
     single<Haptics> { DesktopHaptics(get()) }
+    single<NetworkMonitor> { DesktopNetworkMonitor(get(ApplicationScope)) }
     single<AdProvider> { NoAdProvider() }
     single<AnalyticsTracker> { NoOpAnalyticsTracker() }
     if (google == null) {

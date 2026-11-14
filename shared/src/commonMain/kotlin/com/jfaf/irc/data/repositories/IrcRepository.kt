@@ -31,6 +31,7 @@ class IrcRepository(
 
     override val connectionState: StateFlow<Boolean> = session.connectionState
     override val isReconnecting: StateFlow<Boolean> = session.isReconnecting
+    override val isWaitingForNetwork: StateFlow<Boolean> = session.isWaitingForNetwork
 
     // Guarda los últimos 50 para que una UI recreada (con la conexión viva) los recupere,
     // como hacía IrcServiceApi.
@@ -60,6 +61,22 @@ class IrcRepository(
     override fun joinChannel(channelName: String, key: String?) = session.joinChannel(channelName, key)
     override fun partChannel(channelName: String, partMessage: String?) = session.partChannel(channelName, partMessage)
     override fun sendMessage(target: String, message: String) = session.sendMessage(target, message)
+
+    override fun sendReply(target: String, message: String): Boolean {
+        val lines = message.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val nick = session.currentNickname
+        if (lines.isEmpty() || nick == null) return false
+        for (line in lines) {
+            session.sendMessage(target, line)
+            // Como si el servidor lo devolviera: el chat lo pone en su conversación, en orden con lo recibido,
+            // también si la pantalla del chat se crea después (el flujo guarda los últimos 50). Los avisos en
+            // segundo plano leen el flujo de la sesión, así que esto no genera una notificación.
+            _incomingMessages.tryEmit(
+                ParsedIrcMessage(":$nick PRIVMSG $target :$line", prefix = nick, command = "PRIVMSG", params = listOf(target), trailing = line)
+            )
+        }
+        return true
+    }
 
     override fun sendRawCommand(command: String, isSilent: Boolean) {
         if (isSilent && command.startsWith("WHOIS", ignoreCase = true)) {

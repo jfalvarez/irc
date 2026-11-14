@@ -49,6 +49,9 @@ class ManualIrcClient(
     // canal (en minúsculas) -> clave ("" si no tiene). Sobrevive a las reconexiones.
     private val channelsToRejoin = java.util.concurrent.ConcurrentHashMap<String, String>()
 
+    /** Nick con el que se está conectado (el alternativo si el deseado estaba ocupado). */
+    val nickname: String get() = currentNickname
+
     val isConnected: Boolean
         get() = _connectionState.value && transport.isOpen
 

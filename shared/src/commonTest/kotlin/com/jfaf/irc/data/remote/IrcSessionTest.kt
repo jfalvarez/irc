@@ -1,10 +1,13 @@
 package com.jfaf.irc.data.remote
 
+import com.jfaf.irc.domain.platform.NetworkMonitor
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -127,5 +130,69 @@ class IrcSessionTest {
         delay(100) // deja correr la desconexión del cliente viejo
         assertFalse(old.isOpen)
         assertTrue(new.isOpen) // la desconexión del viejo no afecta al nuevo
+    }
+
+    /** Sesión con una red de pega que el test enciende y apaga. */
+    private val network = object : NetworkMonitor {
+        override val isOnline = MutableStateFlow(true)
+    }
+    private val sessionWithNetwork = IrcSession(scope, policy, network) { p, s, onLost ->
+        val t = transports.getOrPut(p.host) { ReopenableFakeTransport() }
+        ManualIrcClient(p.host, p.port, p.useSsl, s, Dispatchers.IO, onLost, t)
+    }
+
+    private suspend fun connectedWithNetwork(): ReopenableFakeTransport {
+        sessionWithNetwork.connect(params())
+        val t = transports.getValue("irc.test")
+        t.awaitOpenAndHandshake()
+        t.serverSends(":server 001 yo :Welcome")
+        sessionWithNetwork.status.await { it is SessionStatus.Connected }
+        return t
+    }
+
+    @Test
+    fun sinRed_cortaEsperaSinGastarIntentosYReconectaAlVolver() = runBlocking {
+        val t = connectedWithNetwork()
+
+        network.isOnline.value = false
+        assertEquals(SessionStatus.WaitingForNetwork, sessionWithNetwork.status.await { it == SessionStatus.WaitingForNetwork })
+        assertTrue(sessionWithNetwork.isReconnecting.value)
+        assertTrue(sessionWithNetwork.isWaitingForNetwork.value)
+        withTimeout(2_000) { while (t.isOpen) delay(10) } // corta el socket al momento
+
+        // Sin red no se intenta nada, por mucho más tiempo del que duran los 3 intentos
+        delay(300)
+        assertNull(withTimeoutOrNull(50) { t.opened.receive() })
+        assertEquals(SessionStatus.WaitingForNetwork, sessionWithNetwork.status.value)
+
+        network.isOnline.value = true
+        t.awaitOpenAndHandshake()
+        t.serverSends(":server 001 yo :Welcome back")
+        sessionWithNetwork.status.await { it is SessionStatus.Connected }
+        sessionWithNetwork.isReconnecting.await { !it }
+        assertFalse(sessionWithNetwork.isWaitingForNetwork.value)
+    }
+
+    @Test
+    fun desconectarMientrasSeEsperaLaRed_noReconectaAlVolver() = runBlocking {
+        val t = connectedWithNetwork()
+        network.isOnline.value = false
+        sessionWithNetwork.status.await { it == SessionStatus.WaitingForNetwork }
+
+        sessionWithNetwork.disconnect("adios")
+        assertEquals(SessionStatus.Disconnected, sessionWithNetwork.status.value)
+        assertFalse(sessionWithNetwork.isReconnecting.value)
+        assertFalse(sessionWithNetwork.isWaitingForNetwork.value)
+
+        network.isOnline.value = true
+        assertNull(withTimeoutOrNull(300) { t.opened.receive() })
+    }
+
+    @Test
+    fun sinRedYSinConexion_noHaceNada() = runBlocking {
+        network.isOnline.value = false
+        delay(100)
+        assertEquals(SessionStatus.Disconnected, sessionWithNetwork.status.value)
+        assertFalse(sessionWithNetwork.isReconnecting.value)
     }
 }

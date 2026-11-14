@@ -99,6 +99,7 @@ class IrcService : Service() {
         SessionStatus.Connecting -> getString(R.string.notification_status_connecting)
         is SessionStatus.Connected -> getString(R.string.notification_status_connected_to, status.host)
         is SessionStatus.Reconnecting -> getString(R.string.notification_status_reconnecting, status.attempt, status.maxAttempts)
+        SessionStatus.WaitingForNetwork -> getString(R.string.notification_status_waiting_for_network)
     }
 
     /**

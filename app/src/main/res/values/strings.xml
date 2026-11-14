@@ -7,6 +7,7 @@
     <string name="notification_status_connecting">Iniciando conexión IRC...</string>
     <string name="notification_status_disconnected">Estado: Desconectado</string>
     <string name="notification_status_reconnecting">Estado: Reconectando (intento %1$d de %2$d)…</string>
+    <string name="notification_status_waiting_for_network">Estado: Sin conexión a Internet. Se reconectará cuando vuelva.</string>
     <string name="notification_channel_name_irc_service">IRC Service Channel</string>
     <string name="notification_channel_description_irc_service">Notificación persistente que indica el estado de conexión del servicio IRC.</string>
 
@@ -16,4 +17,8 @@
     <string name="new_private_message_from_sender_title">Mensaje privado de %1$s</string>
     <string name="friend_online_notification_title">Amigo conectado</string>
     <string name="friend_online_notification_text">%1$s se ha conectado.</string>
+    <string name="notification_reply_action">Responder</string>
+    <string name="notification_reply_label">Escribe una respuesta</string>
+    <string name="notification_me">Tú</string>
+    <string name="notification_reply_failed">No enviado (sin conexión): %1$s</string>
 </resources>
