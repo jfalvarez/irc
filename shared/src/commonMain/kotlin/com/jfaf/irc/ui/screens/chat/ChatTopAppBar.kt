@@ -36,6 +36,7 @@ import org.jetbrains.compose.resources.stringResource
 
 import com.jfaf.irc.ui.screens.chat.InputDialog
 import com.jfaf.irc.ui.theme.IRCTheme
+import com.jfaf.irc.ui.theme.readableOn
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -237,7 +238,7 @@ private fun TopicDialog(channel: String, topic: String?, onDismiss: () -> Unit) 
             if (topic.isNullOrBlank()) {
                 Text(stringResource(Res.string.topic_dialog_empty))
             } else {
-                Text(MircColorParser.parse(topic))
+                Text(MircColorParser.parse(topic).readableOn(MaterialTheme.colorScheme.surface))
             }
         },
         confirmButton = {

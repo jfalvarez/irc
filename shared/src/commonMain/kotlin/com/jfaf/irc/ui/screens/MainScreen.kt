@@ -63,6 +63,7 @@ import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.TargetNavigation
 import com.jfaf.irc.ui.platform.LocalPlatformUi
+import com.jfaf.irc.domain.chat.UserListGrouping
 import com.jfaf.irc.ui.common.openOnLeftSwipe
 import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.theme.IRCTheme
@@ -109,7 +110,13 @@ fun MainScreen(
     val channelUsers by viewModel.chatScreenState.currentChannelUserList.collectAsState()
     val topics by viewModel.chatScreenState.topics.collectAsState()
     // Cabecera del canal (UI-14): número de usuarios y tema
-    val activeChannelUserCount = if (activeTarget?.startsWith("#") == true) channelUsers.size.takeIf { it > 0 } else null
+    val ignoredUsers by viewModel.chatScreenState.ignoredUsers.collectAsState()
+    // Los usuarios ignorados no se cuentan, igual que no salen en la lista
+    val activeChannelUserCount = if (activeTarget?.startsWith("#") == true) {
+        UserListGrouping.visible(channelUsers, ignoredUsers).size.takeIf { it > 0 }
+    } else {
+        null
+    }
     val activeTopic = activeTarget?.let { topics[it.lowercase()] }
 
     // Atajos de teclado: Ctrl+Tab / Ctrl+Mayús+Tab cambian de pestaña y Ctrl+W cierra la activa (menos Servidor).

@@ -45,9 +45,7 @@ fun ChannelUserListView(
     val ignoredUsers by mainViewModel.chatScreenState.ignoredUsers.collectAsState()
     var expandedUserMenu by remember { mutableStateOf<String?>(null) }
 
-    val filteredUserList = userList.filterNot { user ->
-        ignoredUsers.any { ignoredUser -> cleanNick(user).equals(ignoredUser, ignoreCase = true) }
-    }
+    val filteredUserList = remember(userList, ignoredUsers) { UserListGrouping.visible(userList, ignoredUsers) }
     val groups = remember(filteredUserList) { UserListGrouping.group(filteredUserList) }
 
     if (activeTarget?.startsWith("#") == true) {

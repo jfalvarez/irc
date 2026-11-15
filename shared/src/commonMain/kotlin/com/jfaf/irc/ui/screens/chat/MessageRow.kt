@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 // import com.jfaf.irc.R // No longer needed for string resources of placeholder
 import com.jfaf.irc.ui.media.MediaPreview
 import com.jfaf.irc.ui.theme.IRCTheme
+import com.jfaf.irc.ui.theme.readableOn
 import com.jfaf.irc.ui.theme.mentionAccent
 import com.jfaf.irc.ui.theme.mentionBackground
 import com.jfaf.irc.ui.theme.nickColor
@@ -95,6 +96,7 @@ fun MessageRow(
     val fontWeight = FontWeight.Normal
 
     val uriHandler = LocalUriHandler.current
+    val chatBackground = MaterialTheme.colorScheme.background
     val clickableText = buildAnnotatedString {
         val baseString = speech?.body ?: message.annotatedString ?: AnnotatedString(message.fullText)
         var offset = 0
@@ -116,9 +118,11 @@ fun MessageRow(
                 )
             }
         }
-        append(baseString)
-
-        addStyle(SpanStyle(color = baseTextColor, fontStyle = fontStyle, fontWeight = fontWeight), offset, length)
+        // El estilo base va primero y el cuerpo después: los colores y la negrita de mIRC mandan sobre el base.
+        // (Un addStyle posterior sobre todo el texto los tapaba.)
+        withStyle(SpanStyle(color = baseTextColor, fontStyle = fontStyle, fontWeight = fontWeight)) {
+            append(baseString.readableOn(chatBackground))
+        }
 
         for (link in LinkFinder.find(baseString.text)) {
             val mediaUrl = message.mediaUrl

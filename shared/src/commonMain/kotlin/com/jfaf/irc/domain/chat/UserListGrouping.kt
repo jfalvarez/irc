@@ -10,6 +10,10 @@ object UserListGrouping {
     private const val OPERATOR_PREFIXES = "~&@%"
     private const val MODE_PREFIXES = "@+%&~"
 
+    /** Los usuarios que se ven: sin los ignorados (sin distinguir mayúsculas ni prefijo de modo). */
+    fun visible(users: List<String>, ignored: Set<String>): List<String> =
+        users.filterNot { user -> ignored.any { it.equals(NickColors.normalize(user), ignoreCase = true) } }
+
     /** El modo más alto del usuario según sus prefijos (`@+nick` es operador); fundadores, admins y halfops cuentan como operadores. */
     fun roleOf(user: String): UserRole {
         val prefixes = user.takeWhile { it in MODE_PREFIXES }

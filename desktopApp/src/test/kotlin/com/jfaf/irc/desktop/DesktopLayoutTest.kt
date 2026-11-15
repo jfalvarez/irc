@@ -5,6 +5,8 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SkikoComposeUiTest
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.hasClickAction
@@ -202,6 +204,32 @@ class DesktopLayoutTest {
         runBlocking { prefs.updateMessageDensity(MessageDensity.COMFORTABLE) }
         runCatching { waitUntil(timeoutMillis = 5_000) { count("<Ana>") == 0 } }
         assertEquals(0, count("<Ana>"), "Al volver a cómoda se vuelve a la cabecera")
+    }
+
+    @Test
+    fun elColorDeMircSeVeEnElMensajeEnLosDosModos() = runSkikoComposeUiTest(size = Size(1200f, 760f)) { // ancha: sin cajón modal que tape el mensaje
+        val vm = koin.get<MainViewModel>()
+        showApp(vm)
+        connectAndJoin(vm)
+        Thread.sleep(800) // el aviso de «conectado» (debounce de 300 ms) limpia el estado
+        waitForIdle()
+        server.serverSays(":Ana!u@h PRIVMSG #test :4ROJOROJOROJO")
+        awaitText("ROJOROJOROJO", "Debe verse el mensaje")
+
+        fun redPixels(): Int {
+            val img = onRoot().captureToImage().toPixelMap()
+            var n = 0
+            for (x in 0 until img.width) for (y in 0 until img.height) {
+                val c = img[x, y]
+                if (c.red - maxOf(c.green, c.blue) > 0.35f) n++
+            }
+            return n
+        }
+        assertTrue(redPixels() > 20, "El rojo de mIRC debe verse en el tema oscuro")
+
+        runBlocking { koin.get<UserPreferencesRepository>().updateThemeMode(com.jfaf.irc.data.prefs.ThemeMode.LIGHT) }
+        waitForIdle()
+        assertTrue(redPixels() > 20, "...y en el claro")
     }
 
     @Test

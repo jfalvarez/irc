@@ -47,4 +47,12 @@ class UserListGroupingTest {
         val groups = UserListGrouping.group(listOf("@zeta", "~ana", "&mario"))
         assertEquals(listOf("~ana", "&mario", "@zeta"), groups.single().users)
     }
+
+    @Test
+    fun visibleQuitaALosIgnoradosSinDistinguirMayusculasNiPrefijo() {
+        val users = listOf("@Ana", "+kiko", "Luis", "eva")
+        assertEquals(listOf("@Ana", "Luis"), UserListGrouping.visible(users, setOf("KIKO", "EVA")))
+        assertEquals(users, UserListGrouping.visible(users, emptySet()))
+        assertEquals(emptyList(), UserListGrouping.visible(emptyList(), setOf("ana")))
+    }
 }
