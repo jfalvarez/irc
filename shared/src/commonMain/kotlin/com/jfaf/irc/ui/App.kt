@@ -45,6 +45,8 @@ import com.jfaf.irc.resources.force_update_title
 import com.jfaf.irc.ui.screens.MainScreen
 import com.jfaf.irc.ui.screens.settings.SettingsScreen
 import com.jfaf.irc.ui.theme.IRCAppTheme
+import com.jfaf.irc.ui.viewmodels.SettingsViewModel
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import com.jfaf.irc.ui.viewmodels.TermsViewModel
@@ -74,6 +76,7 @@ fun App(
     mainViewModel: MainViewModel = koinViewModel(),
     signInViewModel: SignInViewModel = koinViewModel(),
     termsViewModel: TermsViewModel = koinViewModel(),
+    settingsViewModel: SettingsViewModel = koinViewModel(),
     updateChecker: UpdateChecker = koinInject(),
     haptics: Haptics = koinInject(),
     appVisibility: AppVisibility = koinInject()
@@ -121,7 +124,8 @@ fun App(
     }
 
     CompositionLocalProvider(LocalPlatformUi provides platformUi) {
-        IRCAppTheme {
+        val themeMode by settingsViewModel.themeMode.collectAsState()
+        IRCAppTheme(darkTheme = themeMode.isDark(systemDark = isSystemInDarkTheme())) {
             BackHandler(enabled = connectionState && navController.previousBackStackEntry == null) {
                 showExitConfirmationDialog = true
             }

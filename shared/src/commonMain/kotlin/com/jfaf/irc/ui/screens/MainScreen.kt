@@ -59,6 +59,7 @@ import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.TargetNavigation
 import com.jfaf.irc.ui.platform.LocalPlatformUi
+import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
@@ -119,6 +120,8 @@ fun MainScreen(
         } else {
             Modifier.background(IRCTheme.gradientBrush)
         }
+        // La pantalla de conexión va sobre el degradado, que es oscuro: siempre con el tema oscuro
+        ForcedDarkTheme(enabled = !connectionState) {
         Box(modifier = Modifier.fillMaxSize().then(backgroundModifier)) {
             Scaffold(
                 modifier = modifier.imePadding(),
@@ -179,6 +182,7 @@ fun MainScreen(
                 }
             }
         }
+        } // ForcedDarkTheme
     }
 
     val openDrawerContent: @Composable (closeAction: () -> Unit) -> Unit = { closeAction ->
@@ -206,6 +210,11 @@ fun MainScreen(
         }
     }
     } // BoxWithConstraints
+}
+
+@Composable
+private fun ForcedDarkTheme(enabled: Boolean, content: @Composable () -> Unit) {
+    if (enabled) IRCAppTheme(darkTheme = true, content = content) else content()
 }
 
 @Composable

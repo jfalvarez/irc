@@ -16,6 +16,16 @@ val NeutralOutline = Color(0xFF8D8F99)           // bordes (≥ 3:1, componentes
 val NeutralOutlineVariant = Color(0xFF3F4048)    // divisores
 val LinkBlue = Color(0xFF8AB4FF)                 // enlaces (≈ 8:1 sobre el fondo)
 
+// Neutros del modo claro (UI-2)
+val LightBackground = Color(0xFFF6F6F8)
+val LightSurface = Color(0xFFFFFFFF)
+val LightSurfaceVariant = Color(0xFFE6E7EC)
+val LightOnSurface = Color(0xFF1B1C20)
+val LightOnSurfaceMuted = Color(0xFF54565F)
+val LightOutline = Color(0xFF767883)
+val LightOutlineVariant = Color(0xFFD0D1D8)
+val LinkBlueLight = Color(0xFF0B57D0)
+
 // Base White
 val IRCWhite = Color.White
 

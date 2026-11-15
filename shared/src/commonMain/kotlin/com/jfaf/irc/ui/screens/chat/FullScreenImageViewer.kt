@@ -82,7 +82,7 @@ fun FullScreenImageViewer(
 
                     when (imageState) {
                         ImageLoadState.Loading -> {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
+                            CircularProgressIndicator(color = Color.White)
                         }
                         ImageLoadState.Error -> {
                             Text(

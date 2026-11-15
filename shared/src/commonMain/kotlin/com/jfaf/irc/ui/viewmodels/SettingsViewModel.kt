@@ -1,5 +1,6 @@
 package com.jfaf.irc.ui.viewmodels
 
+import com.jfaf.irc.data.prefs.ThemeMode
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jfaf.irc.data.prefs.ServerConfig
@@ -82,6 +83,20 @@ class SettingsViewModel(
         }
     }
     // --- Fin Preferencia para Previsualizaciones de Medios ---
+
+    // --- Aspecto (UI-2) ---
+    val themeMode: StateFlow<ThemeMode> =
+        userPreferencesRepository.themeModeFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ThemeMode.Default
+        )
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            userPreferencesRepository.updateThemeMode(mode)
+        }
+    }
 
     // --- Sonido de aviso (sólo se muestra en las plataformas que lo soportan: escritorio) ---
     val soundAlerts: StateFlow<Boolean> =

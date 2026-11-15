@@ -51,4 +51,17 @@ class ThemeContrastTest {
     fun bordesDeComponentesAlMenos3a1() {
         assertAa("borde/fondo", NeutralOutline, NeutralBackground, min = 3.0)
     }
+
+    @Test
+    fun modoClaro() {
+        assertAa("principal/fondo", LightOnSurface, LightBackground)
+        assertAa("avisos/fondo", LightOnSurfaceMuted, LightBackground)
+        assertAa("principal/superficie", LightOnSurface, LightSurface)
+        assertAa("avisos/superficie", LightOnSurfaceMuted, LightSurface)
+        assertAa("principal/contenedor", LightOnSurface, LightSurfaceVariant)
+        assertAa("avisos/contenedor", LightOnSurfaceMuted, LightSurfaceVariant)
+        assertAa("enlaces/fondo", LinkBlueLight, LightBackground)
+        assertAa("enlaces/superficie", LinkBlueLight, LightSurface)
+        assertAa("borde/fondo", LightOutline, LightBackground, min = 3.0)
+    }
 }

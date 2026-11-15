@@ -2,6 +2,7 @@ package com.jfaf.irc.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
@@ -15,6 +16,9 @@ import com.jfaf.irc.ui.theme.BlueEnd
 import com.jfaf.irc.ui.theme.IRCWhite
 import com.jfaf.irc.ui.theme.IRCWhite08 // For specific TextField container
 
+// Si el tema activo es el oscuro
+val LocalDarkTheme = staticCompositionLocalOf { true }
+
 // CompositionLocal for the gradient properties
 val LocalGradientBrush = staticCompositionLocalOf<Brush> {
     error("No GradientBrush provided")
@@ -23,8 +27,27 @@ val LocalGradientColors = staticCompositionLocalOf<List<Color>> {
     error("No GradientColors provided")
 }
 
+// Esquema claro (UI-2): misma marca (morado en la barra y las selecciones) sobre fondos claros.
+private val LightColorScheme = lightColorScheme(
+    primary = PurpleStart,
+    onPrimary = IRCWhite,
+    secondary = BlueEnd,
+    onSecondary = IRCWhite,
+
+    background = LightBackground,
+    onBackground = LightOnSurface,
+
+    surface = LightSurface,
+    onSurface = LightOnSurface,
+
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightOnSurfaceMuted,
+
+    outline = LightOutline,
+    outlineVariant = LightOutlineVariant,
+)
+
 // Esquema oscuro: fondo neutro y marca (morado) sólo en barra, selecciones, botón de enviar e insignias (UI-1).
-// El modo claro llega con UI-2.
 private val DarkColorScheme = darkColorScheme(
     primary = PurpleStart,
     onPrimary = IRCWhite,       // Texto e iconos sobre la marca (8,2:1)
@@ -46,16 +69,18 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun IRCAppTheme(
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val currentColorScheme = DarkColorScheme // UI-2 añadirá el claro y el del sistema
+    val currentColorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     val gradientColorsList = listOf(PurpleStart, BlueEnd)
     val gradientBrushInstance = Brush.verticalGradient(colors = gradientColorsList)
 
     CompositionLocalProvider(
         LocalGradientBrush provides gradientBrushInstance,
-        LocalGradientColors provides gradientColorsList
+        LocalGradientColors provides gradientColorsList,
+        LocalDarkTheme provides darkTheme
     ) {
         MaterialTheme(
             colorScheme = currentColorScheme,
@@ -104,5 +129,5 @@ object IRCTheme {
     val linkColor: Color
       @Composable
       @ReadOnlyComposable
-      get() = LinkBlue
+      get() = if (LocalDarkTheme.current) LinkBlue else LinkBlueLight
 }

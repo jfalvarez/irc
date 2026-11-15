@@ -43,7 +43,7 @@ fun UserActionsMenu(
             text = {
                 Text(
                     stringResource(Res.string.action_send_private_message),
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             onClick = {
@@ -55,7 +55,7 @@ fun UserActionsMenu(
             text = {
                 Text(
                     stringResource(Res.string.action_ignore_user),
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             onClick = {
@@ -67,7 +67,7 @@ fun UserActionsMenu(
             text = {
                 Text(
                     stringResource(Res.string.action_whois),
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             onClick = {
@@ -79,7 +79,7 @@ fun UserActionsMenu(
             text = {
                 Text(
                     stringResource(Res.string.action_report_user),
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             onClick = {

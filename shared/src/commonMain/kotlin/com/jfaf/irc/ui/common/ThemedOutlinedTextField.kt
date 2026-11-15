@@ -21,12 +21,13 @@ fun ThemedOutlinedTextField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     colors: TextFieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = MaterialTheme.colorScheme.onPrimary,
-        unfocusedBorderColor = MaterialTheme.colorScheme.onBackground,
-        focusedTextColor = MaterialTheme.colorScheme.onPrimary,
+        focusedBorderColor = MaterialTheme.colorScheme.onSurface,
+        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+        focusedTextColor = MaterialTheme.colorScheme.onSurface,
         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-        focusedLabelColor = MaterialTheme.colorScheme.onPrimary,
-        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface
+        focusedLabelColor = MaterialTheme.colorScheme.onSurface,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        cursorColor = MaterialTheme.colorScheme.onSurface
     )
 ) {
     OutlinedTextField(

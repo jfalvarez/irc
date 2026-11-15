@@ -96,7 +96,7 @@ private fun DrawerListItem(
     unreadCount: Int = 0
 ) {
     val fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal
-    val textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+    val textColor = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
 
     NavigationDrawerItem(
         label = { Text(target, fontWeight = fontWeight, color = textColor) },
@@ -182,12 +182,12 @@ fun AppDrawerContent(
                     item {
                         val isSelected = target == activeTarget
                         NavigationDrawerItem(
-                            icon = { Icon(Icons.Filled.Menu, stringResource(Res.string.cd_server), tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)) },
+                            icon = { Icon(Icons.Filled.Menu, stringResource(Res.string.cd_server), tint = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)) },
                             label = {
                                 Text(
                                     target,
                                     fontWeight = FontWeight.Normal,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                                 )
                             },
                             selected = isSelected,

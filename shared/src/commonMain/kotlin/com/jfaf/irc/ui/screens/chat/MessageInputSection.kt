@@ -130,7 +130,7 @@ fun MessageInputSection(
                             onTextInputChanged(it.text, it.selection.start)
                         }
                     },
-                    placeholder = { Text(stringResource(Res.string.label_write_message), color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)) },
+                    placeholder = { Text(stringResource(Res.string.label_write_message), color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     leadingIcon = if (showEmojiButton) {
                         {
                             // Sin foco propio: el campo lo conserva y con él lo que hubiera seleccionado
@@ -156,7 +156,7 @@ fun MessageInputSection(
                             Icon(
                                 Icons.AutoMirrored.Filled.Send,
                                 stringResource(Res.string.cd_send_message),
-                                tint = MaterialTheme.colorScheme.onPrimary
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     },
@@ -197,21 +197,21 @@ fun MessageInputSection(
                     }),
                     shape = RoundedCornerShape(24.dp),
                     colors = TextFieldDefaults.colors(
-                        focusedTextColor = MaterialTheme.colorScheme.onPrimary,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
-                        focusedContainerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f),
-                        disabledContainerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.1f),
-                        cursorColor = MaterialTheme.colorScheme.onPrimary,
-                        focusedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
-                        unfocusedLeadingIconColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        cursorColor = MaterialTheme.colorScheme.onSurface,
+                        focusedLeadingIconColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,
-                        focusedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f),
-                        focusedPlaceholderColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
-                        unfocusedPlaceholderColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                        focusedLabelColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
 

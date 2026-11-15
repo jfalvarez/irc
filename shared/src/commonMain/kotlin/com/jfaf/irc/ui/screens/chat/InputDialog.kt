@@ -38,8 +38,8 @@ fun InputDialog(title: String, label: String, onDismiss: () -> Unit, onConfirm: 
             Button(
                 onClick = { onConfirm(textState) }, 
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.onPrimary, 
-                    contentColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.primary, 
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) { 
                 Text(stringResource(Res.string.button_accept)) 

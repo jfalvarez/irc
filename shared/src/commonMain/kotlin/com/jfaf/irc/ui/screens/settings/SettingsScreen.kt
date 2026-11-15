@@ -4,6 +4,9 @@ import com.jfaf.irc.resources.Res
 import com.jfaf.irc.resources.*
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,6 +32,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import com.jfaf.irc.data.prefs.ServerConfig
+import com.jfaf.irc.data.prefs.ThemeMode
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
 import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.ui.screens.terms.TermsDialog
@@ -46,6 +50,7 @@ fun SettingsScreen(
     val showPingPongMessages by viewModel.showPingPongMessages.collectAsState()
     val showMediaPreviews by viewModel.showMediaPreviews.collectAsState()
     val soundAlerts by viewModel.soundAlerts.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
     val platformUi = LocalPlatformUi.current
     val supportsSoundAlerts = platformUi.supportsSoundAlerts
     var showTerms by remember { mutableStateOf(false) }
@@ -83,6 +88,34 @@ fun SettingsScreen(
                     config = serverConfig,
                     onSave = { host, plain, ssl -> viewModel.saveServerConfig(host, plain, ssl) },
                     onReset = { viewModel.resetServerConfig() }
+                )
+            }
+            item {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+            }
+
+            item {
+                Text(
+                    text = stringResource(Res.string.settings_section_appearance),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+            }
+            items(ThemeMode.entries) { mode ->
+                SettingRowWithRadio(
+                    text = stringResource(
+                        when (mode) {
+                            ThemeMode.DARK -> Res.string.settings_theme_dark
+                            ThemeMode.LIGHT -> Res.string.settings_theme_light
+                            ThemeMode.SYSTEM -> Res.string.settings_theme_system
+                        }
+                    ),
+                    selected = mode == themeMode,
+                    onSelect = { viewModel.setThemeMode(mode) }
                 )
             }
             item {
@@ -313,6 +346,28 @@ private fun UserRow(
         Button(onClick = onRemoveClicked) {
             Text(removeButtonText)
         }
+    }
+}
+
+@Composable
+private fun SettingRowWithRadio(
+    text: String,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Text(
+            text = text,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(start = 12.dp)
+        )
     }
 }
 

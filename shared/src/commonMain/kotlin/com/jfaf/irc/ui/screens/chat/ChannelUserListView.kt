@@ -44,7 +44,7 @@ fun ChannelUserListView(
             Text(
                 text = stringResource(Res.string.no_users_in_channel),
                 modifier = Modifier.padding(16.dp),
-                color = MaterialTheme.colorScheme.onPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
         } else {
             LazyColumn(
@@ -64,7 +64,7 @@ fun ChannelUserListView(
                             Text(
                                 text = userName, // Display userName with prefix
                                 modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colorScheme.onPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -82,7 +82,7 @@ fun ChannelUserListView(
         Text(
             text = stringResource(Res.string.select_channel_to_see_users),
             modifier = Modifier.padding(16.dp),
-            color = MaterialTheme.colorScheme.onPrimary
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

@@ -44,6 +44,7 @@ class UserPreferencesRepository(
         val NICKNAME = stringPreferencesKey(NICKNAME_KEY_NAME)
 
         val SOUND_ALERTS = booleanPreferencesKey("sound_alerts")
+        val THEME_MODE = stringPreferencesKey("theme_mode")
         val RECENT_EMOJIS = stringPreferencesKey("recent_emojis")
         val TERMS_ACCEPTED_VERSION = intPreferencesKey("terms_accepted_version")
 
@@ -90,6 +91,17 @@ class UserPreferencesRepository(
     suspend fun updateNickname(nickname: String) {
         dataStore.edit { preferences ->
             preferences[NICKNAME] = nickname
+        }
+    }
+
+    /** Aspecto de la app: oscuro (por defecto), claro o el del sistema. */
+    val themeModeFlow: Flow<ThemeMode> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { ThemeMode.fromStorage(it[THEME_MODE]) }
+
+    suspend fun updateThemeMode(mode: ThemeMode) {
+        dataStore.edit { preferences ->
+            preferences[THEME_MODE] = mode.name
         }
     }
 
