@@ -3,6 +3,7 @@ package com.jfaf.irc.ui.screens.chat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,7 +20,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +49,12 @@ import kotlin.time.Clock
 /** A partir de cuántos elementos por encima del final aparece el botón «ir al último mensaje». */
 private const val JUMP_BUTTON_THRESHOLD = 3
 
+/** Espacio que queda entre el borde de arriba y el separador «Nuevos mensajes», en píxeles. */
+private const val SEPARATOR_TOP_MARGIN_PX = 160
+
+/** Lo que se espera a que llegue la lista de la pestaña nueva antes de dar por hecho que no hay mensajes nuevos. */
+private const val SEPARATOR_WAIT_MS = 250L
+
 @Composable
 fun MessagesList(
     messages: List<UiChatMessage>,
@@ -53,7 +66,9 @@ fun MessagesList(
     /** Mensajes nuevos desde el final (separador «Nuevos mensajes»); 0 = ninguno. */
     newMessagesFromEnd: Int = 0,
     /** Tu nick, para resaltar las menciones. */
-    ownNick: String? = null
+    ownNick: String? = null,
+    /** Pestaña que se muestra: al cambiar, la lista vuelve a donde te quedaste (ver más abajo). */
+    activeTarget: String? = null
 ) {
     val platformUi = LocalPlatformUi.current
     // La lista se pinta del último al primero: la línea de tiempo se construye en orden cronológico y se invierte
@@ -66,6 +81,29 @@ fun MessagesList(
     val scope = rememberCoroutineScope()
     // Con el final abajo (reverseLayout), el elemento 0 es el último mensaje
     val showJumpButton by remember { derivedStateOf { listState.firstVisibleItemIndex > JUMP_BUTTON_THRESHOLD } }
+
+    // Al volver a una pestaña con mensajes sin leer, la lista se coloca en el primero sin leer (justo debajo del
+    // separador «Nuevos mensajes»); si no hay nuevos, al final. Sin esto conservaría el desplazamiento de la pestaña anterior.
+    val currentTimeline by rememberUpdatedState(timeline)
+    LaunchedEffect(activeTarget) {
+        // La lista de la pestaña nueva llega por un flujo, un instante después del cambio: se espera al separador
+        // (un momento como mucho; si no llega, es que no hay mensajes nuevos)
+        withTimeoutOrNull(SEPARATOR_WAIT_MS) {
+            snapshotFlow { currentTimeline.any { it is TimelineItem.NewMessages } }.first { it }
+        }
+        withFrameNanos { }
+        val separator = currentTimeline.indexOfFirst { it is TimelineItem.NewMessages }
+        if (separator < 0) {
+            listState.scrollToItem(0)
+        } else {
+            // La lista va del final al principio: el elemento queda en el borde de abajo y lo nuevo, fuera de vista.
+            // Se sube lo que mide la ventana (menos un margen) para dejar el separador arriba y lo nuevo debajo;
+            // si no hay tanto contenido nuevo, la lista se queda abajo.
+            listState.scrollToItem(separator)
+            val viewport = listState.layoutInfo.viewportSize.height
+            listState.scrollBy((viewport - SEPARATOR_TOP_MARGIN_PX).coerceAtLeast(0).toFloat())
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(

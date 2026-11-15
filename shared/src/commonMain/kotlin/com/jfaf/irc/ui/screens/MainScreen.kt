@@ -414,7 +414,8 @@ private fun ConnectedStateView(
             ad = currentAd,
             mainViewModel = viewModel,
             newMessagesFromEnd = newMessagesFromEnd,
-            ownNick = viewModel.currentNickname
+            ownNick = viewModel.currentNickname,
+            activeTarget = activeTarget
         )
 
         AnimatedVisibility(

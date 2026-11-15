@@ -116,6 +116,33 @@ class DesktopLayoutTest {
     }
 
     @Test
+    fun alVolverAUnaPestanaLaListaSeColocaEnElPrimerMensajeSinLeer() = runSkikoComposeUiTest(size = Size(600f, 760f)) {
+        val vm = koin.get<MainViewModel>()
+        showApp(vm)
+        connectAndJoin(vm)
+        vm.joinChannel("#otro")
+        server.serverSays(":Tester!u@h JOIN :#otro")
+        waitUntil(timeoutMillis = 10_000) { vm.chatScreenState.activeTarget.value == "#otro" }
+        // El aviso de «conectado» llega con un debounce de 300 ms (tiempo real) y limpia el estado: se deja pasar
+        Thread.sleep(800)
+        waitForIdle()
+        vm.setActiveTarget("#test")
+        waitForIdle()
+        // Llegan muchos mensajes a la pestaña que no se mira
+        repeat(40) { server.serverSays(":Ana!u@h PRIVMSG #otro :mensaje $it") }
+        waitUntil(timeoutMillis = 10_000) { "#otro" in vm.chatScreenState.unreadTargets.value }
+        Thread.sleep(500)
+        waitForIdle()
+
+        vm.setActiveTarget("#otro")
+        waitForIdle()
+        awaitText("Nuevos mensajes", "Debe verse el separador de nuevos mensajes")
+        val separatorTop = onAllNodesWithText("Nuevos mensajes").fetchSemanticsNodes().first().boundsInRoot.top
+        assertTrue(separatorTop < 380f, "El separador debe quedar en la mitad de arriba (está en $separatorTop)")
+        assertTrue(count("mensaje 0") > 0, "El primer mensaje sin leer debe verse")
+    }
+
+    @Test
     fun ctrlTabCambiaDePestanaYCtrlWCierraLaActiva() = runSkikoComposeUiTest(size = Size(1200f, 760f)) {
         val vm = koin.get<MainViewModel>()
         showApp(vm)
