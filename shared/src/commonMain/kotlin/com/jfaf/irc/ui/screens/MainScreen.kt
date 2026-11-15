@@ -27,7 +27,11 @@ import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -59,6 +63,7 @@ import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.TargetNavigation
 import com.jfaf.irc.ui.platform.LocalPlatformUi
+import com.jfaf.irc.ui.common.openOnLeftSwipe
 import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
@@ -101,6 +106,11 @@ fun MainScreen(
     val chatTargets by viewModel.chatScreenState.chatTargets.collectAsState()
     val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
     val unreadPmCounts by viewModel.chatScreenState.unreadPmCounts.collectAsState()
+    val channelUsers by viewModel.chatScreenState.currentChannelUserList.collectAsState()
+    val topics by viewModel.chatScreenState.topics.collectAsState()
+    // Cabecera del canal (UI-14): número de usuarios y tema
+    val activeChannelUserCount = if (activeTarget?.startsWith("#") == true) channelUsers.size.takeIf { it > 0 } else null
+    val activeTopic = activeTarget?.let { topics[it.lowercase()] }
 
     // Atajos de teclado: Ctrl+Tab / Ctrl+Mayús+Tab cambian de pestaña y Ctrl+W cierra la activa (menos Servidor).
     val shortcuts = Modifier.chatShortcuts(
@@ -141,7 +151,9 @@ fun MainScreen(
                             onToggleUserList = { viewModel.toggleUserListVisibility() },
                             onIgnoreUserInPm = { nick -> viewModel.ignoreUser(nick) },
                             onAddFriendInPm = { nick -> settingsViewModel.addFriend(nick) },
-                            onWhoisClick = { nick -> viewModel.performWhois(nick) }
+                            onWhoisClick = { nick -> viewModel.performWhois(nick) },
+                            userCount = activeChannelUserCount,
+                            topic = activeTopic
                         )
                     }
                 },
@@ -206,10 +218,67 @@ fun MainScreen(
             drawerState = drawerState,
             drawerContent = { openDrawerContent { scope.launch { drawerState.close() } } }
         ) {
-            screenContent()
+            // Usuarios del canal: cajón por la derecha (UI-11)
+            EndUserListDrawer(viewModel = viewModel, enabled = connectionState) { screenContent() }
         }
     }
     } // BoxWithConstraints
+}
+
+/**
+ * Lista de usuarios como cajón por la derecha (UI-11), en vez de dividir la pantalla. Se abre con el botón de la barra
+ * (`showUserList`) o deslizando desde el borde derecho, y se cierra deslizando, tocando fuera o cambiando de pestaña.
+ * Material sólo trae el cajón por la izquierda: se invierte la dirección del layout y se devuelve a la normal dentro.
+ */
+@Composable
+private fun EndUserListDrawer(
+    viewModel: MainViewModel,
+    enabled: Boolean,
+    content: @Composable () -> Unit
+) {
+    val showUserList by viewModel.chatScreenState.showUserList.collectAsState()
+    val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
+    val isChannel = enabled && activeTarget?.startsWith("#") == true
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+
+    LaunchedEffect(showUserList && isChannel) {
+        if (showUserList && isChannel) drawerState.open() else drawerState.close()
+    }
+    // El cajón se abrió o cerró con un gesto: el estado de la lista sigue a lo que se ve
+    LaunchedEffect(drawerState.currentValue) {
+        val open = drawerState.currentValue == DrawerValue.Open
+        if (open != viewModel.chatScreenState.showUserList.value) viewModel.toggleUserListVisibility()
+    }
+
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            // Cerrado, este cajón no recoge arrastres: si lo hiciera, el de las pestañas (que lo envuelve) nunca vería los
+            // arrastres de izquierda a derecha. Se abre con `openOnLeftSwipe`; abierto, los gestos sirven para cerrarlo.
+            gesturesEnabled = isChannel && drawerState.currentValue != DrawerValue.Closed,
+            drawerContent = {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    ModalDrawerSheet(
+                        modifier = Modifier.width(USER_LIST_FIXED_WIDTH + 40.dp),
+                        drawerContainerColor = IRCTheme.drawerContainerOpaque
+                    ) {
+                        // Sólo se compone mientras el cajón está abierto o moviéndose
+                        if (drawerState.currentValue == DrawerValue.Open || drawerState.targetValue == DrawerValue.Open) {
+                            ChannelUserListView(mainViewModel = viewModel)
+                        }
+                    }
+                }
+            }
+        ) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Box(
+                    modifier = Modifier.openOnLeftSwipe(enabled = isChannel && !showUserList) {
+                        viewModel.toggleUserListVisibility()
+                    }
+                ) { content() }
+            }
+        }
+    }
 }
 
 @Composable
@@ -375,7 +444,6 @@ private fun ConnectedStateView(
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
     val currentAd by viewModel.currentAd.collectAsState()
-    val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
     val messages by viewModel.chatScreenState.uiMessages.collectAsState()
     val newMessagesFromEnd by viewModel.chatScreenState.newMessagesFromEnd.collectAsState()
     val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
@@ -384,8 +452,8 @@ private fun ConnectedStateView(
     val isWaitingForNetwork by viewModel.chatScreenState.isWaitingForNetwork.collectAsState()
 
     val currentTargetIsChannel = activeTarget?.startsWith("#") == true
-    // En la ventana ancha los usuarios van en un panel fijo de la derecha, sin depender del botón.
-    val shouldShowUserListComposite = (fixedUserList || showUserListState) && currentTargetIsChannel
+    // En la ventana ancha los usuarios van en un panel fijo de la derecha; si no, en un cajón por la derecha (EndUserListDrawer).
+    val shouldShowUserListComposite = fixedUserList && currentTargetIsChannel
 
     Column(modifier = Modifier.fillMaxSize()) {
     if (isReconnecting) {
@@ -409,7 +477,7 @@ private fun ConnectedStateView(
         MessagesList(
             messages = messages,
             onMediaClick = onMediaClick,
-            modifier = Modifier.weight(if (shouldShowUserListComposite && !fixedUserList) 0.6f else 1f),
+            modifier = Modifier.weight(1f),
             showMediaPreviews = showMediaPreviews,
             ad = currentAd,
             mainViewModel = viewModel,
@@ -420,7 +488,7 @@ private fun ConnectedStateView(
 
         AnimatedVisibility(
             visible = shouldShowUserListComposite,
-            modifier = if (fixedUserList) Modifier.width(USER_LIST_FIXED_WIDTH) else Modifier.weight(0.4f)
+            modifier = Modifier.width(USER_LIST_FIXED_WIDTH)
         ) {
             Row {
                 VerticalDivider(

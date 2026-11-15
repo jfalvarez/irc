@@ -6,6 +6,11 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SkikoComposeUiTest
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -140,6 +145,38 @@ class DesktopLayoutTest {
         val separatorTop = onAllNodesWithText("Nuevos mensajes").fetchSemanticsNodes().first().boundsInRoot.top
         assertTrue(separatorTop < 380f, "El separador debe quedar en la mitad de arriba (está en $separatorTop)")
         assertTrue(count("mensaje 0") > 0, "El primer mensaje sin leer debe verse")
+    }
+
+    @Test
+    fun ventanaEstrechaAbreLosUsuariosEnUnCajonDerechoAgrupadosPorModo() = runSkikoComposeUiTest(size = Size(600f, 760f)) {
+        val vm = koin.get<MainViewModel>()
+        showApp(vm)
+        connectAndJoin(vm)
+        // El aviso de «conectado» llega con un debounce de 300 ms (tiempo real) y limpia los usuarios: se deja pasar antes de enviar la lista
+        Thread.sleep(800)
+        waitForIdle()
+        server.serverSays(":srv 353 Tester = #test :Tester @Alice +Bob carl")
+        server.serverSays(":srv 332 Tester #test :Tema de prueba")
+
+        // Cabecera del canal: número de usuarios y tema
+        awaitText("4 usuarios", "La cabecera debe decir cuántos usuarios hay")
+        awaitText("Tema de prueba", "La cabecera debe mostrar el tema")
+        assertEquals(0, count("Operadores"), "Con el cajón cerrado no se pinta la lista")
+
+        // Los clics de ratón no llegan en este banco de pruebas; la acción semántica ejecuta el mismo onClick
+        onNodeWithContentDescription("Mostrar/ocultar lista de usuarios").performSemanticsAction(SemanticsActions.OnClick)
+        awaitText("Operadores — 1", "Debe verse el grupo de operadores")
+        assertTrue(vm.chatScreenState.showUserList.value)
+        assertEquals(1, count("Con voz — 1"))
+        assertEquals(1, count("Usuarios — 2"))
+        assertEquals(1, count("Alice"), "El nick va sin el prefijo de modo")
+
+        // Pulsar la cabecera abre el tema completo
+        onNodeWithContentDescription("Mostrar/ocultar lista de usuarios").performSemanticsAction(SemanticsActions.OnClick)
+        runCatching { waitUntil(timeoutMillis = 5_000) { count("Operadores") == 0 } }
+        assertEquals(0, count("Operadores"), "Al cerrar el cajón se deja de pintar la lista")
+        onNode(hasText("Tema de prueba", substring = true) and hasClickAction()).performSemanticsAction(SemanticsActions.OnClick)
+        awaitText("Tema de #test", "Pulsar la cabecera abre el diálogo del tema")
     }
 
     @Test

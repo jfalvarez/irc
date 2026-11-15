@@ -24,6 +24,9 @@ data class ChatUiSnapshot(
     val usersInChannel: Map<String, List<String>> = emptyMap()
 )
 
+/** El tema de un canal: [topic] vacío = sin tema. */
+data class TopicChange(val channel: String, val topic: String)
+
 data class ChatUpdateResult(
     val newCurrentNickname: String,
     val newActiveTarget: String?,
@@ -34,7 +37,8 @@ data class ChatUpdateResult(
     val uiMessageToAdd: UiChatMessage? = null,
     val targetForUiMessage: String? = null,
     val privateMessageEventNick: String? = null,
-    val ownNickChangedTo: String? = null
+    val ownNickChangedTo: String? = null,
+    val topicChange: TopicChange? = null
 )
 
 data class ChannelEventResult(
@@ -156,6 +160,16 @@ class IrcMessageHandler(
 
         val command = parsedMessage.command
 
+        // El tema del canal: al entrar (332 / 331 si no hay) y cuando alguien lo cambia (TOPIC). Además se sigue
+        // mostrando el mensaje de siempre; aquí sólo se guarda para la cabecera del canal.
+        val topicChange: TopicChange? = when (command) {
+            "332", "331" -> parsedMessage.params.getOrNull(1)?.takeIf { it.startsWith("#") }
+                ?.let { TopicChange(it, if (command == "332") parsedMessage.trailing.orEmpty() else "") }
+            "TOPIC" -> parsedMessage.params.firstOrNull()?.takeIf { it.startsWith("#") }
+                ?.let { TopicChange(it, parsedMessage.trailing.orEmpty()) }
+            else -> null
+        }
+
         when (command) {
             "PRIVMSG" -> {
                 val result = handlePrivmsgInternal(
@@ -262,7 +276,8 @@ class IrcMessageHandler(
             uiMessageToAdd = uiMessageToAdd,
             targetForUiMessage = targetForUiMessage,
             privateMessageEventNick = privateMessageEventNick,
-            ownNickChangedTo = ownNickChangedTo
+            ownNickChangedTo = ownNickChangedTo,
+            topicChange = topicChange
         )
     }
 

@@ -88,6 +88,15 @@
     <string name="drawer_user_connected_as">Conectado como: %1$s</string>    <string name="cd_channel">Canal</string>
     <string name="cd_server">Servidor</string>
     <string name="cd_close_target">Cerrar %1$s</string>
+    <string name="chat_users_one">%1$d usuario</string>
+    <string name="chat_users_many">%1$d usuarios</string>
+    <string name="chat_header_with_topic">%1$s · %2$s</string>
+    <string name="topic_dialog_title">Tema de %1$s</string>
+    <string name="topic_dialog_empty">Este canal no tiene tema.</string>
+    <string name="topic_dialog_close">Cerrar</string>
+    <string name="users_group_operators">Operadores — %1$d</string>
+    <string name="users_group_voiced">Con voz — %1$d</string>
+    <string name="users_group_regular">Usuarios — %1$d</string>
     <string name="cd_unread_mentions">%1$d menciones sin leer</string>
     <string name="chat_new_messages">Nuevos mensajes</string>
     <string name="chat_date_today">Hoy</string>

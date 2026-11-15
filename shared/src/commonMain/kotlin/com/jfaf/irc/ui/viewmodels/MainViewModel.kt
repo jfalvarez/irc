@@ -72,6 +72,8 @@ data class ChatScreenState(
     val unreadMentionCounts: StateFlow<Map<String, Int>>,
     /** Mensajes visibles de la pestaña activa, contados desde el final, que llegaron sin leer (separador «Nuevos mensajes»); 0 = ninguno. */
     val newMessagesFromEnd: StateFlow<Int>,
+    /** Tema de cada canal (clave: nombre del canal en minúsculas). */
+    val topics: StateFlow<Map<String, String>>,
     val uiMessages: StateFlow<List<UiChatMessage>>,
     /** true si está conectado O reconectando (la UI mantiene el chat visible mientras reconecta). */
     val connectionState: StateFlow<Boolean>,
@@ -265,6 +267,7 @@ class MainViewModel(
         unreadPmCounts = chatStateManager.unreadPmCounts,
         unreadMentionCounts = chatStateManager.unreadMentionCounts,
         newMessagesFromEnd = newMessagesFromEndFlow,
+        topics = chatStateManager.topics,
         uiMessages = combinedUiMessagesFlow,
         connectionState = uiConnectionState,
         isReconnecting = ircConnection.isReconnecting,

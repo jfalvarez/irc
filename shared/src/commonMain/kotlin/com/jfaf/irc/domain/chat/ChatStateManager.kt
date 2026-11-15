@@ -48,6 +48,11 @@ class ChatStateManager(
     /** Menciones de tu nick sin leer por canal (UI-5). Como [unreadPmCounts], sólo hay entrada mientras el canal está sin leer. */
     val unreadMentionCounts: StateFlow<Map<String, Int>> = _unreadMentionCounts.asStateFlow()
 
+    private val _topics = MutableStateFlow<Map<String, String>>(emptyMap())
+
+    /** Tema de cada canal (UI-14), con el nombre del canal en minúsculas como clave; sin entrada = sin tema. */
+    val topics: StateFlow<Map<String, String>> = _topics.asStateFlow()
+
     private val _newMessageAnchors = MutableStateFlow<Map<String, Int>>(emptyMap())
 
     /**
@@ -321,6 +326,7 @@ class ChatStateManager(
         }
         updateUnread { emptySet() }
         _newMessageAnchors.value = emptyMap()
+        _topics.value = emptyMap()
         _usersInChannel.value = emptyMap()
         _allMessages.update { it + (SERVER_TARGET_ID to emptyList()) }
         _showUserList.value = false
@@ -332,6 +338,7 @@ class ChatStateManager(
         _chatTargets.update { ensureServerTargetIsFirstLocal(it + SERVER_TARGET_ID) }
         updateUnread { emptySet() }
         _newMessageAnchors.value = emptyMap()
+        _topics.value = emptyMap()
         _usersInChannel.value = emptyMap()
         _allMessages.update { current ->
             if (current.containsKey(SERVER_TARGET_ID)) current else current + (SERVER_TARGET_ID to emptyList())
@@ -372,6 +379,10 @@ class ChatStateManager(
         ) {
             val body = MessageGrouping.speech(incoming)?.body?.text ?: incoming.fullText
             if (Mentions.isMention(body, result.newCurrentNickname ?: oldNick)) countUnreadMention(incomingTarget)
+        }
+        result.topicChange?.let { change ->
+            val key = change.channel.lowercase()
+            _topics.update { if (change.topic.isBlank()) it - key else it + (key to change.topic) }
         }
         result.newUsersInChannel?.let { newMap ->
             _usersInChannel.value = newMap.mapValues { (_, userList) -> getSortedUserList(userList) }

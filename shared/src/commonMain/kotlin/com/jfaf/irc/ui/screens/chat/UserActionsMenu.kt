@@ -14,12 +14,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.stringResource
+import com.jfaf.irc.domain.chat.NickColors
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 
-/** Quita el prefijo de modo de canal (@, +, %, &, ~) de un nick. */
-fun cleanNick(nick: String): String =
-    if (nick.isNotEmpty() && nick[0] in "@+%&~") nick.substring(1) else nick
+/** Quita los prefijos de modo de canal (@, +, %, &, ~) de un nick. */
+fun cleanNick(nick: String): String = NickColors.normalize(nick)
 
 /**
  * Menú contextual de acciones sobre un usuario (mensaje privado, ignorar, whois, denunciar).

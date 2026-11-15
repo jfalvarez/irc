@@ -12,10 +12,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Forum
@@ -122,7 +122,7 @@ private fun DrawerListItem(
                 if (onCloseTargetAction != null) {
                     IconButton(onClick = { onCloseTargetAction(target) }) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ExitToApp,
+                            Icons.Filled.Close,
                             stringResource(Res.string.cd_close_target, target),
                             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
@@ -189,7 +189,7 @@ fun AppDrawerContent(
                     item {
                         val isSelected = target == activeTarget
                         NavigationDrawerItem(
-                            icon = { Icon(Icons.Filled.Menu, stringResource(Res.string.cd_server), tint = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)) },
+                            icon = { Icon(Icons.Outlined.Dns, stringResource(Res.string.cd_server), tint = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)) },
                             label = {
                                 Text(
                                     target,

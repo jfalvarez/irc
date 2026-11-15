@@ -3,6 +3,12 @@ package com.jfaf.irc.ui.screens.chat
 import com.jfaf.irc.resources.Res
 import com.jfaf.irc.resources.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.style.TextOverflow
+import com.jfaf.irc.domain.chat.MircColorParser
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
@@ -48,12 +54,17 @@ fun ChatTopAppBar(
     onToggleUserList: () -> Unit,
     onIgnoreUserInPm: (nick: String) -> Unit,
     onAddFriendInPm: (nick: String) -> Unit,
-    onWhoisClick: (nick: String) -> Unit
+    onWhoisClick: (nick: String) -> Unit,
+    /** Usuarios del canal activo; null si no se sabe (todavía no llegó la lista). */
+    userCount: Int? = null,
+    /** Tema del canal activo; null o vacío = sin tema. */
+    topic: String? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showJoinChannelDialog by remember { mutableStateOf(false) }
     var showOpenPmDialog by remember { mutableStateOf(false) }
     var reportingNick by remember { mutableStateOf<String?>(null) }
+    var showTopic by remember { mutableStateOf(false) }
 
     val isChannel = activeTarget?.startsWith("#") == true
     // Exclude SERVER_TARGET_ID (assumed to be "Servidor") from being a PM for the ignore option
@@ -63,7 +74,31 @@ fun ChatTopAppBar(
                activeTarget != "Servidor"
 
     TopAppBar(
-        title = { Text(activeTarget ?: stringResource(Res.string.app_title_default)) },
+        title = {
+            val usersText = if (isChannel && userCount != null) {
+                if (userCount == 1) stringResource(Res.string.chat_users_one, userCount)
+                else stringResource(Res.string.chat_users_many, userCount)
+            } else {
+                null
+            }
+            // Los códigos de color de mIRC no se pintan en la cabecera: sólo el texto, en una línea
+            val topicLine = topic?.let { MircColorParser.parse(it).text.replace(Regex("""\s+"""), " ").trim() }?.takeIf { it.isNotEmpty() }
+            Column(modifier = if (isChannel) Modifier.clickable { showTopic = true } else Modifier) {
+                Text(
+                    text = activeTarget ?: stringResource(Res.string.app_title_default),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (usersText != null) {
+                    Text(
+                        text = if (topicLine != null) stringResource(Res.string.chat_header_with_topic, usersText, topicLine) else usersText,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        },
         navigationIcon = {
             if (showNavigationIcon) {
                 IconButton(onClick = onNavigationIconClick) {
@@ -155,6 +190,10 @@ fun ChatTopAppBar(
         )
     )
 
+    if (showTopic && isChannel && activeTarget != null) {
+        TopicDialog(channel = activeTarget, topic = topic, onDismiss = { showTopic = false })
+    }
+
     if (showJoinChannelDialog) {
         InputDialog(
             title = stringResource(Res.string.dialog_title_join_channel),
@@ -186,4 +225,24 @@ fun ChatTopAppBar(
             }
         )
     }
+}
+
+/** El tema del canal completo (se abre al pulsar la cabecera), con su formato mIRC. */
+@Composable
+private fun TopicDialog(channel: String, topic: String?, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.topic_dialog_title, channel)) },
+        text = {
+            if (topic.isNullOrBlank()) {
+                Text(stringResource(Res.string.topic_dialog_empty))
+            } else {
+                Text(MircColorParser.parse(topic))
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.topic_dialog_close)) }
+        },
+        containerColor = IRCTheme.dialogContainerOpaque
+    )
 }

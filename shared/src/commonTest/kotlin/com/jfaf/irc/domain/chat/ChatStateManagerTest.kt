@@ -233,4 +233,55 @@ class ChatStateManagerTest {
         state.resetStateForDisconnection()
         assertTrue(state.unreadPmCounts.value.isEmpty())
     }
+
+    // --- Tema del canal (UI-14)
+    @Test
+    fun temaAlEntrar_seGuarda() {
+        receive(":srv 332 Yo #Chat :Bienvenidos al canal")
+        assertEquals("Bienvenidos al canal", state.topics.value["#chat"])
+    }
+
+    @Test
+    fun cambioDeTema_loSustituye() {
+        receive(":srv 332 Yo #chat :uno")
+        receive(":Ana!u@h TOPIC #chat :dos")
+        assertEquals("dos", state.topics.value["#chat"])
+    }
+
+    @Test
+    fun sinTema_loBorra() {
+        receive(":srv 332 Yo #chat :uno")
+        receive(":srv 331 Yo #chat :No topic is set")
+        assertTrue(state.topics.value.isEmpty())
+    }
+
+    @Test
+    fun temaVacioPorTopic_loBorra() {
+        receive(":srv 332 Yo #chat :uno")
+        receive(":Ana!u@h TOPIC #chat :")
+        assertTrue(state.topics.value.isEmpty())
+    }
+
+    @Test
+    fun noSonTemasLosNumericosDeOtrosCanalesNiDeUnPrivado() {
+        receive(":srv 332 Yo Ana :algo")
+        assertTrue(state.topics.value.isEmpty())
+    }
+
+    @Test
+    fun alReconectarSeLimpianLosTemas() {
+        receive(":srv 332 Yo #chat :uno")
+        state.resetStateForConnection()
+        assertTrue(state.topics.value.isEmpty())
+        receive(":srv 332 Yo #chat :uno")
+        state.resetStateForDisconnection()
+        assertTrue(state.topics.value.isEmpty())
+    }
+
+    @Test
+    fun elMensajeDelTemaSigueMostrandose() {
+        // El 332 ya se mostraba como mensaje del servidor; guardar el tema no debe quitarlo
+        receive(":srv 332 Yo #chat :uno")
+        assertTrue(state.allMessages.value.values.any { list -> list.any { it.fullText.contains("uno") } })
+    }
 }
