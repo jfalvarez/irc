@@ -8,6 +8,9 @@ enum class MediaTypeEnum {
     NONE
 }
 
+/** Entrada, salida o `QUIT` de un usuario: los mensajes de este tipo se pueden agrupar en una sola línea. */
+enum class PresenceEvent { JOIN, PART, QUIT }
+
 data class UiChatMessage(
     val fullText: String,
     val annotatedString: AnnotatedString? = null,
@@ -15,7 +18,11 @@ data class UiChatMessage(
     val sender: String? = null,
     val isOwnMessage: Boolean = false,
     val mediaUrl: String? = null, // Replaced imageUrl
-    val mediaType: MediaTypeEnum = MediaTypeEnum.NONE // Added mediaType
+    val mediaType: MediaTypeEnum = MediaTypeEnum.NONE, // Added mediaType
+    /** Cuándo llegó (milisegundos de época); null si no se sabe (historial anterior a que se guardara). Sólo sirve a los separadores de fecha; no se muestra en cada mensaje. */
+    val timestamp: Long? = null,
+    /** Si es una entrada, salida o QUIT: permite agruparlos (`JOIN_PART_QUIT`). */
+    val presence: PresenceEvent? = null
 )
 
 enum class UiMessageType {

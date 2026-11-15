@@ -4,6 +4,7 @@ import com.jfaf.irc.domain.config.AppConfig
 import com.jfaf.irc.domain.text.Msg
 import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
+import com.jfaf.irc.domain.chat.model.PresenceEvent
 import com.jfaf.irc.domain.chat.model.UiChatMessage
 import com.jfaf.irc.domain.chat.model.UiMessageType
 import com.jfaf.irc.log.Log
@@ -451,7 +452,7 @@ class IrcMessageHandler(
             }
         }
         val messageText = strings.get(Msg.EVT_JOIN, userJoining, channel)
-        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.JOIN_PART_QUIT, sender = userJoining)
+        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.JOIN_PART_QUIT, sender = userJoining, presence = PresenceEvent.JOIN)
         return ChannelEventResult(channel, newUiMsg, newActiveTarget, updatedChatTargets, updatedUnreadTargets, mutableUsersMap.toMap())
     }
 
@@ -491,7 +492,7 @@ class IrcMessageHandler(
         val reasonMsgContent = reasonPart?.let { if (it.startsWith(":")) it.substring(1) else it } ?: ""
         val reasonMsg = if (reasonMsgContent.isNotBlank()) " ($reasonMsgContent)" else ""
         val messageText = strings.get(Msg.EVT_PART, userParting, channelName, reasonMsg)
-        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.JOIN_PART_QUIT, sender = userParting)
+        val newUiMsg = UiChatMessage(messageText, annotatedString = AnnotatedString(messageText), type = UiMessageType.JOIN_PART_QUIT, sender = userParting, presence = PresenceEvent.PART)
 
         if (userParting.equals(currentNickname, ignoreCase = true)) {
             if (currentChatTargets.any { it.equals(channelName, ignoreCase = true) }) {
@@ -517,7 +518,7 @@ class IrcMessageHandler(
         val trailing = parsedMessage.trailing
         val reason = trailing?.let { " ($it)" } ?: ""
         val quitMessageText = strings.get(Msg.EVT_QUIT, userQuitting ?: strings.get(Msg.EVT_SOMEONE), reason)
-        val quitMessage = UiChatMessage(quitMessageText, annotatedString = AnnotatedString(quitMessageText), type = UiMessageType.JOIN_PART_QUIT, sender = userQuitting)
+        val quitMessage = UiChatMessage(quitMessageText, annotatedString = AnnotatedString(quitMessageText), type = UiMessageType.JOIN_PART_QUIT, sender = userQuitting, presence = PresenceEvent.QUIT)
         
         val mutableUsersMap = currentUsersInChannel.toMutableMap()
         if (userQuitting != null) {

@@ -21,5 +21,7 @@ data class MessageEntity(
     val sender: String?,
     val isOwnMessage: Boolean,
     val mediaUrl: String?,
-    val mediaType: String
+    val mediaType: String,
+    val timestamp: Long? = null,
+    val presence: String? = null
 )

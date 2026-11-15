@@ -18,8 +18,8 @@ object NickPalette {
     )
 
     val light: List<Color> = listOf(
-        Color(0xFFC62828), Color(0xFFBF360C), Color(0xFF7A5F00), Color(0xFF2B7230),
-        Color(0xFF00796B), Color(0xFF00697C), Color(0xFF1565C0), Color(0xFF3949AB),
+        Color(0xFFB71C1C), Color(0xFFB3320B), Color(0xFF7A5F00), Color(0xFF2A6F2F),
+        Color(0xFF006F62), Color(0xFF00697C), Color(0xFF1460B8), Color(0xFF3949AB),
         Color(0xFF6A1B9A), Color(0xFFAD1457), Color(0xFF9C27B0), Color(0xFF5D4037)
     )
 
@@ -46,3 +46,17 @@ val IRCTheme.ownNickColor: Color
     @Composable
     @ReadOnlyComposable
     get() = if (LocalDarkTheme.current) OwnNickDark else PurpleStart
+
+/** Borde de la línea que menciona tu nick (UI-5). */
+val IRCTheme.mentionAccent: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (LocalDarkTheme.current) MentionAccentDark else MentionAccentLight
+
+/** Fondo tenue de la línea que menciona tu nick. */
+val IRCTheme.mentionBackground: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = mentionAccent.copy(alpha = MENTION_BACKGROUND_ALPHA)
+
+const val MENTION_BACKGROUND_ALPHA = 0.14f

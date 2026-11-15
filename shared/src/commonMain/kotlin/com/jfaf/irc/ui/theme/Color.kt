@@ -19,6 +19,10 @@ val LinkBlue = Color(0xFF8AB4FF)                 // enlaces (≈ 8:1 sobre el fo
 // Tu propio nick en el modo oscuro (UI-8): violeta claro de la marca, ≈ 7:1 sobre el fondo
 val OwnNickDark = Color(0xFFC4A5FF)
 
+// Acento de las menciones de tu nick (UI-5): ámbar, más oscuro en el modo claro para que el borde se vea
+val MentionAccentDark = Color(0xFFFFB300)
+val MentionAccentLight = Color(0xFFB26A00)
+
 // Neutros del modo claro (UI-2)
 val LightBackground = Color(0xFFF6F6F8)
 val LightSurface = Color(0xFFFFFFFF)

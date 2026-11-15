@@ -88,6 +88,36 @@
     <string name="drawer_user_connected_as">Conectado como: %1$s</string>    <string name="cd_channel">Canal</string>
     <string name="cd_server">Servidor</string>
     <string name="cd_close_target">Cerrar %1$s</string>
+    <string name="cd_unread_mentions">%1$d menciones sin leer</string>
+    <string name="chat_new_messages">Nuevos mensajes</string>
+    <string name="chat_date_today">Hoy</string>
+    <string name="chat_date_yesterday">Ayer</string>
+    <string name="chat_date_format">%1$d de %2$s</string>
+    <string name="chat_date_format_year">%1$d de %2$s de %3$d</string>
+    <string-array name="chat_months">
+        <item>enero</item>
+        <item>febrero</item>
+        <item>marzo</item>
+        <item>abril</item>
+        <item>mayo</item>
+        <item>junio</item>
+        <item>julio</item>
+        <item>agosto</item>
+        <item>septiembre</item>
+        <item>octubre</item>
+        <item>noviembre</item>
+        <item>diciembre</item>
+    </string-array>
+    <string name="chat_presence_names_two">%1$s y %2$s</string>
+    <string name="chat_presence_names_more">%1$s, %2$s y %3$d más</string>
+    <string name="chat_presence_joined_one">%1$s entró</string>
+    <string name="chat_presence_joined_many">%1$s entraron</string>
+    <string name="chat_presence_left_one">%1$s salió</string>
+    <string name="chat_presence_left_many">%1$s salieron</string>
+    <string name="chat_presence_both">%1$s; %2$s</string>
+    <string name="cd_presence_expand">Mostrar los avisos</string>
+    <string name="cd_presence_collapse">Ocultar los avisos</string>
+    <string name="cd_jump_to_end">Ir al último mensaje</string>
     <string name="cd_unread_messages">%1$d mensajes sin leer</string>
     <string name="cd_unread_private_messages">Hay mensajes privados sin leer</string>
     <string name="cd_insert_emoji">Insertar emoticono</string>

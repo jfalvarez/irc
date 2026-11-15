@@ -11,8 +11,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
+import kotlin.time.Clock
 
-class ChatStateManager {
+/**
+ * @param clock hora de llegada de los mensajes (milisegundos de época); se inyecta para los tests.
+ */
+class ChatStateManager(
+    private val clock: () -> Long = { Clock.System.now().toEpochMilliseconds() }
+) {
 
     companion object {
         const val SERVER_TARGET_ID = "Servidor" // ID constante para el target del servidor
@@ -36,6 +42,20 @@ class ChatStateManager {
      * Sólo en memoria: no se persiste.
      */
     val unreadPmCounts: StateFlow<Map<String, Int>> = _unreadPmCounts.asStateFlow()
+
+    private val _unreadMentionCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
+
+    /** Menciones de tu nick sin leer por canal (UI-5). Como [unreadPmCounts], sólo hay entrada mientras el canal está sin leer. */
+    val unreadMentionCounts: StateFlow<Map<String, Int>> = _unreadMentionCounts.asStateFlow()
+
+    private val _newMessageAnchors = MutableStateFlow<Map<String, Int>>(emptyMap())
+
+    /**
+     * Separador de «nuevos mensajes» (UI-7): por pestaña, cuántos mensajes (contados desde el final) hay desde el primero
+     * que llegó sin leer. Se crea con ese primer mensaje, crece con los siguientes mientras se mira la pestaña y se borra
+     * al salir de ella. Sólo en memoria.
+     */
+    val newMessageAnchors: StateFlow<Map<String, Int>> = _newMessageAnchors.asStateFlow()
 
     private val _usersInChannel = MutableStateFlow<Map<String, List<String>>>(emptyMap())
     val usersInChannel: StateFlow<Map<String, List<String>>> = _usersInChannel.asStateFlow()
@@ -61,6 +81,36 @@ class ChatStateManager {
         _unreadPmCounts.update { counts ->
             if (counts.keys.all { it in updated }) counts else counts.filterKeys { it in updated }
         }
+        _unreadMentionCounts.update { counts ->
+            if (counts.keys.all { it in updated }) counts else counts.filterKeys { it in updated }
+        }
+    }
+
+    private fun countUnreadMention(target: String) {
+        _unreadMentionCounts.update { counts -> counts + (target to ((counts[target] ?: 0) + 1)) }
+    }
+
+    /** Único punto que cambia la pestaña activa: al salir de una se borra su separador de «nuevos mensajes». */
+    private fun switchActive(to: String?) {
+        val previous = _activeTarget.value
+        _activeTarget.value = to
+        if (previous != null && !previous.equals(to, ignoreCase = true)) clearNewMessageAnchor(previous)
+    }
+
+    private fun clearNewMessageAnchor(target: String) {
+        _newMessageAnchors.update { if (target in it) it - target else it }
+    }
+
+    /** Un mensaje (o [count]) más al final de [target]: hace crecer su separador o lo crea si es el primero sin leer. */
+    private fun bumpNewMessageAnchor(target: String, count: Int = 1) {
+        _newMessageAnchors.update { anchors ->
+            val current = anchors[target]
+            when {
+                current != null -> anchors + (target to current + count)
+                target in _unreadTargets.value && !target.equals(_activeTarget.value, ignoreCase = true) -> anchors + (target to count)
+                else -> anchors
+            }
+        }
     }
 
     private fun countUnreadPm(target: String) {
@@ -80,10 +130,12 @@ class ChatStateManager {
     }
 
     private fun appendMessageToTargetInternal(target: String, message: UiChatMessage) {
+        val stamped = if (message.timestamp == null) message.copy(timestamp = clock()) else message
         _allMessages.update { currentAllMessages ->
             val currentMessagesForTarget = currentAllMessages[target] ?: emptyList()
-            currentAllMessages + (target to (currentMessagesForTarget + message).takeLast(MAX_MESSAGES_PER_TARGET))
+            currentAllMessages + (target to (currentMessagesForTarget + stamped).takeLast(MAX_MESSAGES_PER_TARGET))
         }
+        bumpNewMessageAnchor(target)
     }
 
     // --- Funciones para añadir mensajes ---
@@ -108,6 +160,7 @@ class ChatStateManager {
     }
 
     fun clearMessagesForTarget(target: String) {
+        clearNewMessageAnchor(target)
         _allMessages.update { currentAllMessages ->
             if (currentAllMessages.containsKey(target)) {
                 Log.d("ChatStateManager", "Messages cleared for target: $target")
@@ -127,12 +180,12 @@ class ChatStateManager {
 
     fun setActiveTarget(targetName: String, currentOwnNickname: String) {
         if (_chatTargets.value.any { it.equals(targetName, ignoreCase = true) } || targetName == SERVER_TARGET_ID) {
-            _activeTarget.value = targetName
+            switchActive(targetName)
             updateUnread { it - targetName } // Mark as read
             Log.d("ChatStateManager", "Target '$targetName' activated and marked as read.")
         } else {
             Log.w("ChatStateManager", "Attempt to activate non-existent target: $targetName. Current targets: ${_chatTargets.value.joinToString()}")
-            _activeTarget.value = _chatTargets.value.firstOrNull() ?: SERVER_TARGET_ID
+            switchActive(_chatTargets.value.firstOrNull() ?: SERVER_TARGET_ID)
         }
         if (_showUserList.value) { // If the list is currently shown, hide it
             _showUserList.value = false
@@ -155,7 +208,7 @@ class ChatStateManager {
         _allMessages.update { currentAll -> // Ensure message list exists
             if (currentAll[nick] == null) currentAll + (nick to emptyList()) else currentAll
         }
-        _activeTarget.value = nick
+        switchActive(nick)
         updateUnread { it - nick }
         Log.d("ChatStateManager", "PM Target opened/activated: '$nick'")
         if (_showUserList.value) { // If the list is currently shown, hide it
@@ -212,10 +265,11 @@ class ChatStateManager {
             updateUnread { it - targetName }
             _usersInChannel.update { it - targetName }
             _allMessages.update { it - targetName }
+            clearNewMessageAnchor(targetName)
 
             if (currentActiveTargetFromVM?.equals(targetName, ignoreCase = true) == true) {
                 val nextTarget = _chatTargets.value.firstOrNull() ?: SERVER_TARGET_ID
-                _activeTarget.value = nextTarget
+                switchActive(nextTarget)
                 newActiveTargetToSuggest = nextTarget
                 updateUnread { it - nextTarget } // Mark new active as read
                  if (_showUserList.value) { // Also hide user list if active target changed due to closing current PM
@@ -252,7 +306,7 @@ class ChatStateManager {
         val restoredTargets = ensureServerTargetIsFirstLocal(listOf(SERVER_TARGET_ID) + tabs)
         _chatTargets.value = restoredTargets
         _allMessages.value = restoredTargets.associateWith { messages[it].orEmpty().takeLast(MAX_MESSAGES_PER_TARGET) }
-        _activeTarget.value = active?.takeIf { a -> restoredTargets.any { it == a } } ?: SERVER_TARGET_ID
+        switchActive(active?.takeIf { a -> restoredTargets.any { it == a } } ?: SERVER_TARGET_ID)
         Log.d("ChatStateManager", "Restored ${restoredTargets.size - 1} tabs from history.")
     }
 
@@ -263,9 +317,10 @@ class ChatStateManager {
     fun resetStateForConnection() {
         _chatTargets.update { ensureServerTargetIsFirstLocal(it + SERVER_TARGET_ID) }
         if (_chatTargets.value.none { it == _activeTarget.value }) {
-            _activeTarget.value = SERVER_TARGET_ID
+            switchActive(SERVER_TARGET_ID)
         }
         updateUnread { emptySet() }
+        _newMessageAnchors.value = emptyMap()
         _usersInChannel.value = emptyMap()
         _allMessages.update { it + (SERVER_TARGET_ID to emptyList()) }
         _showUserList.value = false
@@ -276,6 +331,7 @@ class ChatStateManager {
     fun resetStateForDisconnection() {
         _chatTargets.update { ensureServerTargetIsFirstLocal(it + SERVER_TARGET_ID) }
         updateUnread { emptySet() }
+        _newMessageAnchors.value = emptyMap()
         _usersInChannel.value = emptyMap()
         _allMessages.update { current ->
             if (current.containsKey(SERVER_TARGET_ID)) current else current + (SERVER_TARGET_ID to emptyList())
@@ -294,7 +350,7 @@ class ChatStateManager {
             }
         }
         result.newActiveTarget?.let { 
-            _activeTarget.value = it 
+            switchActive(it)
             if (oldActiveTarget != it && _showUserList.value) { // If active target actually changed AND list was shown
                  _showUserList.value = false
                  Log.d("ChatStateManager", "User list hidden due to active target change from handler result.")
@@ -310,6 +366,13 @@ class ChatStateManager {
         ) {
             countUnreadPm(incomingTarget)
         }
+        // Una mención de tu nick en un canal sin leer suma a su contador (UI-5).
+        if (incoming?.type == UiMessageType.CHANNEL_MSG_RECEIVED && incomingTarget != null &&
+            incomingTarget in _unreadTargets.value
+        ) {
+            val body = MessageGrouping.speech(incoming)?.body?.text ?: incoming.fullText
+            if (Mentions.isMention(body, result.newCurrentNickname ?: oldNick)) countUnreadMention(incomingTarget)
+        }
         result.newUsersInChannel?.let { newMap ->
             _usersInChannel.value = newMap.mapValues { (_, userList) -> getSortedUserList(userList) }
         }
@@ -320,8 +383,18 @@ class ChatStateManager {
         }
 
         if (result.newAllMessages != null) {
-            _allMessages.value = result.newAllMessages.mapValues { entry -> 
-                entry.value.takeLast(MAX_MESSAGES_PER_TARGET) 
+            // Lo que sobra al final respecto a lo anterior es nuevo: se le pone la hora y crece el separador de «nuevos»
+            val previous = _allMessages.value
+            val now = clock()
+            _allMessages.value = result.newAllMessages.mapValues { (target, list) ->
+                val oldSize = previous[target]?.size ?: 0
+                list.mapIndexed { index, message ->
+                    if (index >= oldSize && message.timestamp == null) message.copy(timestamp = now) else message
+                }.takeLast(MAX_MESSAGES_PER_TARGET)
+            }
+            result.newAllMessages.forEach { (target, list) ->
+                val added = list.size - (previous[target]?.size ?: 0)
+                if (added > 0) bumpNewMessageAnchor(target, added)
             }
             Log.d("ChatStateManager", "Messages updated from newAllMessages in handler result.")
         } else if (result.uiMessageToAdd != null && result.targetForUiMessage != null) {

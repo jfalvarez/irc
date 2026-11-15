@@ -11,6 +11,7 @@ sqlite = "2.7.1"
 ksp = "2.3.13"
 activityCompose = "1.8.0"
 kotlinxCoroutines = "1.11.0"
+kotlinxDatetime = "0.7.1"
 kermit = "2.2.0"
 coil = "3.6.3"
 composeMediaPlayer = "0.11.4"
@@ -51,6 +52,7 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinxDatetime" } # día local de los separadores de fecha del chat
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "kotlinxCoroutines" } # Dispatchers.Main en escritorio
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }

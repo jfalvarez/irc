@@ -52,6 +52,7 @@ kotlin {
         commonMain.dependencies {
             api(libs.kermit)
             api(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.datetime)
             api(libs.androidx.datastore.preferences.core)
             // K9: el modelo de chat usa AnnotatedString/Color de Compose (multiplataforma).
             api(libs.compose.mp.runtime)

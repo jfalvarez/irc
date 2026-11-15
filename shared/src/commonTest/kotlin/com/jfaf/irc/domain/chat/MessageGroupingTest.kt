@@ -51,35 +51,4 @@ class MessageGroupingTest {
         assertNull(MessageGrouping.speech(UiChatMessage(fullText = "sin formato", type = UiMessageType.CHANNEL_MSG_RECEIVED)))
         assertNull(MessageGrouping.speech(UiChatMessage(fullText = "<a b> x", type = UiMessageType.CHANNEL_MSG_RECEIVED)))
     }
-
-    @Test
-    fun seguidosDelMismoNickCompartenCabecera() {
-        val flags = MessageGrouping.headerFlags(listOf(say("ana", "1"), say("ana", "2"), say("kiko", "3"), say("ana", "4")))
-        assertEquals(listOf(true, false, true, true), flags)
-    }
-
-    @Test
-    fun noDistingueMayusculasNiPrefijo() {
-        val flags = MessageGrouping.headerFlags(listOf(say("Ana", "1"), say("ana", "2"), say("@ana", "3")))
-        assertEquals(listOf(true, false, false), flags)
-    }
-
-    @Test
-    fun unMensajeIntermedioCortaLaTanda() {
-        val flags = MessageGrouping.headerFlags(listOf(say("ana", "1"), system("kiko entra"), say("ana", "2")))
-        assertEquals(listOf(true, false, true), flags)
-    }
-
-    @Test
-    fun enviadosYRecibidosSeAgrupanPorNick() {
-        val flags = MessageGrouping.headerFlags(
-            listOf(say("yo", "1", UiMessageType.CHANNEL_MSG_SENT), say("yo", "2", UiMessageType.CHANNEL_MSG_SENT), say("ana", "3"))
-        )
-        assertEquals(listOf(true, false, true), flags)
-    }
-
-    @Test
-    fun listaVacia() {
-        assertEquals(emptyList(), MessageGrouping.headerFlags(emptyList()))
-    }
 }

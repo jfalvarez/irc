@@ -233,6 +233,7 @@ private fun AppDrawerMainContent(
             activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value,
             unreadTargets = viewModel.chatScreenState.unreadTargets.collectAsState().value,
             unreadPmCounts = viewModel.chatScreenState.unreadPmCounts.collectAsState().value,
+            unreadMentionCounts = viewModel.chatScreenState.unreadMentionCounts.collectAsState().value,
             onlineFriends = onlineFriends,
             currentNick = viewModel.currentNickname,
             onTargetSelected = {
@@ -376,6 +377,7 @@ private fun ConnectedStateView(
     val currentAd by viewModel.currentAd.collectAsState()
     val showUserListState by viewModel.chatScreenState.showUserList.collectAsState()
     val messages by viewModel.chatScreenState.uiMessages.collectAsState()
+    val newMessagesFromEnd by viewModel.chatScreenState.newMessagesFromEnd.collectAsState()
     val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
     val showMediaPreviews by viewModel.chatScreenState.showMediaPreviews.collectAsState()
     val isReconnecting by viewModel.chatScreenState.isReconnecting.collectAsState()
@@ -410,7 +412,9 @@ private fun ConnectedStateView(
             modifier = Modifier.weight(if (shouldShowUserListComposite && !fixedUserList) 0.6f else 1f),
             showMediaPreviews = showMediaPreviews,
             ad = currentAd,
-            mainViewModel = viewModel
+            mainViewModel = viewModel,
+            newMessagesFromEnd = newMessagesFromEnd,
+            ownNick = viewModel.currentNickname
         )
 
         AnimatedVisibility(

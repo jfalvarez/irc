@@ -68,6 +68,10 @@ data class ChatScreenState(
     val unreadTargets: StateFlow<Set<String>>,
     /** Privados sin leer por conversación (para la insignia del cajón y el punto del menú). */
     val unreadPmCounts: StateFlow<Map<String, Int>>,
+    /** Menciones de tu nick sin leer por canal (insignia del cajón). */
+    val unreadMentionCounts: StateFlow<Map<String, Int>>,
+    /** Mensajes visibles de la pestaña activa, contados desde el final, que llegaron sin leer (separador «Nuevos mensajes»); 0 = ninguno. */
+    val newMessagesFromEnd: StateFlow<Int>,
     val uiMessages: StateFlow<List<UiChatMessage>>,
     /** true si está conectado O reconectando (la UI mantiene el chat visible mientras reconecta). */
     val connectionState: StateFlow<Boolean>,
@@ -210,6 +214,31 @@ class MainViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
+    @Suppress("UNCHECKED_CAST")
+    private val newMessagesFromEndFlow: StateFlow<Int> = combine(
+        listOf(
+            chatStateManager.activeTarget,
+            chatStateManager.allMessages,
+            chatStateManager.newMessageAnchors,
+            showJoinPartQuitMessagesPref,
+            showNickChangesPref,
+            showModeChangesPref,
+            ignoredUsersPref
+        )
+    ) { values ->
+        val activeTarget = values[0] as String?
+        val allMessages = values[1] as Map<String, List<UiChatMessage>>
+        val anchor = (values[2] as Map<String, Int>)[activeTarget] ?: 0
+        val options = MessageFilterOptions(
+            showJoinPartQuit = values[3] as Boolean,
+            showNickChanges = values[4] as Boolean,
+            showModeChanges = values[5] as Boolean,
+            ignoredUsers = values[6] as Set<String>
+        )
+        // Sólo cuentan los mensajes que se ven: el filtro de Ajustes oculta algunos de los nuevos
+        (allMessages[activeTarget] ?: emptyList()).takeLast(anchor).count { UiMessageFilter.shouldDisplay(it, options) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), 0)
+
     private val currentChannelUserListState: StateFlow<List<String>> =
         chatStateManager.currentChannelUserListFlow.stateIn(
             scope = viewModelScope,
@@ -234,6 +263,8 @@ class MainViewModel(
         chatTargets = chatStateManager.chatTargets,
         unreadTargets = chatStateManager.unreadTargets,
         unreadPmCounts = chatStateManager.unreadPmCounts,
+        unreadMentionCounts = chatStateManager.unreadMentionCounts,
+        newMessagesFromEnd = newMessagesFromEndFlow,
         uiMessages = combinedUiMessagesFlow,
         connectionState = uiConnectionState,
         isReconnecting = ircConnection.isReconnecting,

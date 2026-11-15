@@ -31,10 +31,11 @@ class RoomChatHistoryStore(
         dao.deleteMessages(target)
     }
 
-    private fun MessageEntity.toStored() = StoredMessage(fullText, type, sender, isOwnMessage, mediaUrl, mediaType)
+    private fun MessageEntity.toStored() = StoredMessage(fullText, type, sender, isOwnMessage, mediaUrl, mediaType, timestamp, presence)
 
     private fun StoredMessage.toEntity(target: String, position: Int) = MessageEntity(
         target = target, position = position, fullText = fullText, type = type, sender = sender,
-        isOwnMessage = isOwnMessage, mediaUrl = mediaUrl, mediaType = mediaType
+        isOwnMessage = isOwnMessage, mediaUrl = mediaUrl, mediaType = mediaType,
+        timestamp = timestamp, presence = presence
     )
 }

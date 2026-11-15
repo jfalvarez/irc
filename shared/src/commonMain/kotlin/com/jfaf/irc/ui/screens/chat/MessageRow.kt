@@ -2,7 +2,10 @@ package com.jfaf.irc.ui.screens.chat
 
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.domain.chat.LinkFinder
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,6 +36,8 @@ import androidx.compose.ui.unit.dp
 // import com.jfaf.irc.R // No longer needed for string resources of placeholder
 import com.jfaf.irc.ui.media.MediaPreview
 import com.jfaf.irc.ui.theme.IRCTheme
+import com.jfaf.irc.ui.theme.mentionAccent
+import com.jfaf.irc.ui.theme.mentionBackground
 import com.jfaf.irc.ui.theme.nickColor
 import com.jfaf.irc.ui.theme.ownNickColor
 import com.jfaf.irc.domain.chat.MessageGrouping
@@ -47,7 +52,9 @@ fun MessageRow(
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit,
     showMediaPreviews: Boolean,
     mainViewModel: MainViewModel,
-    showHeader: Boolean = true
+    showHeader: Boolean = true,
+    /** El mensaje nombra tu nick: fondo tenue y borde de acento (UI-5). */
+    isMention: Boolean = false
 ) {
     var nickMenuExpanded by remember { mutableStateOf(false) }
     // Los mensajes de conversación se pintan con avatar y nick (cabecera, una vez por tanda) y el cuerpo debajo
@@ -111,9 +118,20 @@ fun MessageRow(
     }
 
     val isOwn = message.isOwnMessage
+    val mentionAccent = IRCTheme.mentionAccent
+    val mentionBackground = IRCTheme.mentionBackground
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .then(
+                if (isMention) {
+                    Modifier
+                        .background(mentionBackground)
+                        .drawBehind { drawRect(mentionAccent, size = Size(3.dp.toPx(), size.height)) }
+                } else {
+                    Modifier
+                }
+            )
             .padding(
                 start = 8.dp, end = 8.dp,
                 top = if (speech != null && showHeader) 10.dp else 2.dp,

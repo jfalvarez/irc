@@ -90,4 +90,27 @@ class ThemeContrastTest {
         assertAa("tu nick/fondo claro", PurpleStart, LightBackground)
         assertAa("tu nick/superficie clara", PurpleStart, LightSurface)
     }
+
+    @Test
+    fun textoSobreLaLineaDeUnaMencion() {
+        // Fondo tenue de ámbar sobre el fondo del chat (UI-5)
+        val dark = MentionAccentDark.copy(alpha = MENTION_BACKGROUND_ALPHA).compositeOver(NeutralBackground)
+        val light = MentionAccentLight.copy(alpha = MENTION_BACKGROUND_ALPHA).compositeOver(LightBackground)
+        assertAa("texto/mención oscuro", NeutralOnSurface, dark)
+        assertAa("enlace/mención oscuro", LinkBlue, dark)
+        NickPalette.dark.forEachIndexed { i, c -> assertAa("nick $i/mención oscuro", c, dark) }
+        assertAa("texto/mención claro", LightOnSurface, light)
+        assertAa("enlace/mención claro", LinkBlueLight, light)
+        NickPalette.light.forEachIndexed { i, c -> assertAa("nick $i/mención claro", c, light) }
+        assertAa("tu nick/mención oscuro", OwnNickDark, dark)
+        assertAa("tu nick/mención claro", PurpleStart, light)
+        assertAa("borde/fondo oscuro", MentionAccentDark, NeutralBackground, min = 3.0)
+        assertAa("borde/fondo claro", MentionAccentLight, LightBackground, min = 3.0)
+    }
+
+    @Test
+    fun textoDeLosSeparadores() {
+        assertAa("nuevos/fondo oscuro", OwnNickDark, NeutralBackground)
+        assertAa("nuevos/fondo claro", PurpleStart, LightBackground)
+    }
 }

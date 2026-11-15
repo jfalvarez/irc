@@ -93,7 +93,9 @@ private fun DrawerListItem(
     onCloseTargetAction: ((String) -> Unit)?,
     trailingIcon: @Composable (() -> Unit)? = null,
     /** Privados sin leer de esta conversación; 0 = sin insignia. */
-    unreadCount: Int = 0
+    unreadCount: Int = 0,
+    /** El contador son menciones de tu nick (canales) y no privados. */
+    countsMentions: Boolean = false
 ) {
     val fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal
     val textColor = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
@@ -105,7 +107,10 @@ private fun DrawerListItem(
         badge = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (unreadCount > 0) {
-                    val description = stringResource(Res.string.cd_unread_messages, unreadCount)
+                    val description = stringResource(
+                        if (countsMentions) Res.string.cd_unread_mentions else Res.string.cd_unread_messages,
+                        unreadCount
+                    )
                     Badge(
                         containerColor = MaterialTheme.colorScheme.error,
                         contentColor = MaterialTheme.colorScheme.onError,
@@ -140,6 +145,8 @@ fun AppDrawerContent(
     activeTarget: String?,
     unreadTargets: Set<String>,
     unreadPmCounts: Map<String, Int>,
+    /** Menciones de tu nick sin leer por canal. */
+    unreadMentionCounts: Map<String, Int> = emptyMap(),
     onlineFriends: Set<String>,
     currentNick: String,
     onTargetSelected: (String) -> Unit,
@@ -247,7 +254,9 @@ fun AppDrawerContent(
                                         isSelected = target == activeTarget,
                                         isUnread = unreadTargets.contains(target),
                                         onTargetSelected = onTargetSelected,
-                                        onCloseTargetAction = onCloseTargetAction
+                                        onCloseTargetAction = onCloseTargetAction,
+                                        unreadCount = unreadMentionCounts[target] ?: 0,
+                                        countsMentions = true
                                     )
                                 }
                             }

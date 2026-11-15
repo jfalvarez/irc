@@ -5,8 +5,8 @@ import com.jfaf.irc.domain.chat.model.UiChatMessage
 import com.jfaf.irc.domain.chat.model.UiMessageType
 
 /**
- * Reglas puras para pintar los mensajes con cabecera (avatar y nick) una sola vez por tanda (UI-10).
- * El texto de los mensajes de conversación empieza por `<nick> `: aquí se separan el nick y el cuerpo.
+ * Separa el nick y el cuerpo de un mensaje de conversación (UI-10). Su texto empieza por `<nick> `.
+ * Qué mensajes llevan cabecera (avatar y nick) lo decide `ChatTimeline`.
  */
 object MessageGrouping {
 
@@ -33,26 +33,5 @@ object MessageGrouping {
         val nick = raw.substring(1, close)
         if (nick.any { it.isWhitespace() }) return null
         return Speech(nick, text.subSequence(close + 2, raw.length))
-    }
-
-    /**
-     * Para cada mensaje (en orden cronológico), si lleva cabecera: sí, salvo que el anterior sea del mismo
-     * nick y de conversación. Cualquier otro mensaje entre medias (entradas, avisos, anuncios) corta la tanda.
-     * Los que no son de conversación devuelven `false`: no llevan cabecera.
-     */
-    fun headerFlags(messages: List<UiChatMessage>): List<Boolean> {
-        var previousNick: String? = null
-        return messages.map { message ->
-            val speech = speech(message)
-            if (speech == null) {
-                previousNick = null
-                false
-            } else {
-                val key = NickColors.normalize(speech.nick).lowercase()
-                val header = key != previousNick
-                previousNick = key
-                header
-            }
-        }
     }
 }

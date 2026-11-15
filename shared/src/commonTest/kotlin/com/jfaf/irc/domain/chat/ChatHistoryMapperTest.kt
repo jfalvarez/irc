@@ -38,4 +38,29 @@ class ChatHistoryMapperTest {
         assertFalse(UiChatMessage(fullText = "", type = UiMessageType.AD_MESSAGE).isPersistable())
         assertTrue(UiChatMessage(fullText = "a", type = UiMessageType.NOTICE).isPersistable())
     }
+
+    @Test
+    fun ida_y_vuelta_conservaLaHoraYLaPresencia() {
+        val original = UiChatMessage(
+            fullText = "ana entra", type = UiMessageType.JOIN_PART_QUIT, sender = "ana",
+            timestamp = 1_700_000_000_000L, presence = com.jfaf.irc.domain.chat.model.PresenceEvent.QUIT
+        )
+        val restored = original.toStored().toUi()
+        assertEquals(1_700_000_000_000L, restored.timestamp)
+        assertEquals(com.jfaf.irc.domain.chat.model.PresenceEvent.QUIT, restored.presence)
+    }
+
+    @Test
+    fun loGuardadoAntesNoTieneHoraNiPresencia() {
+        val restored = StoredMessage("x", "NOTICE", null, false, null, "NONE").toUi()
+        assertEquals(null, restored.timestamp)
+        assertEquals(null, restored.presence)
+    }
+
+    @Test
+    fun presenciaDesconocidaSeIgnora() {
+        val restored = StoredMessage("x", "JOIN_PART_QUIT", null, false, null, "NONE", 5L, "RARO").toUi()
+        assertEquals(null, restored.presence)
+        assertEquals(5L, restored.timestamp)
+    }
 }

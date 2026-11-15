@@ -7,7 +7,9 @@ data class StoredMessage(
     val sender: String?,
     val isOwnMessage: Boolean,
     val mediaUrl: String?,
-    val mediaType: String
+    val mediaType: String,
+    val timestamp: Long? = null,
+    val presence: String? = null
 )
 
 /** Pestañas abiertas, la activa y el historial reciente de cada una. */

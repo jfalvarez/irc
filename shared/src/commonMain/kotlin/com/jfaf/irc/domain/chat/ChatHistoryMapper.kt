@@ -2,12 +2,13 @@ package com.jfaf.irc.domain.chat
 
 import com.jfaf.irc.data.history.StoredMessage
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
+import com.jfaf.irc.domain.chat.model.PresenceEvent
 import com.jfaf.irc.domain.chat.model.UiChatMessage
 import com.jfaf.irc.domain.chat.model.UiMessageType
 
 /** Conversión entre el modelo de UI y el modelo persistido. No se guardan los estilos (`annotatedString`). */
 fun UiChatMessage.toStored(): StoredMessage =
-    StoredMessage(fullText, type.name, sender, isOwnMessage, mediaUrl, mediaType.name)
+    StoredMessage(fullText, type.name, sender, isOwnMessage, mediaUrl, mediaType.name, timestamp, presence?.name)
 
 /** Los estilos mIRC se reconstruyen desde el texto; el resto de estilos del mensaje original se pierde. */
 fun StoredMessage.toUi(): UiChatMessage = UiChatMessage(
@@ -17,7 +18,9 @@ fun StoredMessage.toUi(): UiChatMessage = UiChatMessage(
     sender = sender,
     isOwnMessage = isOwnMessage,
     mediaUrl = mediaUrl,
-    mediaType = MediaTypeEnum.entries.firstOrNull { it.name == mediaType } ?: MediaTypeEnum.NONE
+    mediaType = MediaTypeEnum.entries.firstOrNull { it.name == mediaType } ?: MediaTypeEnum.NONE,
+    timestamp = timestamp,
+    presence = PresenceEvent.entries.firstOrNull { it.name == presence }
 )
 
 /** Mensajes que no deben guardarse (anuncios de relleno). */
