@@ -6,29 +6,28 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Set of Material typography styles to start with
+private fun style(size: Int, line: Int, weight: FontWeight = FontWeight.Normal, spacing: Double = 0.0) = TextStyle(
+    fontFamily = FontFamily.Default,
+    fontWeight = weight,
+    fontSize = size.sp,
+    lineHeight = line.sp,
+    letterSpacing = spacing.sp
+)
+
+/**
+ * Tema tipográfico completo (UI-15). Los textos de la app usan estos estilos y no tamaños sueltos:
+ * `bodyMedium` (14 sp) es el de los mensajes del chat; `titleMedium`, el de las cabeceras;
+ * `labelSmall`, el de las insignias y los textos auxiliares.
+ */
 val Typography = Typography(
-    bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
-    )
-    /* Other default text styles to override if needed
-    titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
-    ),
-    labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
-    )
-    */
+    headlineSmall = style(24, 32),
+    titleLarge = style(20, 28, FontWeight.Medium),
+    titleMedium = style(16, 24, FontWeight.Medium, 0.15),
+    titleSmall = style(14, 20, FontWeight.Medium, 0.1),
+    bodyLarge = style(16, 24, spacing = 0.5),
+    bodyMedium = style(14, 20, spacing = 0.25),
+    bodySmall = style(12, 16, spacing = 0.4),
+    labelLarge = style(14, 20, FontWeight.Medium, 0.1),
+    labelMedium = style(12, 16, FontWeight.Medium, 0.5),
+    labelSmall = style(11, 16, FontWeight.Medium, 0.5)
 )

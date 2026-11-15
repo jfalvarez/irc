@@ -1,7 +1,7 @@
 package com.jfaf.irc.ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
@@ -14,8 +14,6 @@ import com.jfaf.irc.ui.theme.PurpleStart
 import com.jfaf.irc.ui.theme.BlueEnd
 import com.jfaf.irc.ui.theme.IRCWhite
 import com.jfaf.irc.ui.theme.IRCWhite08 // For specific TextField container
-import com.jfaf.irc.ui.theme.IRCWhite20 // For surfaceVariant, outlineVariant (dividers)
-import com.jfaf.irc.ui.theme.IRCWhite60 // For outline (borders)
 
 // CompositionLocal for the gradient properties
 val LocalGradientBrush = staticCompositionLocalOf<Brush> {
@@ -25,36 +23,32 @@ val LocalGradientColors = staticCompositionLocalOf<List<Color>> {
     error("No GradientColors provided")
 }
 
-// Define the Light ColorScheme for the application
-private val LightColorScheme = lightColorScheme(
+// Esquema oscuro: fondo neutro y marca (morado) sólo en barra, selecciones, botón de enviar e insignias (UI-1).
+// El modo claro llega con UI-2.
+private val DarkColorScheme = darkColorScheme(
     primary = PurpleStart,
-    onPrimary = IRCWhite,       // Text/icons on top of primary color
+    onPrimary = IRCWhite,       // Texto e iconos sobre la marca (8,2:1)
     secondary = BlueEnd,
-    onSecondary = IRCWhite,     // Text/icons on top of secondary color
+    onSecondary = IRCWhite,
 
-    background = PurpleStart,   // Default background for screens (can be overridden by a gradient)
-    onBackground = IRCWhite,    // Text/icons on top of background color
+    background = NeutralBackground,
+    onBackground = NeutralOnSurface,
 
-    surface = PurpleStart.copy(alpha = 0.95f), // General surface color for components like Dialogs, Menus, Drawer sheets
-    onSurface = IRCWhite,                      // Text/icons on top of surface color
+    surface = NeutralSurface,   // Cajón, menús y diálogos
+    onSurface = NeutralOnSurface,
 
-    surfaceVariant = IRCWhite20, // Used for elements like TextField containers (non-outlined), Chips
-    onSurfaceVariant = IRCWhite, // Text/icons on top of surfaceVariant elements (e.g., TextField labels)
+    surfaceVariant = NeutralSurfaceVariant,
+    onSurfaceVariant = NeutralOnSurfaceMuted,
 
-    outline = IRCWhite60,        // Default border color (e.g., OutlinedTextField's unfocused border)
-    outlineVariant = IRCWhite20, // Subtle borders or dividers
-
-    // Other colors like error, tertiary, etc., will use Material 3 defaults.
-    // error = Color(0xFFB00020), // Default error color
-    // onError = Color.White,
+    outline = NeutralOutline,
+    outlineVariant = NeutralOutlineVariant,
 )
 
 @Composable
 fun IRCAppTheme(
-    // darkTheme: Boolean = isSystemInDarkTheme(), // Future: add dark theme support
     content: @Composable () -> Unit
 ) {
-    val currentColorScheme = LightColorScheme // Can be switched with a darkColorScheme later
+    val currentColorScheme = DarkColorScheme // UI-2 añadirá el claro y el del sistema
 
     val gradientColorsList = listOf(PurpleStart, BlueEnd)
     val gradientBrushInstance = Brush.verticalGradient(colors = gradientColorsList)
@@ -90,19 +84,25 @@ object IRCTheme {
         @ReadOnlyComposable
         get() = IRCWhite08 // As defined in Color.kt
 
-// If specific alpha values for dialogs/menus are still needed beyond the general 'surface'
+    // Diálogos, menús y cajón: superficie neutra (antes, el morado de la marca con transparencia)
     val dialogContainerOpaque: Color
       @Composable
       @ReadOnlyComposable
-      get() = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f)
+      get() = MaterialTheme.colorScheme.surface
 
     val dropdownMenuContainerOpaque: Color
       @Composable
       @ReadOnlyComposable
-      get() = MaterialTheme.colorScheme.primary.copy(alpha = 0.98f)
+      get() = MaterialTheme.colorScheme.surface
 
     val drawerContainerOpaque: Color
       @Composable
       @ReadOnlyComposable
-      get() = MaterialTheme.colorScheme.primary.copy(alpha = 0.96f)
+      get() = MaterialTheme.colorScheme.surface
+
+    // Color de los enlaces de los mensajes
+    val linkColor: Color
+      @Composable
+      @ReadOnlyComposable
+      get() = LinkBlue
 }

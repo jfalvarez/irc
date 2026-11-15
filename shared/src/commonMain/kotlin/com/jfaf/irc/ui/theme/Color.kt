@@ -4,7 +4,17 @@ import androidx.compose.ui.graphics.Color
 
 // Gradient Colors
 val PurpleStart = Color(0xFF6A11CB)
-val BlueEnd = Color(0xFF2575FC)
+val BlueEnd = Color(0xFF1E6AF0) // antes #2575FC: el blanco sobre él daba 4,2:1; ahora 4,8:1 (WCAG AA)
+
+// Neutros del modo oscuro (UI-1): el chat va sobre un fondo plano y la marca queda para los acentos
+val NeutralBackground = Color(0xFF1B1C20)       // fondo del chat
+val NeutralSurface = Color(0xFF26272D)           // cajón, menús y diálogos
+val NeutralSurfaceVariant = Color(0xFF33343B)    // campos de texto y contenedores
+val NeutralOnSurface = Color(0xFFE8E8EC)         // texto principal (≈ 14:1 sobre el fondo)
+val NeutralOnSurfaceMuted = Color(0xFFB4B6BE)    // avisos del sistema y texto secundario (≈ 8:1)
+val NeutralOutline = Color(0xFF8D8F99)           // bordes (≥ 3:1, componentes)
+val NeutralOutlineVariant = Color(0xFF3F4048)    // divisores
+val LinkBlue = Color(0xFF8AB4FF)                 // enlaces (≈ 8:1 sobre el fondo)
 
 // Base White
 val IRCWhite = Color.White

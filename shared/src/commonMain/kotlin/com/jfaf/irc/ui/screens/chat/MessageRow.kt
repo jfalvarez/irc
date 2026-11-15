@@ -17,22 +17,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 // import androidx.compose.ui.res.stringResource // No longer needed for placeholder text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 // import com.jfaf.irc.R // No longer needed for string resources of placeholder
 import com.jfaf.irc.ui.media.MediaPreview
+import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 import com.jfaf.irc.domain.chat.model.UiChatMessage
@@ -47,10 +45,10 @@ fun MessageRow(
 ) {
     var nickMenuExpanded by remember { mutableStateOf(false) }
     val baseTextColor = when (message.type) {
-        UiMessageType.SYSTEM_MESSAGE, UiMessageType.JOIN_PART_QUIT, UiMessageType.NICK_CHANGE, UiMessageType.MODE_CHANGE -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-        UiMessageType.SERVER_INFO -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-        UiMessageType.NOTICE -> MaterialTheme.colorScheme.onPrimary
-        else -> MaterialTheme.colorScheme.onPrimary
+        UiMessageType.SYSTEM_MESSAGE, UiMessageType.JOIN_PART_QUIT, UiMessageType.NICK_CHANGE, UiMessageType.MODE_CHANGE -> MaterialTheme.colorScheme.onSurfaceVariant
+        UiMessageType.SERVER_INFO -> MaterialTheme.colorScheme.onSurfaceVariant
+        UiMessageType.NOTICE -> MaterialTheme.colorScheme.onBackground
+        else -> MaterialTheme.colorScheme.onBackground
     }
     val fontStyle = when (message.type) {
         UiMessageType.SYSTEM_MESSAGE, 
@@ -102,7 +100,7 @@ fun MessageRow(
                         url = target,
                         styles = TextLinkStyles(
                             style = SpanStyle(
-                                color = Color.White, // Consider MaterialTheme.colorScheme.primary for theming
+                                color = IRCTheme.linkColor,
                                 textDecoration = TextDecoration.Underline
                             )
                         ),
@@ -125,7 +123,7 @@ fun MessageRow(
         Box {
             Text(
                 text = clickableText,
-                style = TextStyle(fontSize = 14.sp)
+                style = MaterialTheme.typography.bodyMedium
             )
             message.sender?.let { nick ->
                 UserActionsMenu(

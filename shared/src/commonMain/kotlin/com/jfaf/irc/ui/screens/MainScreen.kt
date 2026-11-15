@@ -113,7 +113,13 @@ fun MainScreen(
     val wide = platformUi.isDesktop && connectionState && maxWidth >= WIDE_LAYOUT_MIN_WIDTH
 
     val screenContent: @Composable () -> Unit = {
-        Box(modifier = Modifier.fillMaxSize().background(IRCTheme.gradientBrush)) {
+        // Degradado de marca sólo en la pantalla de conexión; el chat va sobre el fondo plano (UI-1)
+        val backgroundModifier = if (connectionState) {
+            Modifier.background(MaterialTheme.colorScheme.background)
+        } else {
+            Modifier.background(IRCTheme.gradientBrush)
+        }
+        Box(modifier = Modifier.fillMaxSize().then(backgroundModifier)) {
             Scaffold(
                 modifier = modifier.imePadding(),
                 containerColor = Color.Transparent,
