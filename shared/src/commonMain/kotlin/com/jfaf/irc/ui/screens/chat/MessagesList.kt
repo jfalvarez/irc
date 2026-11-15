@@ -1,6 +1,9 @@
 package com.jfaf.irc.ui.screens.chat
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import com.jfaf.irc.data.prefs.MessageDensity
+import com.jfaf.irc.domain.chat.stableKeys
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.gestures.scrollBy
@@ -49,6 +52,9 @@ import kotlin.time.Clock
 /** A partir de cuántos elementos por encima del final aparece el botón «ir al último mensaje». */
 private const val JUMP_BUTTON_THRESHOLD = 3
 
+/** Duración (ms) del fundido de un mensaje que llega y del desplazamiento de los demás (UI-17). */
+private const val ARRIVAL_ANIMATION_MS = 200
+
 /** Espacio que queda entre el borde de arriba y el separador «Nuevos mensajes», en píxeles. */
 private const val SEPARATOR_TOP_MARGIN_PX = 160
 
@@ -68,13 +74,18 @@ fun MessagesList(
     /** Tu nick, para resaltar las menciones. */
     ownNick: String? = null,
     /** Pestaña que se muestra: al cambiar, la lista vuelve a donde te quedaste (ver más abajo). */
-    activeTarget: String? = null
+    activeTarget: String? = null,
+    /** Densidad de los mensajes: cómoda o compacta (UI-16). */
+    density: MessageDensity = MessageDensity.COMFORTABLE
 ) {
     val platformUi = LocalPlatformUi.current
     // La lista se pinta del último al primero: la línea de tiempo se construye en orden cronológico y se invierte
-    val timeline = remember(messages, newMessagesFromEnd, ownNick) {
-        ChatTimeline.build(messages, newMessagesFromEnd, ownNick, dayOf = { DayLabel.epochDay(it) }).reversed()
+    val chronological = remember(messages, newMessagesFromEnd, ownNick) {
+        ChatTimeline.build(messages, newMessagesFromEnd, ownNick, dayOf = { DayLabel.epochDay(it) })
     }
+    val timeline = remember(chronological) { chronological.reversed() }
+    // Con claves estables Compose anima lo que llega (aparece con un fundido) y desliza el resto en vez de repintarlo
+    val keys = remember(chronological) { chronological.stableKeys().reversed() }
     val today = remember(messages) { DayLabel.epochDay(Clock.System.now().toEpochMilliseconds()) }
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
     val listState = rememberLazyListState()
@@ -112,7 +123,9 @@ fun MessagesList(
             reverseLayout = true,
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
         ) {
-            items(timeline) { item ->
+            items(count = timeline.size, key = { keys[it] }) { index ->
+                val item = timeline[index]
+                Box(modifier = Modifier.animateItem(fadeInSpec = tween(ARRIVAL_ANIMATION_MS), placementSpec = tween(ARRIVAL_ANIMATION_MS), fadeOutSpec = null)) {
                 when (item) {
                     is TimelineItem.Message -> {
                         if (item.message.type == UiMessageType.AD_MESSAGE) {
@@ -125,7 +138,8 @@ fun MessagesList(
                                 showMediaPreviews = showMediaPreviews,
                                 mainViewModel = mainViewModel,
                                 showHeader = item.showHeader,
-                                isMention = item.isMention
+                                isMention = item.isMention,
+                                density = density
                             )
                         }
                     }
@@ -135,10 +149,12 @@ fun MessagesList(
                         onToggle = { expandedGroups[item.key] = expandedGroups[item.key] != true },
                         onMediaClick = onMediaClick,
                         showMediaPreviews = showMediaPreviews,
-                        mainViewModel = mainViewModel
+                        mainViewModel = mainViewModel,
+                        density = density
                     )
                     is TimelineItem.DateSeparator -> DateSeparatorRow(item.epochDay, today)
                     TimelineItem.NewMessages -> NewMessagesSeparatorRow()
+                }
                 }
             }
         }

@@ -446,6 +446,7 @@ private fun ConnectedStateView(
     val currentAd by viewModel.currentAd.collectAsState()
     val messages by viewModel.chatScreenState.uiMessages.collectAsState()
     val newMessagesFromEnd by viewModel.chatScreenState.newMessagesFromEnd.collectAsState()
+    val messageDensity by viewModel.chatScreenState.messageDensity.collectAsState()
     val activeTarget by viewModel.chatScreenState.activeTarget.collectAsState()
     val showMediaPreviews by viewModel.chatScreenState.showMediaPreviews.collectAsState()
     val isReconnecting by viewModel.chatScreenState.isReconnecting.collectAsState()
@@ -483,7 +484,8 @@ private fun ConnectedStateView(
             mainViewModel = viewModel,
             newMessagesFromEnd = newMessagesFromEnd,
             ownNick = viewModel.currentNickname,
-            activeTarget = activeTarget
+            activeTarget = activeTarget,
+            density = messageDensity
         )
 
         AnimatedVisibility(

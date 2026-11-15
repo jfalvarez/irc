@@ -45,6 +45,7 @@ class UserPreferencesRepository(
 
         val SOUND_ALERTS = booleanPreferencesKey("sound_alerts")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val MESSAGE_DENSITY = stringPreferencesKey("message_density")
         val RECENT_EMOJIS = stringPreferencesKey("recent_emojis")
         val TERMS_ACCEPTED_VERSION = intPreferencesKey("terms_accepted_version")
 
@@ -102,6 +103,17 @@ class UserPreferencesRepository(
     suspend fun updateThemeMode(mode: ThemeMode) {
         dataStore.edit { preferences ->
             preferences[THEME_MODE] = mode.name
+        }
+    }
+
+    /** Densidad de los mensajes: cómoda (por defecto) o compacta. */
+    val messageDensityFlow: Flow<MessageDensity> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { MessageDensity.fromStorage(it[MESSAGE_DENSITY]) }
+
+    suspend fun updateMessageDensity(density: MessageDensity) {
+        dataStore.edit { preferences ->
+            preferences[MESSAGE_DENSITY] = density.name
         }
     }
 

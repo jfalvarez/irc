@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import com.jfaf.irc.data.prefs.ServerConfig
+import com.jfaf.irc.data.prefs.MessageDensity
 import com.jfaf.irc.data.prefs.ThemeMode
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
 import com.jfaf.irc.ui.platform.LocalPlatformUi
@@ -51,6 +52,7 @@ fun SettingsScreen(
     val showMediaPreviews by viewModel.showMediaPreviews.collectAsState()
     val soundAlerts by viewModel.soundAlerts.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
+    val messageDensity by viewModel.messageDensity.collectAsState()
     val platformUi = LocalPlatformUi.current
     val supportsSoundAlerts = platformUi.supportsSoundAlerts
     var showTerms by remember { mutableStateOf(false) }
@@ -116,6 +118,33 @@ fun SettingsScreen(
                     ),
                     selected = mode == themeMode,
                     onSelect = { viewModel.setThemeMode(mode) }
+                )
+            }
+            item {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+            }
+
+            item {
+                Text(
+                    text = stringResource(Res.string.settings_section_density),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+            }
+            items(MessageDensity.entries) { density ->
+                SettingRowWithRadio(
+                    text = stringResource(
+                        when (density) {
+                            MessageDensity.COMFORTABLE -> Res.string.settings_density_comfortable
+                            MessageDensity.COMPACT -> Res.string.settings_density_compact
+                        }
+                    ),
+                    selected = density == messageDensity,
+                    onSelect = { viewModel.setMessageDensity(density) }
                 )
             }
             item {

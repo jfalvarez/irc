@@ -21,6 +21,25 @@ sealed interface TimelineItem {
     data object NewMessages : TimelineItem
 }
 
+/**
+ * Claves estables de los elementos de la lista (para que Compose anime los que llegan y mueva los demás en vez de
+ * repintarlos). Dos elementos iguales (mismo texto a la misma hora) llevan un sufijo según su orden.
+ */
+fun List<TimelineItem>.stableKeys(): List<String> {
+    val seen = HashMap<String, Int>()
+    return map { item ->
+        val base = when (item) {
+            is TimelineItem.Message -> "m-${item.message.timestamp}-${item.message.sender}-${item.message.fullText.hashCode()}"
+            is TimelineItem.PresenceGroup -> "g-${item.key}"
+            is TimelineItem.DateSeparator -> "d-${item.epochDay}"
+            TimelineItem.NewMessages -> "new"
+        }
+        val n = seen.getOrElse(base) { 0 }
+        seen[base] = n + 1
+        if (n == 0) base else "$base#$n"
+    }
+}
+
 /** Reglas puras que convierten la lista de mensajes de una pestaña en los elementos que se pintan. */
 object ChatTimeline {
 

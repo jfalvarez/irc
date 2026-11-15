@@ -157,6 +157,9 @@
     <string name="settings_theme_dark">Oscuro</string>
     <string name="settings_theme_light">Claro</string>
     <string name="settings_theme_system">El del sistema</string>
+    <string name="settings_section_density">Densidad de los mensajes</string>
+    <string name="settings_density_comfortable">Cómoda: avatares y mensajes agrupados por autor</string>
+    <string name="settings_density_compact">Compacta: una línea por mensaje, como en IRC clásico</string>
     <string name="settings_section_message_preferences">Preferencias de Mensajes</string>
     <string name="settings_option_show_join_part_quit">Mostrar mensajes de JOIN/PART/QUIT</string>
     <string name="settings_option_show_nick_changes">Mostrar cambios de Nick</string>

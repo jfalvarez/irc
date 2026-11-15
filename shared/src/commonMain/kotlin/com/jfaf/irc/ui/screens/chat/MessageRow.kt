@@ -3,6 +3,10 @@ package com.jfaf.irc.ui.screens.chat
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.domain.chat.LinkFinder
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.withStyle
+import com.jfaf.irc.data.prefs.MessageDensity
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
@@ -54,13 +58,24 @@ fun MessageRow(
     mainViewModel: MainViewModel,
     showHeader: Boolean = true,
     /** El mensaje nombra tu nick: fondo tenue y borde de acento (UI-5). */
-    isMention: Boolean = false
+    isMention: Boolean = false,
+    /** Densidad (UI-16): cómoda = avatar y cabecera; compacta = una línea `<nick> texto`. */
+    density: MessageDensity = MessageDensity.COMFORTABLE
 ) {
     var nickMenuExpanded by remember { mutableStateOf(false) }
     // Los mensajes de conversación se pintan con avatar y nick (cabecera, una vez por tanda) y el cuerpo debajo
     val speech = remember(message) { MessageGrouping.speech(message) }
     val speaker = speech?.nick
     val canOpenNickMenu = speaker != null && message.type == UiMessageType.CHANNEL_MSG_RECEIVED
+    val isOwn = message.isOwnMessage
+    val compact = density == MessageDensity.COMPACT
+    // En la densidad compacta el nick va en la misma línea que el texto
+    val inlineNick = speaker != null && compact
+    val nickColorValue = when {
+        speaker == null -> Color.Unspecified
+        isOwn -> IRCTheme.ownNickColor
+        else -> nickColor(speaker)
+    }
     val baseTextColor = when (message.type) {
         UiMessageType.SYSTEM_MESSAGE, UiMessageType.JOIN_PART_QUIT, UiMessageType.NICK_CHANGE, UiMessageType.MODE_CHANGE -> MaterialTheme.colorScheme.onSurfaceVariant
         UiMessageType.SERVER_INFO -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -82,9 +97,28 @@ fun MessageRow(
     val uriHandler = LocalUriHandler.current
     val clickableText = buildAnnotatedString {
         val baseString = speech?.body ?: message.annotatedString ?: AnnotatedString(message.fullText)
+        var offset = 0
+        if (inlineNick && speaker != null) {
+            val prefix = "<$speaker> "
+            withStyle(SpanStyle(color = nickColorValue, fontWeight = FontWeight.Bold)) { append(prefix) }
+            offset = prefix.length
+            // Sólo el nick de los mensajes de canal recibidos abre el menú contextual.
+            if (canOpenNickMenu) {
+                addLink(
+                    clickable = LinkAnnotation.Clickable(
+                        tag = "nick",
+                        // Estilo explícito: con styles = null, el Text de Material3 pinta el enlace con el color primario y subrayado
+                        styles = TextLinkStyles(style = SpanStyle(color = nickColorValue, fontWeight = FontWeight.Bold)),
+                        linkInteractionListener = { nickMenuExpanded = true }
+                    ),
+                    start = 0,
+                    end = prefix.length - 1
+                )
+            }
+        }
         append(baseString)
 
-        addStyle(SpanStyle(color = baseTextColor, fontStyle = fontStyle, fontWeight = fontWeight), 0, length)
+        addStyle(SpanStyle(color = baseTextColor, fontStyle = fontStyle, fontWeight = fontWeight), offset, length)
 
         for (link in LinkFinder.find(baseString.text)) {
             val mediaUrl = message.mediaUrl
@@ -110,14 +144,13 @@ fun MessageRow(
                             }
                         }
                     ),
-                    start = link.start,
-                    end = link.end
+                    start = link.start + offset,
+                    end = link.end + offset
                 )
             }
         }
     }
 
-    val isOwn = message.isOwnMessage
     val mentionAccent = IRCTheme.mentionAccent
     val mentionBackground = IRCTheme.mentionBackground
     Row(
@@ -134,11 +167,11 @@ fun MessageRow(
             )
             .padding(
                 start = 8.dp, end = 8.dp,
-                top = if (speech != null && showHeader) 10.dp else 2.dp,
-                bottom = 2.dp
+                top = if (compact) 1.dp else if (speech != null && showHeader) 10.dp else 2.dp,
+                bottom = if (compact) 1.dp else 2.dp
             )
     ) {
-        if (speaker != null) {
+        if (speaker != null && !compact) {
             // Columna del avatar: sólo la primera línea de la tanda lo muestra; las demás dejan el hueco
             Box(modifier = Modifier.width(NICK_AVATAR_SIZE)) {
                 if (showHeader) {
@@ -152,7 +185,7 @@ fun MessageRow(
             Spacer(modifier = Modifier.width(10.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
-            if (speaker != null && showHeader) {
+            if (speaker != null && showHeader && !compact) {
                 // Sólo el nick de los mensajes de canal recibidos abre el menú contextual.
                 Box {
                     Text(
@@ -171,10 +204,20 @@ fun MessageRow(
                     }
                 }
             }
-            Text(
-                text = clickableText,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Box {
+                Text(
+                    text = clickableText,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                if (inlineNick && canOpenNickMenu && speaker != null) {
+                    UserActionsMenu(
+                        userName = speaker,
+                        expanded = nickMenuExpanded,
+                        onDismiss = { nickMenuExpanded = false },
+                        mainViewModel = mainViewModel
+                    )
+                }
+            }
 
             val mediaUrl = message.mediaUrl
             if (!mediaUrl.isNullOrBlank() && showMediaPreviews) {
@@ -185,6 +228,7 @@ fun MessageRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
+                        .clip(MaterialTheme.shapes.large) // esquinas de 12 dp (UI-17)
                         .clickable { onMediaClick(mediaUrl, message.mediaType) }
                 )
             }

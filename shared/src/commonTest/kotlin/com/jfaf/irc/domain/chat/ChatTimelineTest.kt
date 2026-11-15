@@ -191,4 +191,36 @@ class ChatTimelineTest {
     fun listaVacia() {
         assertEquals(emptyList(), build(emptyList()))
     }
+
+    // --- Claves estables (animaciones)
+
+    @Test
+    fun clavesUnicasAunConMensajesIguales() {
+        val same = say("ana", "hola", at = day)
+        val items = build(listOf(same, same, same, say("ana", "otro", at = day)))
+        val keys = items.stableKeys()
+        assertEquals(keys.size, keys.toSet().size, keys.toString())
+    }
+
+    @Test
+    fun lasClavesNoCambianAlLlegarUnMensajeNuevo() {
+        val a = say("ana", "uno", at = day + hour)
+        val b = say("kiko", "dos", at = day + 2 * hour)
+        val before = build(listOf(a, b)).stableKeys()
+        val after = build(listOf(a, b, say("luis", "tres", at = day + 3 * hour))).stableKeys()
+        assertEquals(before, after.take(before.size))
+    }
+
+    @Test
+    fun clavesDeLosSeparadoresYGrupos() {
+        val items = build(
+            listOf(say("ana", "1", at = day), presence("a", PresenceEvent.JOIN, day), presence("b", PresenceEvent.JOIN, day), say("kiko", "2", at = 2 * day)),
+            newFromEnd = 1
+        )
+        val keys = items.stableKeys()
+        assertTrue("new" in keys)
+        assertTrue(keys.any { it.startsWith("d-") })
+        assertTrue(keys.any { it.startsWith("g-") })
+        assertEquals(keys.size, keys.toSet().size)
+    }
 }

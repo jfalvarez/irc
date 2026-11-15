@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import com.jfaf.irc.ui.theme.IRCWhite
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -145,18 +148,27 @@ fun MessageInputSection(
                         null
                     },
                     trailingIcon = {
-                        IconButton(onClick = {
-                            if (textFieldValue.text.isNotBlank()) {
-                                onSendMessage(textFieldValue.text)
-                                textFieldValue = TextFieldValue("")
-                                onClearSuggestions()
-                                showSuggestions = false
-                            }
-                        }) {
+                        // Botón de enviar en píldora con el degradado de la marca (UI-17); apagado si no hay texto
+                        val canSend = textFieldValue.text.isNotBlank()
+                        IconButton(
+                            onClick = {
+                                if (canSend) {
+                                    onSendMessage(textFieldValue.text)
+                                    textFieldValue = TextFieldValue("")
+                                    onClearSuggestions()
+                                    showSuggestions = false
+                                }
+                            },
+                            modifier = Modifier
+                                .padding(end = 4.dp)
+                                .size(width = 48.dp, height = 36.dp)
+                                .clip(RoundedCornerShape(percent = 50))
+                                .background(IRCTheme.gradientBrush, alpha = if (canSend) 1f else 0.4f)
+                        ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.Send,
                                 stringResource(Res.string.cd_send_message),
-                                tint = MaterialTheme.colorScheme.onSurface
+                                tint = IRCWhite
                             )
                         }
                     },
@@ -195,7 +207,7 @@ fun MessageInputSection(
                             showSuggestions = false
                         }
                     }),
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(percent = 50), // píldora (UI-17)
                     colors = TextFieldDefaults.colors(
                         focusedTextColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedTextColor = MaterialTheme.colorScheme.onSurface,

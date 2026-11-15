@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
+import com.jfaf.irc.data.prefs.MessageDensity
 import com.jfaf.irc.domain.chat.DayLabel
 import com.jfaf.irc.domain.chat.PresenceSummary
 import com.jfaf.irc.domain.chat.TimelineItem
@@ -90,7 +91,8 @@ fun PresenceGroupRow(
     onToggle: () -> Unit,
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit,
     showMediaPreviews: Boolean,
-    mainViewModel: MainViewModel
+    mainViewModel: MainViewModel,
+    density: MessageDensity = MessageDensity.COMFORTABLE
 ) {
     val summary = PresenceSummary.of(group.messages)
     val joined = if (summary.joined.isNotEmpty()) {
@@ -140,7 +142,8 @@ fun PresenceGroupRow(
                     onMediaClick = onMediaClick,
                     showMediaPreviews = showMediaPreviews,
                     mainViewModel = mainViewModel,
-                    showHeader = false
+                    showHeader = false,
+                    density = density
                 )
             }
         }

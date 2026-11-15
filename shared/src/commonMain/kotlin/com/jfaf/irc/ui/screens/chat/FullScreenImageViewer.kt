@@ -65,7 +65,7 @@ fun FullScreenImageViewer(
                         modifier = Modifier
                             .fillMaxWidth(0.95f)
                             .fillMaxHeight(0.85f)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .graphicsLayer {
                                 alpha = if (imageState == ImageLoadState.Success) 1f else 0f
                             }
@@ -103,7 +103,7 @@ fun FullScreenImageViewer(
                         modifier = Modifier
                             .fillMaxWidth(0.95f)
                             .fillMaxHeight(0.85f)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,

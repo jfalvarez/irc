@@ -1,5 +1,6 @@
 package com.jfaf.irc.ui.viewmodels
 
+import com.jfaf.irc.data.prefs.MessageDensity
 import com.jfaf.irc.data.prefs.ThemeMode
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -95,6 +96,20 @@ class SettingsViewModel(
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             userPreferencesRepository.updateThemeMode(mode)
+        }
+    }
+
+    // --- Densidad de los mensajes (UI-16) ---
+    val messageDensity: StateFlow<MessageDensity> =
+        userPreferencesRepository.messageDensityFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = MessageDensity.Default
+        )
+
+    fun setMessageDensity(density: MessageDensity) {
+        viewModelScope.launch {
+            userPreferencesRepository.updateMessageDensity(density)
         }
     }
 

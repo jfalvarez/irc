@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.runSkikoComposeUiTest
 import com.jfaf.irc.data.history.room.ChatDatabase
+import com.jfaf.irc.data.prefs.MessageDensity
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.remote.IrcTransport
 import com.jfaf.irc.di.commonModule
@@ -177,6 +178,30 @@ class DesktopLayoutTest {
         assertEquals(0, count("Operadores"), "Al cerrar el cajón se deja de pintar la lista")
         onNode(hasText("Tema de prueba", substring = true) and hasClickAction()).performSemanticsAction(SemanticsActions.OnClick)
         awaitText("Tema de #test", "Pulsar la cabecera abre el diálogo del tema")
+    }
+
+    @Test
+    fun densidadCompactaPintaElNickEnLaMismaLineaYCuandoSeCambiaVuelveALaComoda() = runSkikoComposeUiTest(size = Size(600f, 760f)) {
+        val vm = koin.get<MainViewModel>()
+        showApp(vm)
+        connectAndJoin(vm)
+        Thread.sleep(800) // el aviso de «conectado» (debounce de 300 ms) limpia el estado
+        waitForIdle()
+        server.serverSays(":Ana!u@h PRIVMSG #test :hola a todos")
+        server.serverSays(":Ana!u@h PRIVMSG #test :segunda linea")
+
+        awaitText("hola a todos", "Debe verse el mensaje")
+        assertEquals(0, count("<Ana>"), "Cómoda: el nick va en una cabecera con avatar, no entre ángulos")
+        assertEquals(1, count("Ana"), "Cómoda: el nick sale una vez por tanda")
+
+        val prefs = koin.get<UserPreferencesRepository>()
+        runBlocking { prefs.updateMessageDensity(MessageDensity.COMPACT) }
+        awaitText("<Ana> hola a todos", "Compacta: una línea por mensaje con el nick delante")
+        assertEquals(1, count("<Ana> segunda linea"), "Compacta: cada mensaje lleva su nick, sin agrupar")
+
+        runBlocking { prefs.updateMessageDensity(MessageDensity.COMFORTABLE) }
+        runCatching { waitUntil(timeoutMillis = 5_000) { count("<Ana>") == 0 } }
+        assertEquals(0, count("<Ana>"), "Al volver a cómoda se vuelve a la cabecera")
     }
 
     @Test

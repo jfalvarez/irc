@@ -20,6 +20,7 @@ import com.jfaf.irc.domain.platform.AdProvider
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferences
 import com.jfaf.irc.data.prefs.DEFAULT_SHOW_MEDIA_PREVIEWS
+import com.jfaf.irc.data.prefs.MessageDensity
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
@@ -74,6 +75,8 @@ data class ChatScreenState(
     val newMessagesFromEnd: StateFlow<Int>,
     /** Tema de cada canal (clave: nombre del canal en minúsculas). */
     val topics: StateFlow<Map<String, String>>,
+    /** Densidad de los mensajes (cómoda o compacta). */
+    val messageDensity: StateFlow<MessageDensity>,
     val uiMessages: StateFlow<List<UiChatMessage>>,
     /** true si está conectado O reconectando (la UI mantiene el chat visible mientras reconecta). */
     val connectionState: StateFlow<Boolean>,
@@ -172,6 +175,13 @@ class MainViewModel(
         viewModelScope.launch { userPreferencesRepository.addRecentEmoji(emoji) }
     }
 
+    private val messageDensityPref: StateFlow<MessageDensity> =
+        userPreferencesRepository.messageDensityFlow.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            MessageDensity.Default
+        )
+
     private val showMediaPreviewsPref: StateFlow<Boolean> =
         userPreferencesRepository.showMediaPreviewsFlow.stateIn(
             viewModelScope,
@@ -268,6 +278,7 @@ class MainViewModel(
         unreadMentionCounts = chatStateManager.unreadMentionCounts,
         newMessagesFromEnd = newMessagesFromEndFlow,
         topics = chatStateManager.topics,
+        messageDensity = messageDensityPref,
         uiMessages = combinedUiMessagesFlow,
         connectionState = uiConnectionState,
         isReconnecting = ircConnection.isReconnecting,
