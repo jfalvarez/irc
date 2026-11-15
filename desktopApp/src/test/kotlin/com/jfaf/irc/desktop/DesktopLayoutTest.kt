@@ -233,6 +233,21 @@ class DesktopLayoutTest {
     }
 
     @Test
+    fun laPantallaDeConexionEsconderNickServHastaDesplegarlo() = runSkikoComposeUiTest(size = Size(1200f, 760f)) {
+        val vm = koin.get<MainViewModel>()
+        showApp(vm)
+
+        awaitText("Chat en tiempo real", "Debe verse la cabecera de la marca")
+        awaitText("Así te verán en el chat", "Debe verse la vista previa del nick")
+        assertEquals(1, count("Conectar"), "Debe verse el botón de conectar")
+        assertEquals(0, count("Contraseña de NickServ"), "NickServ va plegado hasta desplegarlo")
+
+        onNode(hasText("Tengo el nick registrado") and hasClickAction()).performSemanticsAction(SemanticsActions.OnClick)
+        awaitText("Contraseña de NickServ", "Al desplegarlo aparece la contraseña de NickServ")
+        assertEquals(1, count("Recordar contraseña"))
+    }
+
+    @Test
     fun ctrlTabCambiaDePestanaYCtrlWCierraLaActiva() = runSkikoComposeUiTest(size = Size(1200f, 760f)) {
         val vm = koin.get<MainViewModel>()
         showApp(vm)

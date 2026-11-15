@@ -204,7 +204,6 @@
     <string name="menu_item_add_friend">Añadir a amigos a %1$s</string>
     <string name="label_nickserv_password">Contraseña de NickServ</string>
     <string name="label_remember_password">Recordar contraseña</string>
-    <string name="account_signed_in_as">Has iniciado sesión como: %1$s</string>
     <string name="account_sign_out">Cerrar sesión</string>
     <string name="account_delete">Eliminar cuenta</string>
     <string name="account_deleting">Eliminando la cuenta…</string>
@@ -217,8 +216,17 @@
     <string name="account_delete_reauth_failed">No se pudo confirmar con Google. Comprueba la conexión e inténtalo de nuevo. No se ha borrado nada.</string>
     <string name="account_delete_data_failed">No se pudieron borrar tus listas de la cuenta. Comprueba la conexión e inténtalo de nuevo.</string>
     <string name="account_delete_account_failed">Se borraron tus listas, pero no la cuenta. Inténtalo de nuevo.</string>
-    <string name="account_sign_in_hint">Inicia sesión con Google para sincronizar tu configuración (ej. lista de ignorados) entre dispositivos.</string>
     <string name="account_sign_in_google">Iniciar sesión con Google</string>
+    <string name="connection_tagline">Chat en tiempo real</string>
+    <string name="connection_nick_preview_hint">Así te verán en el chat</string>
+    <string name="connection_nickserv_toggle">Tengo el nick registrado</string>
+    <string name="connection_account_sync">Sincroniza ignorados y ajustes</string>
+    <string name="connection_account_google">Google</string>
+    <string name="connection_account_signed_in">Sesión: %1$s</string>
+    <string name="connection_server_footer">%1$s · SSL</string>
+    <string name="cd_show_password">Mostrar contraseña</string>
+    <string name="cd_hide_password">Ocultar contraseña</string>
+    <string name="cd_account_menu">Menú de la cuenta</string>
     <string name="video_open_in_browser">Abrir vídeo en el navegador</string>
     <!-- Condiciones de uso: las acepta el usuario antes de chatear; ver TermsOfUse -->
     <string name="terms_title">Condiciones de uso</string>

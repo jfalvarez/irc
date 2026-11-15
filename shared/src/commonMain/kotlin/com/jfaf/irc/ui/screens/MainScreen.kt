@@ -59,13 +59,13 @@ import com.jfaf.irc.ui.screens.chat.ChatTopAppBar
 import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer
 import com.jfaf.irc.ui.screens.chat.MessageInputSection
 import com.jfaf.irc.ui.screens.chat.MessagesList
+import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.TargetNavigation
 import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.domain.chat.UserListGrouping
 import com.jfaf.irc.ui.common.openOnLeftSwipe
-import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
@@ -118,6 +118,7 @@ fun MainScreen(
         null
     }
     val activeTopic = activeTarget?.let { topics[it.lowercase()] }
+    val serverConfig by settingsViewModel.serverConfig.collectAsState()
 
     // Atajos de teclado: Ctrl+Tab / Ctrl+Mayús+Tab cambian de pestaña y Ctrl+W cierra la activa (menos Servidor).
     val shortcuts = Modifier.chatShortcuts(
@@ -131,14 +132,9 @@ fun MainScreen(
     val wide = platformUi.isDesktop && connectionState && maxWidth >= WIDE_LAYOUT_MIN_WIDTH
 
     val screenContent: @Composable () -> Unit = {
-        // Degradado de marca sólo en la pantalla de conexión; el chat va sobre el fondo plano (UI-1)
-        val backgroundModifier = if (connectionState) {
-            Modifier.background(MaterialTheme.colorScheme.background)
-        } else {
-            Modifier.background(IRCTheme.gradientBrush)
-        }
-        // La pantalla de conexión va sobre el degradado, que es oscuro: siempre con el tema oscuro
-        ForcedDarkTheme(enabled = !connectionState) {
+        // Todas las pantallas, la de conexión incluida, van sobre el fondo plano del modo elegido; el degradado
+        // de la marca queda para la cabecera de la conexión y los acentos (UI-18)
+        val backgroundModifier = Modifier.background(MaterialTheme.colorScheme.background)
         Box(modifier = Modifier.fillMaxSize().then(backgroundModifier)) {
             Scaffold(
                 modifier = modifier.imePadding(),
@@ -181,6 +177,7 @@ fun MainScreen(
                     viewModel = viewModel,
                     signInViewModel = signInViewModel,
                     onGoogleSignIn = onGoogleSignIn,
+                    serverConfig = serverConfig,
                     fixedUserList = wide,
                     onMediaClick = { mediaUrl, mediaType ->
                         viewModel.userClickedOnMedia(mediaUrl, mediaType)
@@ -201,7 +198,6 @@ fun MainScreen(
                 }
             }
         }
-        } // ForcedDarkTheme
     }
 
     val openDrawerContent: @Composable (closeAction: () -> Unit) -> Unit = { closeAction ->
@@ -286,11 +282,6 @@ private fun EndUserListDrawer(
             }
         }
     }
-}
-
-@Composable
-private fun ForcedDarkTheme(enabled: Boolean, content: @Composable () -> Unit) {
-    if (enabled) IRCAppTheme(darkTheme = true, content = content) else content()
 }
 
 @Composable
@@ -384,6 +375,7 @@ private fun MainScreenScaffoldContent(
     viewModel: MainViewModel,
     signInViewModel: SignInViewModel,
     onGoogleSignIn: () -> Unit,
+    serverConfig: ServerConfig,
     fixedUserList: Boolean,
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
@@ -426,6 +418,7 @@ private fun MainScreenScaffoldContent(
                 onNicknameChange = { nicknameInput = it },
                 nickServPasswordState = nickServPasswordInputState,
                 rememberNickServPasswordState = rememberNickServPasswordInputState,
+                serverConfig = serverConfig,
                 signInViewModel = signInViewModel,
                 onGoogleSignIn = onGoogleSignIn,
                 onConnect = { nick, nickServPass, rememberPass ->

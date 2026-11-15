@@ -8,12 +8,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import com.jfaf.irc.domain.usecase.DeleteAccountResult
 import com.jfaf.irc.resources.Res
-import com.jfaf.irc.resources.account_delete
 import com.jfaf.irc.resources.account_delete_account_failed
 import com.jfaf.irc.resources.account_delete_confirm_button
 import com.jfaf.irc.resources.account_delete_confirm_text
@@ -23,47 +19,30 @@ import com.jfaf.irc.resources.account_delete_done
 import com.jfaf.irc.resources.account_delete_not_signed_in
 import com.jfaf.irc.resources.account_delete_reauth_failed
 import com.jfaf.irc.resources.account_delete_wrong_account
-import com.jfaf.irc.resources.account_deleting
 import com.jfaf.irc.resources.button_accept
 import com.jfaf.irc.resources.button_cancel
 import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
-/** Botón «Eliminar cuenta» con su confirmación. Sólo con sesión y si la plataforma lo admite. */
+/** Confirmación de «Eliminar cuenta»; se muestra al elegirlo en el menú de la cuenta. */
 @Composable
-fun DeleteAccountButton(signInViewModel: SignInViewModel) {
-    val deleting by signInViewModel.deletingAccount.collectAsState()
-    var confirming by remember { mutableStateOf(false) }
-
-    TextButton(
-        onClick = { confirming = true },
-        enabled = !deleting,
-        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-    ) {
-        Text(stringResource(if (deleting) Res.string.account_deleting else Res.string.account_delete))
-    }
-
-    if (confirming) {
-        AlertDialog(
-            onDismissRequest = { confirming = false },
-            containerColor = MaterialTheme.colorScheme.surface,
-            title = { Text(stringResource(Res.string.account_delete_confirm_title)) },
-            text = { Text(stringResource(Res.string.account_delete_confirm_text)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirming = false
-                        signInViewModel.deleteAccount()
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text(stringResource(Res.string.account_delete_confirm_button)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirming = false }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(stringResource(Res.string.button_cancel)) }
-            }
-        )
-    }
+fun DeleteAccountConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = { Text(stringResource(Res.string.account_delete_confirm_title)) },
+        text = { Text(stringResource(Res.string.account_delete_confirm_text)) },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) { Text(stringResource(Res.string.account_delete_confirm_button)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)) { Text(stringResource(Res.string.button_cancel)) }
+        }
+    )
 }
 
 /** Aviso con el resultado de borrar la cuenta. Va fuera de la parte «con sesión»: tras borrarla ya no la hay. */
