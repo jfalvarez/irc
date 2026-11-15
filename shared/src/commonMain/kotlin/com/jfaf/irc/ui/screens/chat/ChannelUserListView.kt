@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
+import com.jfaf.irc.ui.theme.nickColor
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 
 @Composable
@@ -64,7 +65,7 @@ fun ChannelUserListView(
                             Text(
                                 text = userName, // Display userName with prefix
                                 modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = nickColor(userName)
                             )
                         }
 

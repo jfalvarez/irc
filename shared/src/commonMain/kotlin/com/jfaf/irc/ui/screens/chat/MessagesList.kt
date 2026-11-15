@@ -3,7 +3,9 @@ package com.jfaf.irc.ui.screens.chat
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.runtime.remember
+import com.jfaf.irc.domain.chat.MessageGrouping
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -24,12 +26,15 @@ fun MessagesList(
     mainViewModel: MainViewModel
 ) {
     val platformUi = LocalPlatformUi.current
+    // La lista se pinta del último al primero; la cabecera de cada tanda va en su primer mensaje cronológico
+    val reversed = remember(messages) { messages.reversed() }
+    val headerFlags = remember(messages) { MessageGrouping.headerFlags(messages).reversed() }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         reverseLayout = true,
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
     ) {
-        items(messages.reversed()) { msg ->
+        itemsIndexed(reversed) { index, msg ->
             if (msg.type == UiMessageType.AD_MESSAGE) {
                 // Anuncio: lo pinta la plataforma (en escritorio no hay)
                 ad?.let { platformUi.AdContent(it) }
@@ -38,7 +43,8 @@ fun MessagesList(
                     message = msg,
                     onMediaClick = onMediaClick,
                     showMediaPreviews = showMediaPreviews,
-                    mainViewModel = mainViewModel
+                    mainViewModel = mainViewModel,
+                    showHeader = headerFlags[index]
                 )
             }
         }

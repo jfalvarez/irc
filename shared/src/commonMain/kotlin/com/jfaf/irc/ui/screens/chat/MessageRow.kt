@@ -5,6 +5,8 @@ import com.jfaf.irc.domain.chat.LinkFinder
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,6 +33,9 @@ import androidx.compose.ui.unit.dp
 // import com.jfaf.irc.R // No longer needed for string resources of placeholder
 import com.jfaf.irc.ui.media.MediaPreview
 import com.jfaf.irc.ui.theme.IRCTheme
+import com.jfaf.irc.ui.theme.nickColor
+import com.jfaf.irc.ui.theme.ownNickColor
+import com.jfaf.irc.domain.chat.MessageGrouping
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 import com.jfaf.irc.domain.chat.model.UiChatMessage
@@ -41,9 +46,14 @@ fun MessageRow(
     message: UiChatMessage, 
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit,
     showMediaPreviews: Boolean,
-    mainViewModel: MainViewModel
+    mainViewModel: MainViewModel,
+    showHeader: Boolean = true
 ) {
     var nickMenuExpanded by remember { mutableStateOf(false) }
+    // Los mensajes de conversación se pintan con avatar y nick (cabecera, una vez por tanda) y el cuerpo debajo
+    val speech = remember(message) { MessageGrouping.speech(message) }
+    val speaker = speech?.nick
+    val canOpenNickMenu = speaker != null && message.type == UiMessageType.CHANNEL_MSG_RECEIVED
     val baseTextColor = when (message.type) {
         UiMessageType.SYSTEM_MESSAGE, UiMessageType.JOIN_PART_QUIT, UiMessageType.NICK_CHANGE, UiMessageType.MODE_CHANGE -> MaterialTheme.colorScheme.onSurfaceVariant
         UiMessageType.SERVER_INFO -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -60,33 +70,14 @@ fun MessageRow(
         UiMessageType.ACTION_MSG -> FontStyle.Italic
         else -> FontStyle.Normal
     }
-    val fontWeight = if (message.isOwnMessage && message.annotatedString?.spanStyles?.all { it.item.fontWeight != FontWeight.Bold } == true) FontWeight.Bold else FontWeight.Normal
+    val fontWeight = FontWeight.Normal
 
     val uriHandler = LocalUriHandler.current
     val clickableText = buildAnnotatedString {
-        val baseString = message.annotatedString ?: AnnotatedString(message.fullText)
+        val baseString = speech?.body ?: message.annotatedString ?: AnnotatedString(message.fullText)
         append(baseString)
 
         addStyle(SpanStyle(color = baseTextColor, fontStyle = fontStyle, fontWeight = fontWeight), 0, length)
-
-        // Solo el "<nick>" de mensajes de canal recibidos abre el menú contextual.
-        val nickSender = message.sender
-        if (message.type == UiMessageType.CHANNEL_MSG_RECEIVED && !nickSender.isNullOrBlank()) {
-            val nickPrefix = "<$nickSender>"
-            if (baseString.text.startsWith(nickPrefix)) {
-                addLink(
-                    clickable = LinkAnnotation.Clickable(
-                        tag = "nick",
-                        // Estilo explícito: con styles = null, el Text de Material3 1.4 pinta el enlace
-                        // con el color primario y subrayado, y el nick casi no se ve sobre el fondo.
-                        styles = TextLinkStyles(style = SpanStyle(color = baseTextColor)),
-                        linkInteractionListener = { nickMenuExpanded = true }
-                    ),
-                    start = 0,
-                    end = nickPrefix.length
-                )
-            }
-        }
 
         for (link in LinkFinder.find(baseString.text)) {
             val mediaUrl = message.mediaUrl
@@ -119,34 +110,67 @@ fun MessageRow(
         }
     }
 
-    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth()) {
-        Box {
+    val isOwn = message.isOwnMessage
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                start = 8.dp, end = 8.dp,
+                top = if (speech != null && showHeader) 10.dp else 2.dp,
+                bottom = 2.dp
+            )
+    ) {
+        if (speaker != null) {
+            // Columna del avatar: sólo la primera línea de la tanda lo muestra; las demás dejan el hueco
+            Box(modifier = Modifier.width(NICK_AVATAR_SIZE)) {
+                if (showHeader) {
+                    NickAvatar(
+                        nick = speaker,
+                        isOwn = isOwn,
+                        modifier = if (canOpenNickMenu) Modifier.clickable { nickMenuExpanded = true } else Modifier
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            if (speaker != null && showHeader) {
+                // Sólo el nick de los mensajes de canal recibidos abre el menú contextual.
+                Box {
+                    Text(
+                        text = speaker,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (isOwn) IRCTheme.ownNickColor else nickColor(speaker),
+                        modifier = if (canOpenNickMenu) Modifier.clickable { nickMenuExpanded = true } else Modifier
+                    )
+                    if (canOpenNickMenu) {
+                        UserActionsMenu(
+                            userName = speaker,
+                            expanded = nickMenuExpanded,
+                            onDismiss = { nickMenuExpanded = false },
+                            mainViewModel = mainViewModel
+                        )
+                    }
+                }
+            }
             Text(
                 text = clickableText,
                 style = MaterialTheme.typography.bodyMedium
             )
-            message.sender?.let { nick ->
-                UserActionsMenu(
-                    userName = nick,
-                    expanded = nickMenuExpanded,
-                    onDismiss = { nickMenuExpanded = false },
-                    mainViewModel = mainViewModel
+
+            val mediaUrl = message.mediaUrl
+            if (!mediaUrl.isNullOrBlank() && showMediaPreviews) {
+                Spacer(modifier = Modifier.height(4.dp))
+                MediaPreview(
+                    mediaUrl = mediaUrl,
+                    mediaType = message.mediaType,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clickable { onMediaClick(mediaUrl, message.mediaType) }
                 )
             }
+            // No 'else' block, so no placeholder text if showMediaPreviews is false
         }
-
-        val mediaUrl = message.mediaUrl
-        if (!mediaUrl.isNullOrBlank() && showMediaPreviews) {
-            Spacer(modifier = Modifier.height(4.dp))
-            MediaPreview(
-                mediaUrl = mediaUrl,
-                mediaType = message.mediaType,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .clickable { onMediaClick(mediaUrl, message.mediaType) }
-            )
-        } 
-        // No 'else' block, so no placeholder text if showMediaPreviews is false
     }
 }

@@ -64,4 +64,30 @@ class ThemeContrastTest {
         assertAa("enlaces/superficie", LinkBlueLight, LightSurface)
         assertAa("borde/fondo", LightOutline, LightBackground, min = 3.0)
     }
+
+    @Test
+    fun coloresDeNicksEnModoOscuro() {
+        NickPalette.dark.forEachIndexed { i, color ->
+            assertAa("nick $i/fondo", color, NeutralBackground)
+            assertAa("nick $i/superficie", color, NeutralSurface)
+            assertAa("inicial/avatar $i", NickPalette.onAvatar(darkTheme = true), color)
+        }
+    }
+
+    @Test
+    fun coloresDeNicksEnModoClaro() {
+        NickPalette.light.forEachIndexed { i, color ->
+            assertAa("nick $i/fondo", color, LightBackground)
+            assertAa("nick $i/superficie", color, LightSurface)
+            assertAa("inicial/avatar $i", NickPalette.onAvatar(darkTheme = false), color)
+        }
+    }
+
+    @Test
+    fun tuNickSeLeeEnLosDosModos() {
+        assertAa("tu nick/fondo oscuro", OwnNickDark, NeutralBackground)
+        assertAa("tu nick/superficie oscura", OwnNickDark, NeutralSurface)
+        assertAa("tu nick/fondo claro", PurpleStart, LightBackground)
+        assertAa("tu nick/superficie clara", PurpleStart, LightSurface)
+    }
 }
