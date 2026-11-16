@@ -8,7 +8,6 @@ plugins {
     // Compilador de Compose: el modelo del chat (AnnotatedString) se pinta en :app y debe seguir siendo estable.
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform) // Compose Resources (textos)
-    alias(libs.plugins.kotlin.serialization) // JSON de las APIs REST de Firebase (data/auth)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
 }
@@ -73,9 +72,6 @@ kotlin {
             api(libs.jetbrains.navigation.compose)
             // Imágenes (Coil 3, paso 3.3). Se expone con api porque :app registra su ImageLoader.
             api(libs.coil.compose)
-            // Firebase por REST (login de escritorio): el motor HTTP lo pone cada plataforma
-            implementation(libs.ktor.client.core)
-            implementation(libs.kotlinx.serialization.json)
         }
         // Android y escritorio son JVM: el cliente de red de Coil (OkHttp) va en el grupo compartido.
         named("jvmCommonMain").dependencies {
@@ -91,7 +87,6 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
-            implementation(libs.ktor.client.mock)
         }
         // Leer Compose Resources en la JVM de escritorio necesita el runtime nativo de Skia (skiko).
         named("desktopTest").dependencies {

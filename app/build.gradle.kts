@@ -23,8 +23,6 @@ val admobAppIdFromLocalProps = localProperties.getProperty("admob.appId", "ca-ap
 // Obtener las palabras clave del filtro de imagen, o una cadena vacía si no se define
 val imageFilterKeywords = localProperties.getProperty("IMAGE_FILTER_KEYWORDS", "")
 
-val googleSignInClientId = localProperties.getProperty("google.signin.clientId")
-
 // Id del dispositivo para probar el formulario de consentimiento como en la UE (sólo debug; lo escribe UMP en Logcat)
 val umpTestDeviceId = localProperties.getProperty("ump.testDeviceHashedId", "")
 
@@ -43,7 +41,6 @@ android {
 
         // Exponer IMAGE_FILTER_KEYWORDS como un campo en BuildConfig
         buildConfigField("String", "IMAGE_FILTER_KEYWORDS", "\"$imageFilterKeywords\"")
-        buildConfigField("String", "GOOGLE_SIGN_IN_CLIENT_ID", "\"$googleSignInClientId\"")
         buildConfigField("String", "UMP_TEST_DEVICE_ID", "\"$umpTestDeviceId\"")
     }
 
@@ -98,9 +95,6 @@ dependencies {
     implementation(libs.firebase.analytics)       // Firebase Analytics KTX
     implementation(libs.firebase.remoteconfig)   // Firebase Remote Config KTX
     implementation(libs.firebase.crashlytics)    // Firebase Crashlytics KTX
-    implementation(libs.firebase.firestore)
-    implementation(libs.firebase.auth)
-    implementation(libs.play.services.auth)
 
     // AdMob
     implementation(libs.play.services.ads)

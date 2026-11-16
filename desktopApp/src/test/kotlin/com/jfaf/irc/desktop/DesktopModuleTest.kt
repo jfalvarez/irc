@@ -2,9 +2,7 @@ package com.jfaf.irc.desktop
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import com.jfaf.irc.data.auth.RestAuthSession
 import com.jfaf.irc.data.user.LocalUserMetadataStore
-import com.jfaf.irc.data.user.SyncedUserMetadataStore
 import com.jfaf.irc.data.history.room.ChatDatabase
 import com.jfaf.irc.data.remote.IrcSession
 import com.jfaf.irc.di.commonModule
@@ -16,7 +14,6 @@ import com.jfaf.irc.domain.notifications.Notifier
 import com.jfaf.irc.domain.platform.AdProvider
 import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.domain.platform.AppVisibility
-import com.jfaf.irc.domain.platform.AuthSession
 import com.jfaf.irc.domain.platform.ConnectionHost
 import com.jfaf.irc.domain.platform.Haptics
 import com.jfaf.irc.domain.platform.UpdateChecker
@@ -25,7 +22,6 @@ import com.jfaf.irc.domain.text.StringProvider
 import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
-import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.koin.core.Koin
@@ -37,7 +33,6 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -53,7 +48,7 @@ class DesktopModuleTest {
     @BeforeTest
     fun setUp() {
         dataDir = Files.createTempDirectory("irc-desktop-test").toFile()
-        app = koinApplication { modules(commonModule, viewModelModule, desktopModule(dataDir, google = null)) }
+        app = koinApplication { modules(commonModule, viewModelModule, desktopModule(dataDir)) }
         koin = app.koin
     }
 
@@ -71,7 +66,6 @@ class DesktopModuleTest {
         assertNotNull(koin.get<Haptics>())
         assertNotNull(koin.get<AdProvider>())
         assertNotNull(koin.get<AnalyticsTracker>())
-        assertNotNull(koin.get<AuthSession>())
         assertNotNull(koin.get<UpdateChecker>())
         assertNotNull(koin.get<AppVisibility>())
         assertNotNull(koin.get<IrcSession>())
@@ -99,37 +93,11 @@ class DesktopModuleTest {
     fun resuelveLosViewModels() {
         assertNotNull(koin.get<MainViewModel>())
         assertNotNull(koin.get<SettingsViewModel>())
-        assertNotNull(koin.get<SignInViewModel>())
     }
 
     @Test
-    fun sinLoginNoHayUsuario() {
-        assertNull(koin.get<AuthSession>().currentUser.value)
-        assertTrue(koin.get<AuthSession>() is NoAuthSession)
-        assertNull(koin.getOrNull<DesktopGoogleSignIn>(), "Sin configuración no se ofrece el login")
-        assertTrue(koin.get<UserMetadataStore>() is LocalUserMetadataStore, "Sin login, listas sólo en local")
-    }
-
-    @Test
-    fun conConfiguracionDeGoogle_resuelveElLoginSinSesionGuardada() {
-        val config = DesktopGoogleConfig.of("cliente", "secreto", "clave", "proyecto")!!
-        val withGoogle = koinApplication { modules(commonModule, viewModelModule, desktopModule(dataDir, google = config)) }
-        try {
-            val auth = withGoogle.koin.get<AuthSession>()
-            assertTrue(auth is RestAuthSession)
-            assertNull(auth.currentUser.value)
-            assertNotNull(withGoogle.koin.get<DesktopGoogleSignIn>())
-            assertTrue(withGoogle.koin.get<UserMetadataStore>() is SyncedUserMetadataStore, "Con login, listas sincronizadas")
-            assertNotNull(withGoogle.koin.get<SignInViewModel>())
-        } finally {
-            runCatching { withGoogle.koin.get<ChatDatabase>().close() }
-            withGoogle.close()
-        }
-    }
-
-    @Test
-    fun configuracionIncompleta_noOfreceLogin() {
-        assertNull(DesktopGoogleConfig.of("cliente", "", "clave", "proyecto"))
+    fun lasListasSonSoloLocales() {
+        assertTrue(koin.get<UserMetadataStore>() is LocalUserMetadataStore, "Ignorados y amigos sólo en el dispositivo")
     }
 
     @Test

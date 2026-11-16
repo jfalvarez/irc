@@ -55,7 +55,7 @@ class SoundSettingTest {
     @BeforeTest
     fun setUp() {
         dataDir = Files.createTempDirectory("irc-sound-setting-test").toFile()
-        app = koinApplication { modules(commonModule, viewModelModule, desktopModule(dataDir, output, google = null)) }
+        app = koinApplication { modules(commonModule, viewModelModule, desktopModule(dataDir, output)) }
         koin = app.koin
     }
 

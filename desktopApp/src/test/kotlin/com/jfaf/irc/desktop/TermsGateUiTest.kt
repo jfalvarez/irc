@@ -36,7 +36,7 @@ class TermsGateUiTest {
     @BeforeTest
     fun setUp() {
         dataDir = Files.createTempDirectory("irc-terms-test").toFile()
-        koin = startKoin { modules(commonModule, viewModelModule, desktopModule(dataDir, google = null)) }.koin
+        koin = startKoin { modules(commonModule, viewModelModule, desktopModule(dataDir)) }.koin
     }
 
     @AfterTest
@@ -47,7 +47,7 @@ class TermsGateUiTest {
     }
 
     private fun SkikoComposeUiTest.showApp() = setContent {
-        App(platformUi = DesktopPlatformUi(), onGoogleSignIn = {}, onRedirectToPlayStore = {}, onExit = { exited = true })
+        App(platformUi = DesktopPlatformUi(), onRedirectToPlayStore = {}, onExit = { exited = true })
     }
 
     private fun SkikoComposeUiTest.isShown(text: String) = onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()

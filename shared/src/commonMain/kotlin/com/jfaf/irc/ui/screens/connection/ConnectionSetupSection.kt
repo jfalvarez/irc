@@ -27,12 +27,9 @@ import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,17 +37,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,16 +62,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.resources.Res
-import com.jfaf.irc.resources.account_delete
-import com.jfaf.irc.resources.account_deleting
-import com.jfaf.irc.resources.account_sign_out
 import com.jfaf.irc.resources.button_connect
-import com.jfaf.irc.resources.cd_account_menu
 import com.jfaf.irc.resources.cd_hide_password
 import com.jfaf.irc.resources.cd_show_password
-import com.jfaf.irc.resources.connection_account_google
-import com.jfaf.irc.resources.connection_account_signed_in
-import com.jfaf.irc.resources.connection_account_sync
 import com.jfaf.irc.resources.connection_nick_preview_hint
 import com.jfaf.irc.resources.connection_nickserv_toggle
 import com.jfaf.irc.resources.connection_server_footer
@@ -84,13 +72,11 @@ import com.jfaf.irc.resources.connection_tagline
 import com.jfaf.irc.resources.label_nickname
 import com.jfaf.irc.resources.label_nickserv_password
 import com.jfaf.irc.resources.label_remember_password
-import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.ui.screens.chat.NickAvatar
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.theme.IRCWhite
 import com.jfaf.irc.ui.theme.PurpleStart
 import com.jfaf.irc.ui.theme.ownNickColor
-import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import org.jetbrains.compose.resources.stringResource
 
 /** Ancho de la tarjeta en escritorio y en las ventanas anchas. */
@@ -107,7 +93,7 @@ private val FieldShape = RoundedCornerShape(12.dp)
 
 /**
  * Pantalla de conexión (UI-18 a UI-24): cabecera con el degradado de la marca y, debajo, una tarjeta con la vista
- * previa del nick, el formulario y el botón de conectar; la cuenta de Google y el servidor, en segundo plano.
+ * previa del nick, el formulario y el botón de conectar; el servidor, en segundo plano.
  * Va sobre el fondo neutro y sigue el modo de color elegido.
  */
 @Composable
@@ -117,8 +103,6 @@ fun ConnectionSetupSection(
     nickServPasswordState: MutableState<String>,
     rememberNickServPasswordState: MutableState<Boolean>,
     serverConfig: ServerConfig,
-    signInViewModel: SignInViewModel,
-    onGoogleSignIn: () -> Unit,
     onConnect: (String, String, Boolean) -> Unit
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -135,7 +119,6 @@ fun ConnectionSetupSection(
             )
         }
         val outside: @Composable () -> Unit = {
-            AccountRow(signInViewModel, onGoogleSignIn)
             ServerFooter(serverConfig)
         }
 
@@ -416,78 +399,6 @@ private fun ConnectButton(enabled: Boolean, onClick: () -> Unit) {
             fontWeight = FontWeight.Bold
         )
     }
-}
-
-/** Cuenta de Google en segundo plano: enlace discreto, o el correo con un menú si hay sesión (UI-23). */
-@Composable
-private fun AccountRow(signInViewModel: SignInViewModel, onGoogleSignIn: () -> Unit) {
-    val platformUi = LocalPlatformUi.current
-    if (!platformUi.supportsGoogleSignIn) return
-    val isUserAuthenticated by signInViewModel.isUserAuthenticated.collectAsState()
-    val currentUser by signInViewModel.currentUser.collectAsState()
-    val deleting by signInViewModel.deletingAccount.collectAsState()
-
-    Row(
-        modifier = Modifier.padding(top = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        if (isUserAuthenticated) {
-            var menuOpen by remember { mutableStateOf(false) }
-            var confirmingDelete by remember { mutableStateOf(false) }
-            Text(
-                stringResource(Res.string.connection_account_signed_in, currentUser?.email ?: ""),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false)
-            )
-            Box {
-                IconButton(onClick = { menuOpen = true }) {
-                    Icon(
-                        Icons.Filled.MoreVert,
-                        contentDescription = stringResource(Res.string.cd_account_menu),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                DropdownMenu(
-                    expanded = menuOpen,
-                    onDismissRequest = { menuOpen = false },
-                    containerColor = MaterialTheme.colorScheme.surface
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.account_sign_out)) },
-                        onClick = { menuOpen = false; signInViewModel.signOut() }
-                    )
-                    if (signInViewModel.canDeleteAccount) {
-                        DropdownMenuItem(
-                            enabled = !deleting,
-                            text = { Text(stringResource(if (deleting) Res.string.account_deleting else Res.string.account_delete), color = MaterialTheme.colorScheme.error) },
-                            onClick = { menuOpen = false; confirmingDelete = true }
-                        )
-                    }
-                }
-            }
-            if (confirmingDelete) {
-                DeleteAccountConfirmDialog(
-                    onConfirm = { confirmingDelete = false; signInViewModel.deleteAccount() },
-                    onDismiss = { confirmingDelete = false }
-                )
-            }
-        } else {
-            Text(
-                stringResource(Res.string.connection_account_sync),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            TextButton(onClick = onGoogleSignIn) {
-                Text(stringResource(Res.string.connection_account_google), fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-    // Fuera de la parte «con sesión»: tras borrar la cuenta ya no la hay y el aviso debe seguir
-    AccountDeletionResultDialog(signInViewModel)
 }
 
 /** Pie con el servidor al que se conectará, de los Ajustes; sólo informativo (UI-24). */

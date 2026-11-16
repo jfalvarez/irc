@@ -30,15 +30,12 @@
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
 
-# JNA (DPAPI): carga la librería nativa y enlaza las interfaces por reflexión
+# JNA: carga la librería nativa y enlaza las interfaces por reflexión (lo usan librerías de escritorio)
 -keep class com.sun.jna.** { *; }
 -keep class * implements com.sun.jna.** { *; }
 -dontwarn com.sun.jna.**
 
-# Ktor (login de Google por REST) y kotlinx.serialization
--dontwarn io.ktor.**
 -dontwarn org.slf4j.**
--keepclassmembers class kotlinx.serialization.json.** { *** Companion; }
 
 # Otras clases del classpath que sólo se usan en Android o en pruebas
 -dontwarn android.**

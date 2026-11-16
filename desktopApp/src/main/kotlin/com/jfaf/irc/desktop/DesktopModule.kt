@@ -3,11 +3,6 @@ package com.jfaf.irc.desktop
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
-import com.jfaf.irc.data.auth.FirebaseAuthApi
-import com.jfaf.irc.data.auth.FirebaseRestAuth
-import com.jfaf.irc.data.auth.RestAuthSession
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.okhttp.OkHttp
 import com.jfaf.irc.data.history.room.CHAT_DATABASE_NAME
 import com.jfaf.irc.data.history.room.ChatDatabase
 import com.jfaf.irc.data.history.room.buildChatDatabase
@@ -16,22 +11,12 @@ import com.jfaf.irc.data.prefs.createPreferencesDataStore
 import com.jfaf.irc.data.remote.IrcTransport
 import com.jfaf.irc.data.remote.JvmSocketTransport
 import com.jfaf.irc.data.text.ComposeStringProvider
-import com.jfaf.irc.data.firestore.FirestoreRestUserLists
 import com.jfaf.irc.data.user.LocalUserMetadataStore
-import com.jfaf.irc.data.user.SyncedUserMetadataStore
-import com.jfaf.irc.domain.platform.AppVisibility
-import com.jfaf.irc.domain.user.RemoteUserLists
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
 import com.jfaf.irc.domain.config.AppConfig
 import com.jfaf.irc.domain.notifications.Notifier
 import com.jfaf.irc.domain.platform.AdProvider
 import com.jfaf.irc.domain.platform.AnalyticsTracker
-import com.jfaf.irc.domain.platform.AuthSession
-import com.jfaf.irc.domain.platform.GoogleIdTokenRequester
 import com.jfaf.irc.domain.platform.NetworkMonitor
-import com.jfaf.irc.domain.platform.NoGoogleIdTokenRequester
 import com.jfaf.irc.domain.platform.ConnectionHost
 import com.jfaf.irc.domain.platform.Haptics
 import com.jfaf.irc.domain.platform.UpdateChecker
@@ -47,13 +32,11 @@ import java.io.File
 /**
  * Implementaciones de escritorio. Junto con `commonModule` y `viewModelModule` (de `:shared`)
  * completa el grafo de Koin. [dataDir] es la carpeta de datos del usuario, [soundOutput] el que emite el sonido
- * de aviso (las pruebas ponen uno que sólo cuenta) y [google] la configuración del login de Google
- * (por defecto, la de `local.properties`; null: sin login, como en las pruebas).
+ * de aviso (las pruebas ponen uno que sólo cuenta).
  */
 fun desktopModule(
     dataDir: File,
-    soundOutput: SoundPlayer = ToneSoundPlayer(),
-    google: DesktopGoogleConfig? = DesktopGoogleConfig.fromBuild()
+    soundOutput: SoundPlayer = ToneSoundPlayer()
 ) = module {
     // Persistencia: las mismas funciones comunes que Android, con rutas de archivo
     single {
@@ -80,33 +63,7 @@ fun desktopModule(
     single<NetworkMonitor> { DesktopNetworkMonitor(get(ApplicationScope)) }
     single<AdProvider> { NoAdProvider() }
     single<AnalyticsTracker> { NoOpAnalyticsTracker() }
-    if (google == null) {
-        single<AuthSession> { NoAuthSession() }
-        single<UserMetadataStore> { LocalUserMetadataStore(get()) }
-    } else {
-        // Login de Google: navegador del sistema + Firebase Auth por REST; sesión cifrada en la carpeta de datos
-        val now = { System.currentTimeMillis() }
-        single { HttpClient(OkHttp) }
-        single<FirebaseAuthApi> { FirebaseRestAuth(get(), google.firebaseApiKey, now) }
-        single { RestAuthSession(get(), DpapiSessionStore(File(dataDir, SESSION_FILE)), now).also { it.start(get(ApplicationScope)) } } bind AuthSession::class
-        single { GoogleLoopbackOAuth(get(), google.clientId, google.clientSecret) }
-        single { DesktopGoogleSignIn(get(), get(), get(ApplicationScope)) }
-
-        // Listas: en local y, con sesión, sincronizadas con Firestore por REST (como Android, sin escucha en
-        // tiempo real: también se consulta al volver a la ventana)
-        single<RemoteUserLists> {
-            val auth = get<RestAuthSession>()
-            val backToWindow = get<AppVisibility>().isInForeground.drop(1).filter { it }.map { }
-            FirestoreRestUserLists(get(), google.firebaseProjectId, auth, auth::idToken, now, refreshRequests = backToWindow)
-        }
-        single<UserMetadataStore> {
-            SyncedUserMetadataStore(LocalUserMetadataStore(get()), get()).also { it.start(get(ApplicationScope)) }
-        }
-    }
+    // Ignorados y amigos: sólo en el dispositivo
+    single<UserMetadataStore> { LocalUserMetadataStore(get()) }
     single<UpdateChecker> { NoUpdateChecker() }
-    // Borrar la cuenta desde el escritorio: pendiente (#37b); RestAuthSession aún no lo admite, así que no hay botón
-    single<GoogleIdTokenRequester> { NoGoogleIdTokenRequester }
 }
-
-/** Sesión de Google guardada (cifrada con DPAPI en Windows), en la carpeta de datos. */
-const val SESSION_FILE = "google_session.bin"

@@ -4,9 +4,6 @@ package com.jfaf.irc.domain.config
 interface AppConfig {
     /** Palabras (en minúsculas) que, si aparecen en la URL de una imagen, impiden previsualizarla. */
     val imageFilterKeywords: Set<String>
-
-    /** Client ID de OAuth para el login con Google. En escritorio (sin login, decisión 0.1) será "". */
-    val googleSignInClientId: String
 }
 
 /** "a, B ,,c" -> {"a", "b", "c"} */

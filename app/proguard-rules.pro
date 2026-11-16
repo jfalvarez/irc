@@ -20,6 +20,3 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# Firestore lee users/{uid} con toObject<UserMetadata>() por reflexión: necesita el constructor
-# vacío y los getters con sus nombres. Si se mueve la clase, actualizar este nombre.
--keep class com.jfaf.irc.data.firebase.UserMetadata { *; }

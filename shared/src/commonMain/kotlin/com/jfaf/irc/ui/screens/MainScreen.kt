@@ -70,7 +70,6 @@ import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
-import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import kotlinx.coroutines.launch
 
 /** Ancho a partir del cual la versión de escritorio usa paneles fijos (el "expandido" de Material). */
@@ -82,8 +81,6 @@ fun MainScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = koinViewModel(),
     settingsViewModel: SettingsViewModel = koinViewModel(),
-    signInViewModel: SignInViewModel,
-    onGoogleSignIn: () -> Unit,
     navController: NavHostController,
     snackbarHostState: SnackbarHostState
 ) {
@@ -175,8 +172,6 @@ fun MainScreen(
                     paddingValues = paddingValues,
                     connectionState = connectionState,
                     viewModel = viewModel,
-                    signInViewModel = signInViewModel,
-                    onGoogleSignIn = onGoogleSignIn,
                     serverConfig = serverConfig,
                     fixedUserList = wide,
                     onMediaClick = { mediaUrl, mediaType ->
@@ -373,8 +368,6 @@ private fun MainScreenScaffoldContent(
     paddingValues: PaddingValues,
     connectionState: Boolean,
     viewModel: MainViewModel,
-    signInViewModel: SignInViewModel,
-    onGoogleSignIn: () -> Unit,
     serverConfig: ServerConfig,
     fixedUserList: Boolean,
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
@@ -419,8 +412,6 @@ private fun MainScreenScaffoldContent(
                 nickServPasswordState = nickServPasswordInputState,
                 rememberNickServPasswordState = rememberNickServPasswordInputState,
                 serverConfig = serverConfig,
-                signInViewModel = signInViewModel,
-                onGoogleSignIn = onGoogleSignIn,
                 onConnect = { nick, nickServPass, rememberPass ->
                     if (nick.isNotBlank()) {
                         viewModel.connect(nick, true, nickServPass, rememberPass)

@@ -5,13 +5,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.room.Room
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
-import com.google.firebase.auth.auth
-import com.google.firebase.firestore.firestore
 import com.jfaf.irc.ads.NativeAdManager
 import com.jfaf.irc.config.RemoteConfigManager
 import com.jfaf.irc.data.firebase.FirebaseAnalyticsTracker
-import com.jfaf.irc.data.firebase.FirebaseAuthSession
-import com.jfaf.irc.data.firebase.FirestoreUserLists
 import com.jfaf.irc.data.history.room.CHAT_DATABASE_NAME
 import com.jfaf.irc.data.history.room.ChatDatabase
 import com.jfaf.irc.data.history.room.buildChatDatabase
@@ -21,14 +17,11 @@ import com.jfaf.irc.data.remote.IrcTransport
 import com.jfaf.irc.data.remote.JvmSocketTransport
 import com.jfaf.irc.data.text.ComposeStringProvider
 import com.jfaf.irc.data.user.LocalUserMetadataStore
-import com.jfaf.irc.data.user.SyncedUserMetadataStore
 import com.jfaf.irc.domain.config.AppConfig
 import com.jfaf.irc.domain.notifications.Notifier
 import com.jfaf.irc.domain.platform.AdProvider
 import com.jfaf.irc.domain.platform.AnalyticsTracker
-import com.jfaf.irc.domain.platform.AuthSession
 import com.jfaf.irc.domain.platform.ConnectionHost
-import com.jfaf.irc.domain.platform.GoogleIdTokenRequester
 import com.jfaf.irc.domain.platform.Haptics
 import com.jfaf.irc.domain.platform.NetworkMonitor
 import com.jfaf.irc.domain.platform.UpdateChecker
@@ -38,14 +31,13 @@ import com.jfaf.irc.privacy.AdsConsentManager
 import com.jfaf.irc.service.AndroidConnectionHost
 import com.jfaf.irc.service.AndroidNetworkMonitor
 import com.jfaf.irc.service.AndroidNotifier
-import com.jfaf.irc.ui.platform.AndroidGoogleIdTokenRequester
 import com.jfaf.irc.util.AndroidHaptics
 import com.jfaf.irc.util.BuildConfigAppConfig
 import org.koin.android.ext.koin.androidContext
 import kotlinx.coroutines.runBlocking
 import org.koin.dsl.module
 
-/** Implementaciones Android: Context, Room, DataStore, Firebase, AdMob y servicio. */
+/** Implementaciones Android: Context, Room, DataStore, Firebase (analítica y avisos), AdMob y servicio. */
 val androidModule = module {
     // Persistencia
     single {
@@ -73,16 +65,7 @@ val androidModule = module {
     // Firebase
     single { FirebaseAnalytics.getInstance(androidContext()) }
     single<AnalyticsTracker> { FirebaseAnalyticsTracker(get()) }
-    single { Firebase.auth }
-    single { Firebase.firestore }
-    single<AuthSession> { FirebaseAuthSession(get()) }
-    // Confirmar con la cuenta de Google antes de borrarla (la pantalla la abre MainActivity)
-    single { AndroidGoogleIdTokenRequester() }
-    single<GoogleIdTokenRequester> { get<AndroidGoogleIdTokenRequester>() }
-    // Listas en local, sincronizadas con Firestore si hay sesión
-    single<UserMetadataStore> {
-        SyncedUserMetadataStore(LocalUserMetadataStore(get()), FirestoreUserLists(get(), get()))
-            .also { it.start(get(ApplicationScope)) }
-    }
+    // Ignorados y amigos: sólo en el dispositivo
+    single<UserMetadataStore> { LocalUserMetadataStore(get()) }
     single<UpdateChecker> { RemoteConfigManager(androidContext()) }
 }

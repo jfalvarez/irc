@@ -21,7 +21,6 @@ class IrcMessageHandlerTest {
     }
     private fun config(vararg keywords: String) = object : AppConfig {
         override val imageFilterKeywords = keywords.toSet()
-        override val googleSignInClientId = ""
     }
     private val handler = IrcMessageHandler(fakeStrings, config())
 

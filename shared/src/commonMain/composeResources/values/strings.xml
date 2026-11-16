@@ -204,29 +204,12 @@
     <string name="menu_item_add_friend">Añadir a amigos a %1$s</string>
     <string name="label_nickserv_password">Contraseña de NickServ</string>
     <string name="label_remember_password">Recordar contraseña</string>
-    <string name="account_sign_out">Cerrar sesión</string>
-    <string name="account_delete">Eliminar cuenta</string>
-    <string name="account_deleting">Eliminando la cuenta…</string>
-    <string name="account_delete_confirm_title">¿Eliminar tu cuenta?</string>
-    <string name="account_delete_confirm_text">Se borrarán tu cuenta y las listas de ignorados y amigos guardadas en ella. En este dispositivo las listas se conservan. Para confirmarlo se volverá a comprobar tu cuenta de Google (puede pedirte que la elijas). No se puede deshacer.</string>
-    <string name="account_delete_confirm_button">Eliminar</string>
-    <string name="account_delete_done">Tu cuenta se ha eliminado.</string>
-    <string name="account_delete_not_signed_in">No hay ninguna sesión iniciada.</string>
-    <string name="account_delete_wrong_account">Elegiste una cuenta de Google distinta de la de la sesión. No se ha borrado nada.</string>
-    <string name="account_delete_reauth_failed">No se pudo confirmar con Google. Comprueba la conexión e inténtalo de nuevo. No se ha borrado nada.</string>
-    <string name="account_delete_data_failed">No se pudieron borrar tus listas de la cuenta. Comprueba la conexión e inténtalo de nuevo.</string>
-    <string name="account_delete_account_failed">Se borraron tus listas, pero no la cuenta. Inténtalo de nuevo.</string>
-    <string name="account_sign_in_google">Iniciar sesión con Google</string>
     <string name="connection_tagline">Chat en tiempo real</string>
     <string name="connection_nick_preview_hint">Así te verán en el chat</string>
     <string name="connection_nickserv_toggle">Tengo el nick registrado</string>
-    <string name="connection_account_sync">Sincroniza ignorados y ajustes</string>
-    <string name="connection_account_google">Google</string>
-    <string name="connection_account_signed_in">Sesión: %1$s</string>
     <string name="connection_server_footer">%1$s · SSL</string>
     <string name="cd_show_password">Mostrar contraseña</string>
     <string name="cd_hide_password">Ocultar contraseña</string>
-    <string name="cd_account_menu">Menú de la cuenta</string>
     <string name="video_open_in_browser">Abrir vídeo en el navegador</string>
     <!-- Condiciones de uso: las acepta el usuario antes de chatear; ver TermsOfUse -->
     <string name="terms_title">Condiciones de uso</string>
@@ -235,7 +218,7 @@
     <string name="terms_decline">Salir</string>
     <string name="terms_close">Cerrar</string>
     <string name="settings_terms">Condiciones de uso</string>
-    <string name="terms_text">Esta app es un cliente para conectarte a redes de chat IRC públicas, gestionadas por terceros (por defecto, IRC-Hispano). La app no aloja, guarda ni modera las conversaciones de los canales: cada red y cada canal tienen sus propias normas y sus moderadores (operadores).\n\n1. Edad. Tienes que tener al menos %1$d años.\n\n2. Conducta. No está permitido usar la app para:\n• publicar o enlazar contenido ilegal;\n• publicar o enlazar cualquier contenido que sexualice a menores (tolerancia cero);\n• acosar, amenazar o insultar, o incitar al odio o a la violencia;\n• difundir datos personales de otras personas sin su permiso;\n• suplantar a otras personas, enviar spam o enlaces maliciosos.\n\n3. Contenido de otros usuarios. En los canales puedes encontrar contenido ofensivo o para adultos que esta app no controla. Las previsualizaciones de imágenes y vídeos están desactivadas por defecto; si las activas en Ajustes, lo haces bajo tu responsabilidad.\n\n4. Herramientas. Puedes ignorar a cualquier usuario para dejar de ver sus mensajes y, con la opción «Denunciar», ver cómo avisar a los moderadores del canal o de la red. Si algo puede ser un delito, en especial si afecta a menores, denúncialo a las autoridades.\n\n5. Cuenta. Iniciar sesión con Google es opcional.\n\n6. Responsabilidad. La app se ofrece tal cual, sin garantías. Cada usuario es responsable de lo que escribe y comparte. Si incumples estas condiciones o las normas de la red, los operadores pueden expulsarte.\n\n7. Cambios. Si estas condiciones cambian de forma importante, la app te pedirá que las aceptes de nuevo.\n\nCómo se tratan tus datos se explica en la política de privacidad, enlazada en la ficha de la app en Google Play.</string>
+    <string name="terms_text">Esta app es un cliente para conectarte a redes de chat IRC públicas, gestionadas por terceros (por defecto, IRC-Hispano). La app no aloja, guarda ni modera las conversaciones de los canales: cada red y cada canal tienen sus propias normas y sus moderadores (operadores).\n\n1. Edad. Tienes que tener al menos %1$d años.\n\n2. Conducta. No está permitido usar la app para:\n• publicar o enlazar contenido ilegal;\n• publicar o enlazar cualquier contenido que sexualice a menores (tolerancia cero);\n• acosar, amenazar o insultar, o incitar al odio o a la violencia;\n• difundir datos personales de otras personas sin su permiso;\n• suplantar a otras personas, enviar spam o enlaces maliciosos.\n\n3. Contenido de otros usuarios. En los canales puedes encontrar contenido ofensivo o para adultos que esta app no controla. Las previsualizaciones de imágenes y vídeos están desactivadas por defecto; si las activas en Ajustes, lo haces bajo tu responsabilidad.\n\n4. Herramientas. Puedes ignorar a cualquier usuario para dejar de ver sus mensajes y, con la opción «Denunciar», ver cómo avisar a los moderadores del canal o de la red. Si algo puede ser un delito, en especial si afecta a menores, denúncialo a las autoridades.\n\n5. Responsabilidad. La app se ofrece tal cual, sin garantías. Cada usuario es responsable de lo que escribe y comparte. Si incumples estas condiciones o las normas de la red, los operadores pueden expulsarte.\n\n6. Cambios. Si estas condiciones cambian de forma importante, la app te pedirá que las aceptes de nuevo.\n\nCómo se tratan tus datos se explica en la política de privacidad, enlazada en la ficha de la app en Google Play.</string>
     <!-- Denunciar: la app no modera los canales; explica a quién avisar y ofrece ignorar -->
     <string name="action_report_user">Denunciar</string>
     <string name="menu_item_report_user">Denunciar a %1$s</string>

@@ -48,7 +48,6 @@ import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.jfaf.irc.ui.viewmodels.MainViewModel
-import com.jfaf.irc.ui.viewmodels.SignInViewModel
 import com.jfaf.irc.ui.viewmodels.TermsViewModel
 import com.jfaf.irc.ui.screens.terms.TermsDialog
 import kotlinx.coroutines.flow.collectLatest
@@ -61,8 +60,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * Raíz común de la UI: tema, navegación, avisos de salir y de actualización.
  * Lo que depende de la plataforma entra como parámetro.
  *
- * @param platformUi piezas de la plataforma (anuncios, Google Sign-In, imágenes y vídeo).
- * @param onGoogleSignIn lanza el flujo de inicio de sesión de Google (Android).
+ * @param platformUi piezas de la plataforma (anuncios, imágenes y vídeo).
  * @param onRedirectToPlayStore abre la ficha de la tienda desde el aviso de actualización.
  * @param onExit cierra la app, una vez desconectado (en Android, quita las notificaciones y la tarea).
  */
@@ -70,11 +68,9 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun App(
     platformUi: PlatformUi,
-    onGoogleSignIn: () -> Unit,
     onRedirectToPlayStore: () -> Unit,
     onExit: () -> Unit,
     mainViewModel: MainViewModel = koinViewModel(),
-    signInViewModel: SignInViewModel = koinViewModel(),
     termsViewModel: TermsViewModel = koinViewModel(),
     settingsViewModel: SettingsViewModel = koinViewModel(),
     updateChecker: UpdateChecker = koinInject(),
@@ -144,8 +140,6 @@ fun App(
                 ) {
                     MainScreen(
                         viewModel = mainViewModel,
-                        signInViewModel = signInViewModel,
-                        onGoogleSignIn = onGoogleSignIn,
                         navController = navController,
                         snackbarHostState = snackbarHostState
                     )

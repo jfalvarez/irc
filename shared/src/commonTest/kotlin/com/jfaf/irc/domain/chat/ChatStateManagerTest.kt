@@ -141,7 +141,6 @@ class ChatStateManagerTest {
         },
         object : AppConfig {
             override val imageFilterKeywords = emptySet<String>()
-            override val googleSignInClientId = ""
         }
     )
 
