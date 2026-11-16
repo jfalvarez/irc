@@ -5,6 +5,7 @@ import com.jfaf.irc.data.history.room.RoomChatHistoryStore
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.remote.IrcSession
 import com.jfaf.irc.data.remote.IrcTransport
+import com.jfaf.irc.domain.linkpreview.LinkPreviewRepository
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
 import com.jfaf.irc.domain.IrcConnection
@@ -37,6 +38,7 @@ val commonModule = module {
     single { AppVisibility() }
     single { FriendPresenceTracker() }
     single { UserPreferencesRepository(get()) }
+    single { LinkPreviewRepository(get(), get(ApplicationScope)) } // el LinkPreviewFetcher lo pone cada plataforma
     single<ChatHistoryStore> { RoomChatHistoryStore(get()) }
 
     factory { IrcMessageHandler(get(), get()) }

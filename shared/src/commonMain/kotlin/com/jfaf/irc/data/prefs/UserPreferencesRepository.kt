@@ -22,6 +22,8 @@ data class UserPreferences(val nickname: String, val nickServPassword: String)
  * abierto cualquiera puede enlazar una imagen explícita.
  */
 const val DEFAULT_SHOW_MEDIA_PREVIEWS = false
+/** Vista previa de los enlaces (UI-31): apagada por defecto, porque visitar el enlace de un desconocido le revela tu IP. */
+const val DEFAULT_SHOW_LINK_PREVIEWS = false
 
 class UserPreferencesRepository(
     private val dataStore: DataStore<Preferences>
@@ -41,6 +43,7 @@ class UserPreferencesRepository(
         val SHOW_PING_PONG_MESSAGES = booleanPreferencesKey(SHOW_PING_PONG_KEY_NAME)
         val NICKSERV_PASSWORD = stringPreferencesKey(NICKSERV_PASSWORD_KEY_NAME)
         val SHOW_MEDIA_PREVIEWS = booleanPreferencesKey(SHOW_MEDIA_PREVIEWS_KEY_NAME)
+        val SHOW_LINK_PREVIEWS = booleanPreferencesKey("show_link_previews")
         val NICKNAME = stringPreferencesKey(NICKNAME_KEY_NAME)
 
         val SOUND_ALERTS = booleanPreferencesKey("sound_alerts")
@@ -175,6 +178,17 @@ class UserPreferencesRepository(
         .map { preferences ->
             preferences[SHOW_MEDIA_PREVIEWS] ?: DEFAULT_SHOW_MEDIA_PREVIEWS
         }
+
+    /** Vista previa de los enlaces de los mensajes (UI-31). */
+    val showLinkPreviewsFlow: Flow<Boolean> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { it[SHOW_LINK_PREVIEWS] ?: DEFAULT_SHOW_LINK_PREVIEWS }
+
+    suspend fun updateShowLinkPreviews(show: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[SHOW_LINK_PREVIEWS] = show
+        }
+    }
 
     /** Versión de las condiciones de uso que aceptó el usuario; null si nunca (ver `TermsOfUse`). */
     val termsAcceptedVersionFlow: Flow<Int?> = dataStore.data

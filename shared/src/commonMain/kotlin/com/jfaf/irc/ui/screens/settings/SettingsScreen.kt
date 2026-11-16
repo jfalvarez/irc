@@ -52,6 +52,7 @@ fun SettingsScreen(
     val showModeChanges by viewModel.showModeChanges.collectAsState()
     val showPingPongMessages by viewModel.showPingPongMessages.collectAsState()
     val showMediaPreviews by viewModel.showMediaPreviews.collectAsState()
+    val showLinkPreviews by viewModel.showLinkPreviews.collectAsState()
     val soundAlerts by viewModel.soundAlerts.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val messageDensity by viewModel.messageDensity.collectAsState()
@@ -249,6 +250,13 @@ fun SettingsScreen(
                     text = stringResource(Res.string.settings_option_show_media_previews),
                     checked = showMediaPreviews,
                     onCheckedChange = { viewModel.setShowMediaPreviews(it) }
+                )
+            }
+            item {
+                SettingRowWithCheckbox(
+                    text = stringResource(Res.string.settings_option_show_link_previews),
+                    checked = showLinkPreviews,
+                    onCheckedChange = { viewModel.setShowLinkPreviews(it) }
                 )
             }
             if (supportsSoundAlerts) {

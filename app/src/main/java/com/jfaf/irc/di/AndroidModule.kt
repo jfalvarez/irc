@@ -15,6 +15,8 @@ import com.jfaf.irc.data.prefs.USER_PREFERENCES_FILE
 import com.jfaf.irc.data.prefs.createPreferencesDataStore
 import com.jfaf.irc.data.remote.IrcTransport
 import com.jfaf.irc.data.remote.JvmSocketTransport
+import com.jfaf.irc.data.linkpreview.OkHttpLinkPreviewFetcher
+import com.jfaf.irc.domain.linkpreview.LinkPreviewFetcher
 import com.jfaf.irc.data.text.ComposeStringProvider
 import com.jfaf.irc.data.user.LocalUserMetadataStore
 import com.jfaf.irc.domain.config.AppConfig
@@ -51,6 +53,7 @@ val androidModule = module {
 
     // Plataforma
     factory<IrcTransport> { JvmSocketTransport() } // uno nuevo por intento de conexión
+    single<LinkPreviewFetcher> { OkHttpLinkPreviewFetcher() }
     // Se crea al primer uso (al crear el ViewModel): lee una vez los textos de Compose Resources.
     single<StringProvider> { runBlocking { ComposeStringProvider.load() } }
     single<AppConfig> { BuildConfigAppConfig() }

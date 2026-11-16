@@ -128,4 +128,21 @@ class PreferencesDataStoreTest {
         assertTrue(second.amoledBlackFlow.first())
         job2.cancelAndJoin()
     }
+
+    @Test
+    fun vistaPreviaDeEnlaces_apagadaPorDefectoYSeConservaAlReabrir() = runBlocking {
+        val job1 = Job()
+        val first = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job1)))
+        assertFalse(DEFAULT_SHOW_LINK_PREVIEWS)
+        assertFalse(first.showLinkPreviewsFlow.first(), "Debe estar apagada si nunca se tocó")
+        assertFalse(first.showMediaPreviewsFlow.first(), "Y no depende de la de imágenes y vídeos")
+        first.updateShowLinkPreviews(true)
+        job1.cancelAndJoin()
+
+        val job2 = Job()
+        val second = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job2)))
+        assertTrue(second.showLinkPreviewsFlow.first())
+        assertFalse(second.showMediaPreviewsFlow.first(), "Activar una no activa la otra")
+        job2.cancelAndJoin()
+    }
 }

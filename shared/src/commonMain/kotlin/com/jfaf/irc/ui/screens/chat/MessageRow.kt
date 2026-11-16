@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +54,7 @@ import com.jfaf.irc.ui.theme.mentionBackground
 import com.jfaf.irc.ui.theme.nickColor
 import com.jfaf.irc.ui.theme.ownNickColor
 import com.jfaf.irc.domain.chat.MessageGrouping
+import com.jfaf.irc.domain.linkpreview.LinkPreviewTarget
 import com.jfaf.irc.ui.viewmodels.MainViewModel
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
 import com.jfaf.irc.domain.chat.model.UiChatMessage
@@ -256,6 +258,11 @@ fun MessageRow(
                 )
             }
             // No 'else' block, so no placeholder text if showMediaPreviews is false
+
+            // Vista previa del primer enlace (UI-31): sólo con el ajuste activado, y no si ya hay imagen o vídeo
+            val showLinkPreviews by mainViewModel.chatScreenState.showLinkPreviews.collectAsState()
+            val previewUrl = remember(message, showLinkPreviews) { if (showLinkPreviews) LinkPreviewTarget.of(message) else null }
+            if (previewUrl != null) LinkPreviewHost(url = previewUrl)
         }
     }
 }

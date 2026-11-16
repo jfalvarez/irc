@@ -21,6 +21,7 @@ import com.jfaf.irc.domain.platform.AdProvider
 import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferences
 import com.jfaf.irc.data.prefs.DEFAULT_SHOW_MEDIA_PREVIEWS
+import com.jfaf.irc.data.prefs.DEFAULT_SHOW_LINK_PREVIEWS
 import com.jfaf.irc.data.prefs.MessageDensity
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.domain.IrcConnection
@@ -91,6 +92,8 @@ data class ChatScreenState(
     val showUserList: StateFlow<Boolean>,
     val nickSuggestions: StateFlow<List<String>>,
     val showMediaPreviews: StateFlow<Boolean>,
+    /** Vista previa de los enlaces (UI-31). */
+    val showLinkPreviews: StateFlow<Boolean>,
     val onlineFriends: StateFlow<Set<String>>,
     val ignoredUsers: StateFlow<Set<String>>
 )
@@ -203,6 +206,13 @@ class MainViewModel(
             MessageDensity.Default
         )
 
+    private val showLinkPreviewsPref: StateFlow<Boolean> =
+        userPreferencesRepository.showLinkPreviewsFlow.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            DEFAULT_SHOW_LINK_PREVIEWS
+        )
+
     private val showMediaPreviewsPref: StateFlow<Boolean> =
         userPreferencesRepository.showMediaPreviewsFlow.stateIn(
             viewModelScope,
@@ -309,6 +319,7 @@ class MainViewModel(
         showUserList = chatStateManager.showUserList,
         nickSuggestions = _nickSuggestions.asStateFlow(),
         showMediaPreviews = showMediaPreviewsPref,
+        showLinkPreviews = showLinkPreviewsPref,
         onlineFriends = onlineFriendsState,
         ignoredUsers = ignoredUsersPref
     )

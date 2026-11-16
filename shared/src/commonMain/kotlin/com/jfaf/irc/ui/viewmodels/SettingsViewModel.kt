@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.data.prefs.DEFAULT_SHOW_MEDIA_PREVIEWS
+import com.jfaf.irc.data.prefs.DEFAULT_SHOW_LINK_PREVIEWS
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.domain.user.UserMetadataStore
 import kotlinx.coroutines.flow.SharingStarted
@@ -85,6 +86,20 @@ class SettingsViewModel(
         }
     }
     // --- Fin Preferencia para Previsualizaciones de Medios ---
+
+    // --- Vista previa de los enlaces (UI-31) ---
+    val showLinkPreviews: StateFlow<Boolean> =
+        userPreferencesRepository.showLinkPreviewsFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = DEFAULT_SHOW_LINK_PREVIEWS
+        )
+
+    fun setShowLinkPreviews(show: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.updateShowLinkPreviews(show)
+        }
+    }
 
     // --- Aspecto (UI-2) ---
     val themeMode: StateFlow<ThemeMode> =
