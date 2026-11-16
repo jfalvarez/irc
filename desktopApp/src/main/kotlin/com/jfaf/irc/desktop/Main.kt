@@ -7,14 +7,11 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.ui.res.useResource
 import androidx.compose.ui.platform.LocalWindowInfo
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.isTraySupported
 import androidx.compose.ui.window.rememberTrayState
-import androidx.compose.ui.window.rememberWindowState
 import co.touchlab.kermit.platformLogWriter
 import com.jfaf.irc.data.remote.IrcSession
 import com.jfaf.irc.di.ApplicationScope
@@ -69,13 +66,16 @@ fun main() {
         runBlocking { withTimeoutOrNull(SHUTDOWN_TIMEOUT_MS) { session.disconnect() } }
     }
 
+    val windowStore = WindowStateStore(dataDir)
+
     application {
+        val windowState = remember { windowStore.load() }
         val exit = {
+            windowStore.save(windowState)
             shutdown()
             instance.close()
             exitApplication()
         }
-        val windowState = rememberWindowState(size = DpSize(1000.dp, 700.dp))
         val appIcon = remember { BitmapPainter(useResource("icon.png", ::loadImageBitmap)) }
 
         // Los avisos de privados salen por la bandeja del sistema.
