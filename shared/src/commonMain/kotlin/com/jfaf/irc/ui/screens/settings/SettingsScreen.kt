@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.data.prefs.MessageDensity
+import com.jfaf.irc.data.prefs.TextScale
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.jfaf.irc.data.prefs.ThemeMode
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
 import com.jfaf.irc.ui.platform.LocalPlatformUi
@@ -53,6 +55,8 @@ fun SettingsScreen(
     val soundAlerts by viewModel.soundAlerts.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val messageDensity by viewModel.messageDensity.collectAsState()
+    val amoledBlack by viewModel.amoledBlack.collectAsState()
+    val textScale by viewModel.textScale.collectAsState()
     val platformUi = LocalPlatformUi.current
     val supportsSoundAlerts = platformUi.supportsSoundAlerts
     var showTerms by remember { mutableStateOf(false) }
@@ -118,6 +122,45 @@ fun SettingsScreen(
                     ),
                     selected = mode == themeMode,
                     onSelect = { viewModel.setThemeMode(mode) }
+                )
+            }
+            item {
+                // Negro puro: sólo se nota con el tema oscuro, así que se apaga si el tema activo es el claro
+                val darkActive = themeMode.isDark(systemDark = isSystemInDarkTheme())
+                SettingRowWithCheckbox(
+                    text = stringResource(Res.string.settings_amoled),
+                    checked = amoledBlack,
+                    onCheckedChange = { viewModel.setAmoledBlack(it) },
+                    enabled = darkActive
+                )
+            }
+            item {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+            }
+
+            item {
+                Text(
+                    text = stringResource(Res.string.settings_section_text_size),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 16.dp)
+                )
+            }
+            items(TextScale.entries) { scale ->
+                SettingRowWithRadio(
+                    text = stringResource(
+                        when (scale) {
+                            TextScale.SMALL -> Res.string.settings_text_size_small
+                            TextScale.NORMAL -> Res.string.settings_text_size_normal
+                            TextScale.LARGE -> Res.string.settings_text_size_large
+                            TextScale.EXTRA_LARGE -> Res.string.settings_text_size_extra_large
+                        }
+                    ),
+                    selected = scale == textScale,
+                    onSelect = { viewModel.setTextScale(scale) }
                 )
             }
             item {
@@ -310,23 +353,25 @@ private fun SettingRowWithCheckbox(
     text: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
+            .clickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = text,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = if (enabled) 1f else 0.5f),
             modifier = Modifier.weight(1f)
         )
         Checkbox(
             checked = checked,
+            enabled = enabled,
             onCheckedChange = onCheckedChange
         )
     }

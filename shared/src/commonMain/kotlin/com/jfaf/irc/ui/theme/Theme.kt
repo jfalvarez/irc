@@ -9,6 +9,8 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 
 // Import specific colors from our Color.kt
 import com.jfaf.irc.ui.theme.PurpleStart
@@ -67,17 +69,36 @@ private val DarkColorScheme = darkColorScheme(
     outlineVariant = NeutralOutlineVariant,
 )
 
+// Negro puro (UI-29): igual que el oscuro, con el fondo negro y las superficies un punto por encima.
+private val AmoledColorScheme = DarkColorScheme.copy(
+    background = AmoledBackground,
+    surface = AmoledSurface,
+    surfaceVariant = AmoledSurfaceVariant,
+    outlineVariant = AmoledOutlineVariant,
+)
+
 @Composable
 fun IRCAppTheme(
     darkTheme: Boolean = true,
+    /** Negro puro: sólo tiene efecto con el tema oscuro. */
+    amoled: Boolean = false,
+    /** Factor del tamaño del texto (UI-29), sobre el del sistema. */
+    textScale: Float = 1f,
     content: @Composable () -> Unit
 ) {
-    val currentColorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val currentColorScheme = when {
+        !darkTheme -> LightColorScheme
+        amoled -> AmoledColorScheme
+        else -> DarkColorScheme
+    }
+    val density = LocalDensity.current
 
     val gradientColorsList = listOf(PurpleStart, BlueEnd)
     val gradientBrushInstance = Brush.verticalGradient(colors = gradientColorsList)
 
     CompositionLocalProvider(
+        // Sólo escala el texto (sp), no las medidas en dp: como el tamaño de letra del sistema
+        LocalDensity provides Density(density.density, density.fontScale * textScale),
         LocalGradientBrush provides gradientBrushInstance,
         LocalGradientColors provides gradientColorsList,
         LocalDarkTheme provides darkTheme

@@ -46,6 +46,8 @@ class UserPreferencesRepository(
         val SOUND_ALERTS = booleanPreferencesKey("sound_alerts")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val MESSAGE_DENSITY = stringPreferencesKey("message_density")
+        val TEXT_SCALE = stringPreferencesKey("text_scale")
+        val AMOLED_BLACK = booleanPreferencesKey("amoled_black")
         val RECENT_EMOJIS = stringPreferencesKey("recent_emojis")
         val TERMS_ACCEPTED_VERSION = intPreferencesKey("terms_accepted_version")
 
@@ -114,6 +116,28 @@ class UserPreferencesRepository(
     suspend fun updateMessageDensity(density: MessageDensity) {
         dataStore.edit { preferences ->
             preferences[MESSAGE_DENSITY] = density.name
+        }
+    }
+
+    /** Tamaño del texto de la app (UI-29): normal por defecto. */
+    val textScaleFlow: Flow<TextScale> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { TextScale.fromStorage(it[TEXT_SCALE]) }
+
+    suspend fun updateTextScale(scale: TextScale) {
+        dataStore.edit { preferences ->
+            preferences[TEXT_SCALE] = scale.name
+        }
+    }
+
+    /** Negro puro en el tema oscuro (UI-29), para pantallas OLED. Desactivado por defecto. */
+    val amoledBlackFlow: Flow<Boolean> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { it[AMOLED_BLACK] ?: false }
+
+    suspend fun updateAmoledBlack(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[AMOLED_BLACK] = enabled
         }
     }
 

@@ -14,6 +14,12 @@ val NeutralOnSurface = Color(0xFFE8E8EC)         // texto principal (≈ 14:1 so
 val NeutralOnSurfaceMuted = Color(0xFFB4B6BE)    // avisos del sistema y texto secundario (≈ 8:1)
 val NeutralOutline = Color(0xFF8D8F99)           // bordes (≥ 3:1, componentes)
 val NeutralOutlineVariant = Color(0xFF3F4048)    // divisores
+
+// Negro puro (UI-29): fondo negro para pantallas OLED; las superficies siguen un punto por encima para distinguirse.
+val AmoledBackground = Color(0xFF000000)
+val AmoledSurface = Color(0xFF141417)            // cajón, menús y diálogos
+val AmoledSurfaceVariant = Color(0xFF222328)     // campos de texto y contenedores
+val AmoledOutlineVariant = Color(0xFF2E2F35)     // divisores
 val LinkBlue = Color(0xFF8AB4FF)                 // enlaces (≈ 8:1 sobre el fondo)
 
 // Tu propio nick en el modo oscuro (UI-8): violeta claro de la marca, ≈ 7:1 sobre el fondo

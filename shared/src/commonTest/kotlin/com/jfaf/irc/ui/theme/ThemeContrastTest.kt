@@ -113,4 +113,33 @@ class ThemeContrastTest {
         assertAa("nuevos/fondo oscuro", OwnNickDark, NeutralBackground)
         assertAa("nuevos/fondo claro", PurpleStart, LightBackground)
     }
+
+    // --- Negro puro (UI-29): las mismas exigencias sobre el fondo negro y sus superficies ---
+    @Test
+    fun negroPuro_textoYEnlaces() {
+        assertAa("principal/fondo", NeutralOnSurface, AmoledBackground)
+        assertAa("avisos/fondo", NeutralOnSurfaceMuted, AmoledBackground)
+        assertAa("enlaces/fondo", LinkBlue, AmoledBackground)
+        assertAa("principal/superficie", NeutralOnSurface, AmoledSurface)
+        assertAa("avisos/superficie", NeutralOnSurfaceMuted, AmoledSurface)
+        assertAa("principal/contenedor", NeutralOnSurface, AmoledSurfaceVariant)
+        assertAa("avisos/contenedor", NeutralOnSurfaceMuted, AmoledSurfaceVariant)
+        assertAa("borde/fondo", NeutralOutline, AmoledBackground, min = 3.0)
+        assertAa("nuevos/fondo", OwnNickDark, AmoledBackground)
+    }
+
+    @Test
+    fun negroPuro_coloresDeNicks() {
+        NickPalette.dark.forEachIndexed { i, color ->
+            assertAa("nick $i/fondo", color, AmoledBackground)
+            assertAa("nick $i/superficie", color, AmoledSurface)
+        }
+    }
+
+    @Test
+    fun negroPuro_esNegroYSusSuperficiesSeDistinguen() {
+        assertTrue(AmoledBackground == Color(0xFF000000), "El fondo debe ser negro puro")
+        assertTrue(luminance(AmoledSurface) > luminance(AmoledBackground))
+        assertTrue(luminance(AmoledSurfaceVariant) > luminance(AmoledSurface))
+    }
 }

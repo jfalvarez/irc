@@ -111,4 +111,21 @@ class PreferencesDataStoreTest {
         assertEquals(1, second.termsAcceptedVersionFlow.first())
         job2.cancelAndJoin()
     }
+
+    @Test
+    fun tamanoDeTextoYNegroPuro_valoresPorDefectoYSeConservanAlReabrir() = runBlocking {
+        val job1 = Job()
+        val first = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job1)))
+        assertEquals(TextScale.NORMAL, first.textScaleFlow.first())
+        assertFalse(first.amoledBlackFlow.first(), "El negro puro debe estar apagado por defecto")
+        first.updateTextScale(TextScale.LARGE)
+        first.updateAmoledBlack(true)
+        job1.cancelAndJoin()
+
+        val job2 = Job()
+        val second = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job2)))
+        assertEquals(TextScale.LARGE, second.textScaleFlow.first())
+        assertTrue(second.amoledBlackFlow.first())
+        job2.cancelAndJoin()
+    }
 }

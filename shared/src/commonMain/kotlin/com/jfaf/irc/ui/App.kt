@@ -130,7 +130,13 @@ fun App(
 
     CompositionLocalProvider(LocalPlatformUi provides platformUi) {
         val themeMode by settingsViewModel.themeMode.collectAsState()
-        IRCAppTheme(darkTheme = themeMode.isDark(systemDark = isSystemInDarkTheme())) {
+        val amoled by settingsViewModel.amoledBlack.collectAsState()
+        val textScale by settingsViewModel.textScale.collectAsState()
+        IRCAppTheme(
+            darkTheme = themeMode.isDark(systemDark = isSystemInDarkTheme()),
+            amoled = amoled,
+            textScale = textScale.factor
+        ) {
             BackHandler(enabled = connectionState && navController.previousBackStackEntry == null) {
                 showExitConfirmationDialog = true
             }

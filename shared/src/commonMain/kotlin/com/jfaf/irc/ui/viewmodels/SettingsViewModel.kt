@@ -1,6 +1,7 @@
 package com.jfaf.irc.ui.viewmodels
 
 import com.jfaf.irc.data.prefs.MessageDensity
+import com.jfaf.irc.data.prefs.TextScale
 import com.jfaf.irc.data.prefs.ThemeMode
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -96,6 +97,33 @@ class SettingsViewModel(
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             userPreferencesRepository.updateThemeMode(mode)
+        }
+    }
+
+    // --- Negro puro y tamaño del texto (UI-29) ---
+    val amoledBlack: StateFlow<Boolean> =
+        userPreferencesRepository.amoledBlackFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    fun setAmoledBlack(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.updateAmoledBlack(enabled)
+        }
+    }
+
+    val textScale: StateFlow<TextScale> =
+        userPreferencesRepository.textScaleFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = TextScale.Default
+        )
+
+    fun setTextScale(scale: TextScale) {
+        viewModelScope.launch {
+            userPreferencesRepository.updateTextScale(scale)
         }
     }
 
