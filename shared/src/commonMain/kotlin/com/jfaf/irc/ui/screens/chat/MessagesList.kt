@@ -38,6 +38,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.jfaf.irc.domain.chat.ChatSearch
+import com.jfaf.irc.domain.chat.ChatStateManager
+import com.jfaf.irc.domain.chat.EmptyChat
 import com.jfaf.irc.domain.chat.ChatTimeline
 import com.jfaf.irc.ui.theme.IRCTheme
 import com.jfaf.irc.ui.theme.mentionAccent
@@ -150,6 +152,10 @@ fun MessagesList(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
+        // Canal o privado en el que nadie ha dicho nada todavía: una pista en vez de un hueco en blanco (UI-37)
+        if (activeTarget != null && activeTarget != ChatStateManager.SERVER_TARGET_ID && EmptyChat.isEmpty(messages)) {
+            EmptyChatHint(target = activeTarget, modifier = Modifier.align(Alignment.TopCenter))
+        }
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = listState,

@@ -92,6 +92,10 @@
     <string name="quick_switcher_hint">Ir a un canal o conversación…</string>
     <string name="drawer_search_hint">Buscar…</string>
     <string name="menu_item_browse_channels">Explorar canales</string>
+    <string name="empty_channel_hint">Aún no hay mensajes en %1$s. Escribe el primero abajo.</string>
+    <string name="empty_pm_hint">Aún no hay mensajes con %1$s. Escribe el primero abajo.</string>
+    <string name="no_channels_title">Todavía no estás en ningún canal</string>
+    <string name="no_channels_body">Busca uno en la lista del servidor, o escribe /join #canal para entrar por su nombre.</string>
     <string name="drawer_browse_channels">Explorar canales</string>
     <string name="channel_browser_title">Explorar canales</string>
     <string name="channel_browser_search_hint">Buscar por nombre o tema</string>

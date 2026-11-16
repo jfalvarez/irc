@@ -58,6 +58,7 @@ import com.jfaf.irc.ui.screens.chat.ChannelUserListView
 import com.jfaf.irc.ui.screens.chat.ChatSearchBar
 import com.jfaf.irc.ui.screens.chat.ChatSearchState
 import com.jfaf.irc.ui.screens.chat.ChatTopAppBar
+import com.jfaf.irc.ui.screens.chat.NoChannelsCard
 import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer
 import com.jfaf.irc.ui.screens.chat.WhoisDialog
 import com.jfaf.irc.ui.screens.chat.MessageInputSection
@@ -201,6 +202,7 @@ fun MainScreen(
                     serverConfig = serverConfig,
                     fixedUserList = wide,
                     search = chatSearch,
+                    onBrowseChannels = { navController.navigate("channels") },
                     onMediaClick = { mediaUrl, mediaType ->
                         viewModel.userClickedOnMedia(mediaUrl, mediaType)
                     }
@@ -426,6 +428,7 @@ private fun MainScreenScaffoldContent(
     serverConfig: ServerConfig,
     fixedUserList: Boolean,
     search: ChatSearchState,
+    onBrowseChannels: () -> Unit,
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
     val userPreferences by viewModel.userPreferences.collectAsState()
@@ -479,6 +482,7 @@ private fun MainScreenScaffoldContent(
                 viewModel = viewModel,
                 fixedUserList = fixedUserList,
                 search = search,
+                onBrowseChannels = onBrowseChannels,
                 onMediaClick = onMediaClick
             )
         }
@@ -490,6 +494,7 @@ private fun ConnectedStateView(
     viewModel: MainViewModel,
     fixedUserList: Boolean,
     search: ChatSearchState,
+    onBrowseChannels: () -> Unit,
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
     val currentAd by viewModel.currentAd.collectAsState()
@@ -501,6 +506,7 @@ private fun ConnectedStateView(
     val isReconnecting by viewModel.chatScreenState.isReconnecting.collectAsState()
     val isWaitingForNetwork by viewModel.chatScreenState.isWaitingForNetwork.collectAsState()
     val isConnected by viewModel.chatScreenState.connectionState.collectAsState()
+    val chatTargets by viewModel.chatScreenState.chatTargets.collectAsState()
 
     val currentTargetIsChannel = activeTarget?.startsWith("#") == true
     // En la ventana ancha los usuarios van en un panel fijo de la derecha; si no, en un cajón por la derecha (EndUserListDrawer).
@@ -512,6 +518,10 @@ private fun ConnectedStateView(
         isWaitingForNetwork = isWaitingForNetwork,
         isConnected = isConnected
     )
+    // Quien acaba de conectar sólo ve el mensaje del día en el Servidor: se le dice por dónde seguir (UI-37)
+    if (activeTarget == ChatStateManager.SERVER_TARGET_ID && chatTargets.none { it.startsWith("#") }) {
+        NoChannelsCard(onBrowseChannels = onBrowseChannels)
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
