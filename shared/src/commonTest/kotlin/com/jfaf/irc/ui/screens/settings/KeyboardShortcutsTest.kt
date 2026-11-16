@@ -12,7 +12,7 @@ class KeyboardShortcutsTest {
 
     @Test
     fun recogeLosAtajosDelChat() {
-        listOf(QUICK_SWITCH_SHORTCUT, "Ctrl+Tab", "Ctrl+Mayús+Tab", "Ctrl+W", "Intro", "Tab").forEach {
+        listOf(QUICK_SWITCH_SHORTCUT, "Ctrl+F", "Ctrl+Tab", "Ctrl+Mayús+Tab", "Ctrl+W", "Intro", "Tab").forEach {
             assertTrue(it in keys, "Falta el atajo $it en la lista de Ajustes: $keys")
         }
     }

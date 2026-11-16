@@ -6,7 +6,10 @@ import com.jfaf.irc.data.prefs.MessageDensity
 import com.jfaf.irc.domain.chat.stableKeys
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,7 +37,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.jfaf.irc.domain.chat.ChatSearch
 import com.jfaf.irc.domain.chat.ChatTimeline
+import com.jfaf.irc.ui.theme.IRCTheme
+import com.jfaf.irc.ui.theme.mentionAccent
+import com.jfaf.irc.ui.theme.searchMatchBackground
 import com.jfaf.irc.domain.chat.DayLabel
 import com.jfaf.irc.domain.chat.TimelineItem
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
@@ -58,6 +65,9 @@ private const val ARRIVAL_ANIMATION_MS = 200
 /** Espacio que queda entre el borde de arriba y el separador «Nuevos mensajes», en píxeles. */
 private const val SEPARATOR_TOP_MARGIN_PX = 160
 
+/** Qué parte de la altura de la ventana se sube el resultado actual de la búsqueda, para dejarlo hacia el centro. */
+private const val SEARCH_CENTERING_FRACTION = 0.4f
+
 /** Lo que se espera a que llegue la lista de la pestaña nueva antes de dar por hecho que no hay mensajes nuevos. */
 private const val SEPARATOR_WAIT_MS = 250L
 
@@ -76,7 +86,9 @@ fun MessagesList(
     /** Pestaña que se muestra: al cambiar, la lista vuelve a donde te quedaste (ver más abajo). */
     activeTarget: String? = null,
     /** Densidad de los mensajes: cómoda o compacta (UI-16). */
-    density: MessageDensity = MessageDensity.COMFORTABLE
+    density: MessageDensity = MessageDensity.COMFORTABLE,
+    /** Búsqueda dentro del chat (UI-35): marca los mensajes que contienen lo buscado y se desplaza al actual. */
+    search: ChatSearchState? = null
 ) {
     val platformUi = LocalPlatformUi.current
     // La lista se pinta del último al primero: la línea de tiempo se construye en orden cronológico y se invierte
@@ -87,6 +99,17 @@ fun MessagesList(
     // Con claves estables Compose anima lo que llega (aparece con un fundido) y desliza el resto en vez de repintarlo
     val keys = remember(chronological) { chronological.stableKeys().reversed() }
     val today = remember(messages) { DayLabel.epochDay(Clock.System.now().toEpochMilliseconds()) }
+    // Búsqueda (UI-35): posiciones cronológicas de los mensajes que casan, del más reciente al más antiguo
+    val searchQuery = if (search?.active == true) search.query else ""
+    val matches = remember(chronological, searchQuery) { ChatSearch.matches(chronological, searchQuery) }
+    val matchSet = remember(matches) { matches.toHashSet() }
+    val currentMatch = if (searchQuery.isBlank()) null else matches.getOrNull(search?.position ?: 0)
+    LaunchedEffect(matches.size, searchQuery) {
+        search?.let {
+            it.matchCount = matches.size
+            if (it.position >= matches.size) it.position = 0
+        }
+    }
     val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -116,6 +139,16 @@ fun MessagesList(
         }
     }
 
+    // Al cambiar de resultado, o de consulta, la lista se desplaza hasta el actual y lo deja hacia el centro
+    val currentMatchState by rememberUpdatedState(currentMatch)
+    val chronologicalSize by rememberUpdatedState(chronological.size)
+    LaunchedEffect(searchQuery, search?.position) {
+        val chronologicalIndex = currentMatchState ?: return@LaunchedEffect
+        // La lista va del final al principio: el elemento de la posición cronológica i es el (tamaño - 1 - i)
+        listState.scrollToItem(chronologicalSize - 1 - chronologicalIndex)
+        listState.scrollBy(listState.layoutInfo.viewportSize.height * SEARCH_CENTERING_FRACTION)
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -125,7 +158,15 @@ fun MessagesList(
         ) {
             items(count = timeline.size, key = { keys[it] }) { index ->
                 val item = timeline[index]
-                Box(modifier = Modifier.animateItem(fadeInSpec = tween(ARRIVAL_ANIMATION_MS), placementSpec = tween(ARRIVAL_ANIMATION_MS), fadeOutSpec = null)) {
+                val chronologicalIndex = timeline.size - 1 - index
+                val searchModifier = when {
+                    chronologicalIndex == currentMatch -> Modifier
+                        .background(IRCTheme.searchMatchBackground)
+                        .border(2.dp, IRCTheme.mentionAccent, RoundedCornerShape(8.dp))
+                    chronologicalIndex in matchSet -> Modifier.background(IRCTheme.searchMatchBackground)
+                    else -> Modifier
+                }
+                Box(modifier = Modifier.animateItem(fadeInSpec = tween(ARRIVAL_ANIMATION_MS), placementSpec = tween(ARRIVAL_ANIMATION_MS), fadeOutSpec = null).then(searchModifier)) {
                 when (item) {
                     is TimelineItem.Message -> {
                         if (item.message.type == UiMessageType.AD_MESSAGE) {

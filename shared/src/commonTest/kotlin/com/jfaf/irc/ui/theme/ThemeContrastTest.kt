@@ -109,6 +109,25 @@ class ThemeContrastTest {
     }
 
     @Test
+    fun textoSobreUnMensajeEncontradoPorLaBusqueda() {
+        // Fondo tenue y neutro de las coincidencias de la búsqueda (UI-35), en los tres fondos
+        val dark = Color.White.copy(alpha = SEARCH_MATCH_ALPHA_DARK).compositeOver(NeutralBackground)
+        val amoled = Color.White.copy(alpha = SEARCH_MATCH_ALPHA_DARK).compositeOver(AmoledBackground)
+        val light = Color.Black.copy(alpha = SEARCH_MATCH_ALPHA_LIGHT).compositeOver(LightBackground)
+        listOf("oscuro" to dark, "negro" to amoled).forEach { (mode, bg) ->
+            assertAa("texto/búsqueda $mode", NeutralOnSurface, bg)
+            assertAa("avisos/búsqueda $mode", NeutralOnSurfaceMuted, bg)
+            assertAa("enlace/búsqueda $mode", LinkBlue, bg)
+            assertAa("tu nick/búsqueda $mode", OwnNickDark, bg)
+            NickPalette.dark.forEachIndexed { i, c -> assertAa("nick $i/búsqueda $mode", c, bg) }
+        }
+        assertAa("texto/búsqueda claro", LightOnSurface, light)
+        assertAa("enlace/búsqueda claro", LinkBlueLight, light)
+        assertAa("tu nick/búsqueda claro", PurpleStart, light)
+        NickPalette.light.forEachIndexed { i, c -> assertAa("nick $i/búsqueda claro", c, light) }
+    }
+
+    @Test
     fun textoDeLosSeparadores() {
         assertAa("nuevos/fondo oscuro", OwnNickDark, NeutralBackground)
         assertAa("nuevos/fondo claro", PurpleStart, LightBackground)

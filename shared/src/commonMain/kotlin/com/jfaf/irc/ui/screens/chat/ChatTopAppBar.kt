@@ -65,6 +65,8 @@ fun ChatTopAppBar(
     onWhoisClick: (nick: String) -> Unit,
     /** Abre el explorador de canales. */
     onBrowseChannelsClick: () -> Unit = {},
+    /** Abre la búsqueda dentro del chat (UI-35). */
+    onSearchClick: () -> Unit = {},
     /** Usuarios del canal activo; null si no se sabe (todavía no llegó la lista). */
     userCount: Int? = null,
     /** Tema del canal activo; null o vacío = sin tema. */
@@ -198,6 +200,13 @@ fun ChatTopAppBar(
                         }
                     )
                 }
+                DropdownMenuItem(
+                    text = { Text(stringResource(Res.string.menu_item_search_chat), color = MaterialTheme.colorScheme.onSurface) },
+                    onClick = {
+                        showMenu = false
+                        onSearchClick()
+                    }
+                )
                 DropdownMenuItem(
                     text = { Text(stringResource(Res.string.menu_item_browse_channels), color = MaterialTheme.colorScheme.onSurface) },
                     onClick = {

@@ -55,6 +55,8 @@ import org.koin.compose.viewmodel.koinViewModel
 import androidx.navigation.NavHostController
 import com.jfaf.irc.ui.screens.chat.AppDrawerContent
 import com.jfaf.irc.ui.screens.chat.ChannelUserListView
+import com.jfaf.irc.ui.screens.chat.ChatSearchBar
+import com.jfaf.irc.ui.screens.chat.ChatSearchState
 import com.jfaf.irc.ui.screens.chat.ChatTopAppBar
 import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer
 import com.jfaf.irc.ui.screens.chat.WhoisDialog
@@ -128,12 +130,16 @@ fun MainScreen(
 
     // Selector rápido (Ctrl+K): sólo con la conexión abierta, que es cuando hay pestañas a las que saltar
     var showQuickSwitcher by remember { mutableStateOf(false) }
+    // Búsqueda dentro del chat (UI-35, Ctrl+F): se cierra al cambiar de pestaña, porque busca en la activa
+    val chatSearch = remember { ChatSearchState() }
+    LaunchedEffect(activeTarget) { chatSearch.close() }
     // Atajos de teclado: Ctrl+Tab / Ctrl+Mayús+Tab cambian de pestaña y Ctrl+W cierra la activa (menos Servidor).
     val shortcuts = Modifier.chatShortcuts(
         onNextTab = { TargetNavigation.neighbour(chatTargets, activeTarget, forward = true)?.let(viewModel::setActiveTarget) },
         onPreviousTab = { TargetNavigation.neighbour(chatTargets, activeTarget, forward = false)?.let(viewModel::setActiveTarget) },
         onCloseTab = { activeTarget?.takeIf { it != ChatStateManager.SERVER_TARGET_ID }?.let(viewModel::closeTarget) },
-        onQuickSwitch = { if (connectionState) showQuickSwitcher = !showQuickSwitcher }
+        onQuickSwitch = { if (connectionState) showQuickSwitcher = !showQuickSwitcher },
+        onSearch = { if (connectionState) chatSearch.open() }
     )
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -150,7 +156,9 @@ fun MainScreen(
                 containerColor = Color.Transparent,
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 topBar = {
-                    if (connectionState) {
+                    if (connectionState && chatSearch.active) {
+                        ChatSearchBar(state = chatSearch)
+                    } else if (connectionState) {
                         ChatTopAppBar(
                             activeTarget = viewModel.chatScreenState.activeTarget.collectAsState().value,
                             unreadPmCount = unreadPmCounts.values.sum(),
@@ -165,6 +173,7 @@ fun MainScreen(
                             onAddFriendInPm = { nick -> settingsViewModel.addFriend(nick) },
                             onWhoisClick = { nick -> viewModel.performWhois(nick) },
                             onBrowseChannelsClick = { navController.navigate("channels") },
+                            onSearchClick = { chatSearch.open() },
                             userCount = activeChannelUserCount,
                             topic = activeTopic,
                             onQuickSwitch = { showQuickSwitcher = true },
@@ -191,6 +200,7 @@ fun MainScreen(
                     viewModel = viewModel,
                     serverConfig = serverConfig,
                     fixedUserList = wide,
+                    search = chatSearch,
                     onMediaClick = { mediaUrl, mediaType ->
                         viewModel.userClickedOnMedia(mediaUrl, mediaType)
                     }
@@ -415,6 +425,7 @@ private fun MainScreenScaffoldContent(
     viewModel: MainViewModel,
     serverConfig: ServerConfig,
     fixedUserList: Boolean,
+    search: ChatSearchState,
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
     val userPreferences by viewModel.userPreferences.collectAsState()
@@ -467,6 +478,7 @@ private fun MainScreenScaffoldContent(
             ConnectedStateView(
                 viewModel = viewModel,
                 fixedUserList = fixedUserList,
+                search = search,
                 onMediaClick = onMediaClick
             )
         }
@@ -477,6 +489,7 @@ private fun MainScreenScaffoldContent(
 private fun ConnectedStateView(
     viewModel: MainViewModel,
     fixedUserList: Boolean,
+    search: ChatSearchState,
     onMediaClick: (mediaUrl: String, mediaType: MediaTypeEnum) -> Unit
 ) {
     val currentAd by viewModel.currentAd.collectAsState()
@@ -514,7 +527,8 @@ private fun ConnectedStateView(
             newMessagesFromEnd = newMessagesFromEnd,
             ownNick = viewModel.currentNickname,
             activeTarget = activeTarget,
-            density = messageDensity
+            density = messageDensity,
+            search = search
         )
 
         AnimatedVisibility(

@@ -221,6 +221,14 @@
     <string name="shortcut_close_tab">Cerrar la pestaña activa</string>
     <string name="shortcut_send">Enviar el mensaje</string>
     <string name="shortcut_autocomplete">Completar el nick sugerido</string>
+    <string name="shortcut_search">Buscar en el chat</string>
+    <string name="menu_item_search_chat">Buscar en el chat</string>
+    <string name="chat_search_hint">Buscar en este chat</string>
+    <string name="chat_search_count">%1$d de %2$d</string>
+    <string name="chat_search_no_results">Sin resultados</string>
+    <string name="cd_search_older">Resultado más antiguo</string>
+    <string name="cd_search_newer">Resultado más reciente</string>
+    <string name="cd_search_close">Cerrar la búsqueda</string>
     <string name="settings_density_comfortable">Cómoda: avatares y mensajes agrupados por autor</string>
     <string name="settings_density_compact">Compacta: una línea por mensaje, como en IRC clásico</string>
     <string name="settings_section_message_preferences">Preferencias de Mensajes</string>

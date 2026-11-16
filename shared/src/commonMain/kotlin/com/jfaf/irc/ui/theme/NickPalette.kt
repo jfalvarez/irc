@@ -60,3 +60,17 @@ val IRCTheme.mentionBackground: Color
     get() = mentionAccent.copy(alpha = MENTION_BACKGROUND_ALPHA)
 
 const val MENTION_BACKGROUND_ALPHA = 0.14f
+
+/**
+ * Fondo tenue de un mensaje que contiene lo buscado (UI-35): un gris neutro (blanco en el oscuro, negro en el claro) que
+ * no compite con el de las menciones. El resultado actual, además, lleva un borde del acento de las menciones.
+ * `ThemeContrastTest` comprueba que el texto, los enlaces y los nicks se siguen leyendo sobre él.
+ */
+val IRCTheme.searchMatchBackground: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (LocalDarkTheme.current) Color.White.copy(alpha = SEARCH_MATCH_ALPHA_DARK) else Color.Black.copy(alpha = SEARCH_MATCH_ALPHA_LIGHT)
+
+/** Más suave en el modo claro: un fondo gris más oscuro dejaba algún color de nick por debajo de 4,5:1. */
+const val SEARCH_MATCH_ALPHA_DARK = 0.10f
+const val SEARCH_MATCH_ALPHA_LIGHT = 0.07f

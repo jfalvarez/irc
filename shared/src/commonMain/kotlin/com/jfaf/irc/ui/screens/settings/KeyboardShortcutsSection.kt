@@ -20,6 +20,7 @@ import com.jfaf.irc.resources.shortcut_next_tab
 import com.jfaf.irc.resources.shortcut_previous_tab
 import com.jfaf.irc.resources.shortcut_quick_switch
 import com.jfaf.irc.resources.shortcut_send
+import com.jfaf.irc.resources.shortcut_search
 import com.jfaf.irc.ui.screens.chat.KeyCap
 import com.jfaf.irc.ui.screens.chat.QUICK_SWITCH_SHORTCUT
 import org.jetbrains.compose.resources.StringResource
@@ -35,6 +36,7 @@ class KeyboardShortcut(val keys: String, val description: StringResource)
 object KeyboardShortcuts {
     val all: List<KeyboardShortcut> = listOf(
         KeyboardShortcut(QUICK_SWITCH_SHORTCUT, Res.string.shortcut_quick_switch),
+        KeyboardShortcut("Ctrl+F", Res.string.shortcut_search),
         KeyboardShortcut("Ctrl+Tab", Res.string.shortcut_next_tab),
         KeyboardShortcut("Ctrl+Mayús+Tab", Res.string.shortcut_previous_tab),
         KeyboardShortcut("Ctrl+W", Res.string.shortcut_close_tab),
