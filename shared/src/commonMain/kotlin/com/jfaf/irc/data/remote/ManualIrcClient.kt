@@ -14,6 +14,16 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.concurrent.Volatile
 
+/**
+ * Detección de conexiones muertas sin error (cambio de wifi, suspensión, NAT que olvida la conexión):
+ * si en [idleMs] no llega ninguna línea se envía un `PING`, y si en [replyTimeoutMs] tampoco llega nada
+ * se da la conexión por perdida. Cualquier línea del servidor (también sus propios PING) cuenta como señal de vida.
+ */
+data class KeepAlivePolicy(
+    val idleMs: Long = 60_000L,
+    val replyTimeoutMs: Long = 30_000L
+)
+
 class ManualIrcClient(
     val host: String,
     private val port: Int,
@@ -22,13 +32,15 @@ class ManualIrcClient(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     /** Se invoca cuando la conexión se cierra sin que el usuario lo haya pedido. */
     private val onConnectionLost: () -> Unit = {},
-    private val transport: IrcTransport
+    private val transport: IrcTransport,
+    private val keepAlive: KeepAlivePolicy = KeepAlivePolicy()
 ) {
     private val TAG = "ManualIrcClient"
 
     private companion object {
         /** Tiempo máximo esperando a que salga el QUIT antes de cerrar la conexión. */
         const val QUIT_TIMEOUT_MS = 2_000L
+        const val KEEPALIVE_COOKIE = "keepalive"
     }
 
     // Buffer para que un colector lento no bloquee el bucle de lectura (ni retrase los PONG).
@@ -46,6 +58,8 @@ class ManualIrcClient(
     private var nickFallbackAttempts = 0
 
     @Volatile private var closedByUser = false
+    /** Líneas recibidas en esta conexión: el vigilante del [KeepAlivePolicy] mira si cambia. */
+    @Volatile private var receivedLines = 0L
     // canal (en minúsculas) -> clave ("" si no tiene). Sobrevive a las reconexiones.
     private val channelsToRejoin = java.util.concurrent.ConcurrentHashMap<String, String>()
 
@@ -81,7 +95,12 @@ class ManualIrcClient(
                     sendRawInternal("NICK $currentNickname")
                     sendRawInternal("USER $user 0 * :$real")
 
-                    listenForMessages()
+                    val watchdog = launch { keepAliveLoop() }
+                    try {
+                        listenForMessages()
+                    } finally {
+                        watchdog.cancel()
+                    }
                 } else {
                     throw Exception(AppConstants.ERROR_MSG_SOCKET_CONNECT_FAILED)
                 }
@@ -99,6 +118,7 @@ class ManualIrcClient(
                 if (!transport.isOpen) break
                 val line = withContext(ioDispatcher) { transport.readLine() }
                 if (line != null) {
+                    receivedLines++
                     Log.d(TAG, "<<< $line")
                     val parsedMessage = IrcLineParser.parse(line)
                     if (parsedMessage == null) {
@@ -124,6 +144,28 @@ class ManualIrcClient(
             notifyConnectionLost()
         } finally {
             Log.d(TAG, "Bucle de escucha finalizado.")
+        }
+    }
+
+    /**
+     * Vigilante de la conexión: tras [KeepAlivePolicy.idleMs] sin tráfico envía un PING y, si en
+     * [KeepAlivePolicy.replyTimeoutMs] sigue sin llegar nada, cierra el transporte (lo que además
+     * desbloquea el `readLine()`) y avisa de la pérdida para que la sesión reconecte.
+     */
+    private suspend fun keepAliveLoop() {
+        while (isActive && _connectionState.value) {
+            val before = receivedLines
+            delay(keepAlive.idleMs)
+            if (!_connectionState.value || receivedLines != before) continue // hubo tráfico: está viva
+            val atPing = receivedLines // antes de enviar: un PONG rápido no debe quedar fuera de la cuenta
+            sendRawInternal("PING :$KEEPALIVE_COOKIE")
+            delay(keepAlive.replyTimeoutMs)
+            if (_connectionState.value && receivedLines == atPing) {
+                Log.w(TAG, "Sin respuesta del servidor en ${keepAlive.idleMs + keepAlive.replyTimeoutMs} ms: conexión perdida.")
+                cleanupConnection()
+                notifyConnectionLost()
+                return
+            }
         }
     }
 

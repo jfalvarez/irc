@@ -150,6 +150,31 @@ class IrcSessionTest {
         return t
     }
 
+    /** Sesión con un vigilante rápido: la conexión «muere» sin error (el servidor deja de contestar). */
+    private val sessionWithKeepAlive = IrcSession(scope, policy) { p, s, onLost ->
+        val t = transports.getOrPut(p.host) { ReopenableFakeTransport() }
+        ManualIrcClient(p.host, p.port, p.useSsl, s, Dispatchers.IO, onLost, t, KeepAlivePolicy(idleMs = 100, replyTimeoutMs = 100))
+    }
+
+    @Test
+    fun conexionMuertaSinError_seDetectaYSeReconecta() = runBlocking {
+        sessionWithKeepAlive.connect(params("zombi.test"))
+        val t = transports.getValue("zombi.test")
+        t.awaitOpenAndHandshake()
+        t.serverSends(":server 001 yo :Welcome")
+        sessionWithKeepAlive.status.await { it is SessionStatus.Connected }
+
+        // El servidor deja de responder (ni el PING propio ni nada): el socket sigue «abierto» pero muerto
+        t.awaitWritten("PING")
+        assertEquals(SessionStatus.Reconnecting(1, 3), sessionWithKeepAlive.status.await { it is SessionStatus.Reconnecting })
+
+        t.awaitOpenAndHandshake()
+        t.serverSends(":server 001 yo :Welcome back")
+        sessionWithKeepAlive.status.await { it is SessionStatus.Connected }
+        sessionWithKeepAlive.isReconnecting.await { !it }
+        assertTrue(sessionWithKeepAlive.connectionState.value)
+    }
+
     @Test
     fun sinRed_cortaEsperaSinGastarIntentosYReconectaAlVolver() = runBlocking {
         val t = connectedWithNetwork()
