@@ -42,6 +42,8 @@ import com.jfaf.irc.domain.usecase.SendMessageActionStatus
 import com.jfaf.irc.domain.usecase.SendMessageOrCommandUseCase
 import com.jfaf.irc.domain.usecase.UpdateFriendMonitoringUseCase
 import com.jfaf.irc.domain.usecase.WhoisRequestResult
+import com.jfaf.irc.domain.user.WhoisCollector
+import com.jfaf.irc.domain.user.WhoisResult
 import com.jfaf.irc.domain.chat.command.CommandResult
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
@@ -112,6 +114,7 @@ class MainViewModel(
     private val sendMessageOrCommandUseCase: SendMessageOrCommandUseCase,
     private val handleIncomingMessageUseCase: HandleIncomingMessageUseCase,
     private val silentWhoisCompletionSignal: SilentWhoisCompletionSignal,
+    private val whoisCollector: WhoisCollector,
     private val strings: StringProvider,
     private val adProvider: AdProvider
 ) : ViewModel(), ChatEventListener {
@@ -150,6 +153,10 @@ class MainViewModel(
 
     private val _snackbarEvents = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
     val snackbarEvents: SharedFlow<String> = _snackbarEvents.asSharedFlow()
+
+    /** Diálogo de WHOIS: null = cerrado; [WhoisUiState.Loading] mientras responde el servidor. */
+    private val _whoisState = MutableStateFlow<WhoisUiState?>(null)
+    val whoisState: StateFlow<WhoisUiState?> = _whoisState.asStateFlow()
 
     private val _nickSuggestions = MutableStateFlow<List<String>>(emptyList())
 
@@ -319,6 +326,8 @@ class MainViewModel(
             _friendCameOnlineEvent.emit(nick)
             _snackbarEvents.emit(strings.get(Msg.SNACK_FRIEND_ONLINE, nick))
         }.launchIn(viewModelScope)
+
+        whoisCollector.results.onEach(::onWhoisResult).launchIn(viewModelScope)
     }
 
     private fun startFriendChecker() {
@@ -524,7 +533,7 @@ class MainViewModel(
             isFriendCheckPaused = true
             when (performWhoisUseCase(nick)) {
                 is WhoisRequestResult.Success -> {
-                    _snackbarEvents.tryEmit(strings.get(Msg.SNACK_WHOIS_REQUESTED, nick))
+                    _whoisState.value = WhoisUiState.Loading(nick)
                 }
                 is WhoisRequestResult.NotConnected -> {
                     _snackbarEvents.tryEmit(strings.get(Msg.SNACK_WHOIS_NOT_CONNECTED))
@@ -536,6 +545,25 @@ class MainViewModel(
             delay(5000) // 5 seconds
             isFriendCheckPaused = false
         }
+    }
+
+    /** El diálogo recibe el resultado completo y el Servidor guarda un resumen de una línea como registro. */
+    private fun onWhoisResult(result: WhoisResult) {
+        if (result.found) {
+            chatStateManager.addSystemMessageToTarget(
+                ChatStateManager.SERVER_TARGET_ID,
+                strings.get(Msg.WHOIS_SUMMARY, result.nick, "${result.user}@${result.host}", result.server ?: "?")
+            )
+        }
+        // Si el usuario cerró el diálogo mientras tanto, no se reabre
+        if (_whoisState.value is WhoisUiState.Loading) {
+            _whoisState.value = WhoisUiState.Result(result)
+        }
+    }
+
+    fun dismissWhois() {
+        (_whoisState.value as? WhoisUiState.Loading)?.let { whoisCollector.cancel(it.nick) }
+        _whoisState.value = null
     }
 
     // --- Nick Autocompletion Functions ---

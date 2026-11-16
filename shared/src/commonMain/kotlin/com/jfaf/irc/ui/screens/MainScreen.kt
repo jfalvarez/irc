@@ -57,6 +57,7 @@ import com.jfaf.irc.ui.screens.chat.AppDrawerContent
 import com.jfaf.irc.ui.screens.chat.ChannelUserListView
 import com.jfaf.irc.ui.screens.chat.ChatTopAppBar
 import com.jfaf.irc.ui.screens.chat.FullScreenImageViewer
+import com.jfaf.irc.ui.screens.chat.WhoisDialog
 import com.jfaf.irc.ui.screens.chat.MessageInputSection
 import com.jfaf.irc.ui.screens.chat.MessagesList
 import com.jfaf.irc.data.prefs.ServerConfig
@@ -90,6 +91,7 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
 
     val selectedMediaForFullScreen by viewModel.selectedMediaForFullScreen.collectAsState()
+    val whoisState by viewModel.whoisState.collectAsState()
 
     LaunchedEffect(connectionState) {
         if (connectionState) {
@@ -191,6 +193,13 @@ fun MainScreen(
                         onClose = { viewModel.clearExpandedMedia() }
                     )
                 }
+            }
+            whoisState?.let { state ->
+                WhoisDialog(
+                    state = state,
+                    onJoinChannel = { channel -> viewModel.joinChannel(channel) },
+                    onDismiss = { viewModel.dismissWhois() }
+                )
             }
         }
     }

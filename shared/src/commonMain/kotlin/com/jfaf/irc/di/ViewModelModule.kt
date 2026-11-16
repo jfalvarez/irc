@@ -3,6 +3,7 @@ package com.jfaf.irc.di
 import com.jfaf.irc.domain.chat.ChatHistoryPersister
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.command.CommandProcessor
+import com.jfaf.irc.domain.user.WhoisCollector
 import com.jfaf.irc.domain.usecase.AttemptNickServIdentificationUseCase
 import com.jfaf.irc.domain.usecase.CloseTargetUseCase
 import com.jfaf.irc.domain.usecase.ConnectUseCase
@@ -33,6 +34,7 @@ val viewModelModule = module {
  */
 private fun Scope.newMainViewModel(): MainViewModel {
     val chat = ChatStateManager()
+    val whois = WhoisCollector()
     val partChannel = PartChannelUseCase(get(), get(), chat)
     return MainViewModel(
         ircConnection = get(),
@@ -45,7 +47,7 @@ private fun Scope.newMainViewModel(): MainViewModel {
         attemptNickServIdentificationUseCase = AttemptNickServIdentificationUseCase(get(), get(), get(), chat),
         disconnectUseCase = DisconnectUseCase(get(), get(), chat),
         ignoreUserUseCase = IgnoreUserUseCase(get(), get(), chat, get()),
-        performWhoisUseCase = PerformWhoisUseCase(get(), get(), chat, get()),
+        performWhoisUseCase = PerformWhoisUseCase(get(), get(), chat, get(), whois),
         joinChannelUseCase = JoinChannelUseCase(get(), get(), chat),
         openPrivateMessageUseCase = OpenPrivateMessageUseCase(get(), chat, get()),
         partChannelUseCase = partChannel,
@@ -53,8 +55,9 @@ private fun Scope.newMainViewModel(): MainViewModel {
         sendMessageOrCommandUseCase = SendMessageOrCommandUseCase(
             get(), get(), chat, CommandProcessor(get(), chat, get())
         ),
-        handleIncomingMessageUseCase = HandleIncomingMessageUseCase(get(), chat, get(), get(), get(), get(), get()),
+        handleIncomingMessageUseCase = HandleIncomingMessageUseCase(get(), chat, get(), get(), get(), get(), get(), whois),
         silentWhoisCompletionSignal = get(),
+        whoisCollector = whois,
         strings = get(),
         adProvider = get()
     )

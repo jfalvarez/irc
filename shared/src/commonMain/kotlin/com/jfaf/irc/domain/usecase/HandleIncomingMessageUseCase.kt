@@ -7,6 +7,7 @@ import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
 import com.jfaf.irc.domain.user.UserMetadataStore
 import com.jfaf.irc.domain.user.FriendPresenceTracker
+import com.jfaf.irc.domain.user.WhoisCollector
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.ChatUiSnapshot
 import com.jfaf.irc.domain.chat.IrcMessageHandler
@@ -19,7 +20,8 @@ class HandleIncomingMessageUseCase(
     private val userMetadataStore: UserMetadataStore,
     private val friendPresence: FriendPresenceTracker,
     private val ircConnection: IrcConnection,
-    private val silentWhoisCompletionSignal: SilentWhoisCompletionSignal
+    private val silentWhoisCompletionSignal: SilentWhoisCompletionSignal,
+    private val whoisCollector: WhoisCollector
 ) {
     suspend operator fun invoke(
         parsedMessage: ParsedIrcMessage,
@@ -43,6 +45,11 @@ class HandleIncomingMessageUseCase(
             if (isEndOfSilentWhois) {
                 silentWhoisCompletionSignal.signalCompletion()
             }
+            return HandleIncomingMessageResult(messageProcessed = true)
+        }
+
+        // Respuestas de un WHOIS pedido desde la UI: se agrupan y salen en el diálogo, no línea a línea
+        if (whoisCollector.accept(parsedMessage)) {
             return HandleIncomingMessageResult(messageProcessed = true)
         }
 

@@ -36,6 +36,7 @@
     <string name="msg_part_invalid">No se puede salir: no es un canal válido o no hay canal activo.</string>
     <string name="msg_whois_not_connected">No conectado. No se puede enviar WHOIS.</string>
     <string name="msg_whois_requesting">[WHOIS] Solicitando información para %1$s...</string>
+    <string name="msg_whois_summary">[WHOIS] %1$s: %2$s en %3$s</string>
     <string name="msg_send_not_connected">No conectado. No se puede enviar el mensaje/comando.</string>
     <string name="msg_send_window_cleared">Ventana limpiada.</string>
     <string name="msg_send_unknown_command">Comando '/%1$s' desconocido. Escribe /help para ver los comandos disponibles.</string>
@@ -50,7 +51,6 @@
     <string name="msg_snack_friend_online">Tu amigo %1$s se ha conectado.</string>
     <string name="msg_snack_disconnected">Desconectado del servidor.</string>
     <string name="msg_snack_ignored_added">Usuario '%1$s' añadido a ignorados.</string>
-    <string name="msg_snack_whois_requested">WHOIS para '%1$s' solicitado. Ver pestaña 'Servidor'.</string>
     <string name="msg_snack_whois_not_connected">Error: No conectado al servidor para enviar WHOIS.</string>
     <string name="msg_evt_join">* %1$s ha entrado a %2$s</string>
     <string name="msg_evt_part">* %1$s ha salido de %2$s%3$s</string>
@@ -91,6 +91,21 @@
     <string name="chat_users_one">%1$d usuario</string>
     <string name="chat_users_many">%1$d usuarios</string>
     <string name="chat_header_with_topic">%1$s · %2$s</string>
+    <string name="whois_dialog_title">Whois: %1$s</string>
+    <string name="whois_dialog_loading">Consultando a %1$s…</string>
+    <string name="whois_dialog_not_found">Usuario '%1$s' no encontrado.</string>
+    <string name="whois_dialog_close">Cerrar</string>
+    <string name="whois_label_identity">Usuario</string>
+    <string name="whois_label_real_name">Nombre real</string>
+    <string name="whois_label_server">Servidor</string>
+    <string name="whois_label_idle">Inactivo</string>
+    <string name="whois_label_connected">Conectado desde hace</string>
+    <string name="whois_label_account">Cuenta</string>
+    <string name="whois_label_away">Ausente</string>
+    <string name="whois_label_real_host">Host real</string>
+    <string name="whois_label_channels">Canales</string>
+    <string name="whois_flag_operator">Operador de red</string>
+    <string name="whois_flag_secure">Conexión segura</string>
     <string name="topic_dialog_title">Tema de %1$s</string>
     <string name="topic_dialog_empty">Este canal no tiene tema.</string>
     <string name="topic_dialog_close">Cerrar</string>

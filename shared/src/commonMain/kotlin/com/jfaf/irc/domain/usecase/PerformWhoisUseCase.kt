@@ -6,6 +6,7 @@ import com.jfaf.irc.log.Log
 import com.jfaf.irc.domain.platform.AnalyticsTracker
 import com.jfaf.irc.domain.IrcConnection
 import com.jfaf.irc.domain.chat.ChatStateManager
+import com.jfaf.irc.domain.user.WhoisCollector
 
 sealed interface WhoisRequestResult {
     object Success : WhoisRequestResult
@@ -17,7 +18,8 @@ class PerformWhoisUseCase(
     private val strings: StringProvider,
     private val ircConnection: IrcConnection,
     private val chatStateManager: ChatStateManager,
-    private val analytics: AnalyticsTracker
+    private val analytics: AnalyticsTracker,
+    private val whoisCollector: WhoisCollector
 ) {
     suspend operator fun invoke(nick: String): WhoisRequestResult {
         if (nick.isBlank()) {
@@ -43,6 +45,7 @@ class PerformWhoisUseCase(
             ChatStateManager.SERVER_TARGET_ID, 
             strings.get(Msg.WHOIS_REQUESTING, nick)
         )
+        whoisCollector.expect(nick)
         ircConnection.sendRawCommand("WHOIS $nick", isSilent = false)
         return WhoisRequestResult.Success
     }

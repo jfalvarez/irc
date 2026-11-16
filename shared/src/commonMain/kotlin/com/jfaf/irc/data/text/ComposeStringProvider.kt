@@ -59,6 +59,7 @@ class ComposeStringProvider private constructor(
             Msg.PART_INVALID -> Res.string.msg_part_invalid
             Msg.WHOIS_NOT_CONNECTED -> Res.string.msg_whois_not_connected
             Msg.WHOIS_REQUESTING -> Res.string.msg_whois_requesting
+            Msg.WHOIS_SUMMARY -> Res.string.msg_whois_summary
             Msg.SEND_NOT_CONNECTED -> Res.string.msg_send_not_connected
             Msg.SEND_WINDOW_CLEARED -> Res.string.msg_send_window_cleared
             Msg.SEND_UNKNOWN_COMMAND -> Res.string.msg_send_unknown_command
@@ -73,7 +74,6 @@ class ComposeStringProvider private constructor(
             Msg.SNACK_FRIEND_ONLINE -> Res.string.msg_snack_friend_online
             Msg.SNACK_DISCONNECTED -> Res.string.msg_snack_disconnected
             Msg.SNACK_IGNORED_ADDED -> Res.string.msg_snack_ignored_added
-            Msg.SNACK_WHOIS_REQUESTED -> Res.string.msg_snack_whois_requested
             Msg.SNACK_WHOIS_NOT_CONNECTED -> Res.string.msg_snack_whois_not_connected
             Msg.EVT_JOIN -> Res.string.msg_evt_join
             Msg.EVT_PART -> Res.string.msg_evt_part
