@@ -74,6 +74,8 @@ fun MessageInputSection(
     /** Escritorio: los emoticonos usados últimamente, para la categoría «Recientes» del selector. */
     recentEmojis: List<String> = emptyList(),
     onEmojiPicked: (String) -> Unit = {},
+    /** Apagado durante la reconexión: el campo sigue en pantalla con lo escrito, pero no deja enviar. */
+    enabled: Boolean = true,
     /** Menciones y citas que pide el menú de un mensaje: se insertan en el cursor y el campo recibe el foco. */
     insertions: Flow<InputInsertion> = emptyFlow(),
     /** Pone el foco en el campo al aparecer y cada vez que cambia [focusKey] (escritorio; en el móvil abriría el teclado). */
@@ -144,6 +146,7 @@ fun MessageInputSection(
             ) {
                 TextField(
                     value = textFieldValue,
+                    enabled = enabled,
                     onValueChange = {
                         val oldValue = textFieldValue
                         textFieldValue = it
@@ -151,7 +154,7 @@ fun MessageInputSection(
                             onTextInputChanged(it.text, it.selection.start)
                         }
                     },
-                    placeholder = { Text(stringResource(Res.string.label_write_message), color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    placeholder = { Text(stringResource(if (enabled) Res.string.label_write_message else Res.string.status_reconnecting), color = MaterialTheme.colorScheme.onSurfaceVariant) },
                     leadingIcon = if (showEmojiButton) {
                         {
                             // Sin foco propio: el campo lo conserva y con él lo que hubiera seleccionado
@@ -167,7 +170,7 @@ fun MessageInputSection(
                     },
                     trailingIcon = {
                         // Botón de enviar en píldora con el degradado de la marca (UI-17); apagado si no hay texto
-                        val canSend = textFieldValue.text.isNotBlank()
+                        val canSend = enabled && textFieldValue.text.isNotBlank()
                         IconButton(
                             onClick = {
                                 if (canSend) {
@@ -217,7 +220,7 @@ fun MessageInputSection(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = {
-                        if (textFieldValue.text.isNotBlank()) {
+                        if (enabled && textFieldValue.text.isNotBlank()) {
                             onSendMessage(textFieldValue.text)
                             textFieldValue = TextFieldValue("")
                             keyboardController?.hide()

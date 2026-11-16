@@ -70,6 +70,7 @@
     <!-- Textos de la UI (composables). -->
     <string name="status_reconnecting">Reconectando…</string>
     <string name="status_waiting_for_network">Sin conexión a Internet. Se reconectará cuando vuelva.</string>
+    <string name="status_connection_restored">Conexión recuperada</string>
     <string name="status_not_connected">No conectado</string>
     <string name="label_nickname">Nickname</string>
     <string name="button_connect">Conectar</string>

@@ -63,6 +63,8 @@ import com.jfaf.irc.ui.screens.chat.MessagesList
 import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.domain.chat.ChatStateManager
+import com.jfaf.irc.domain.chat.ConnectionBanner
+import com.jfaf.irc.ui.screens.chat.ConnectionBannerView
 import com.jfaf.irc.domain.chat.TargetNavigation
 import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.domain.chat.UserListGrouping
@@ -320,6 +322,8 @@ private fun AppDrawerMainContent(
                 closeDrawerAction()
                 navController.navigate("settings")
             },
+            // Sin enlace (reconectando) las pestañas se ven apagadas: se pueden leer, pero no llegarán mensajes
+            linkUp = !viewModel.chatScreenState.isReconnecting.collectAsState().value,
             permanent = permanent
         )
     } else {
@@ -349,7 +353,8 @@ private fun MainScreenBottomBar(
     autoFocusInput: Boolean
 ) {
     Column {
-        val showInputSection = connectionState && !isReconnecting && activeTargetValue != null
+        // Durante la reconexión el campo sigue ahí (apagado) para no perder lo que se estaba escribiendo
+        val showInputSection = connectionState && activeTargetValue != null
 
         if (showInputSection) {
             MessageInputSection(
@@ -366,6 +371,7 @@ private fun MainScreenBottomBar(
                 recentEmojis = viewModel.recentEmojis.collectAsState().value,
                 onEmojiPicked = { viewModel.onEmojiPicked(it) },
                 insertions = viewModel.inputInsertions,
+                enabled = ConnectionBanner.isInputEnabled(isReconnecting),
                 autoFocus = autoFocusInput,
                 focusKey = activeTargetValue
             )
@@ -452,25 +458,18 @@ private fun ConnectedStateView(
     val showMediaPreviews by viewModel.chatScreenState.showMediaPreviews.collectAsState()
     val isReconnecting by viewModel.chatScreenState.isReconnecting.collectAsState()
     val isWaitingForNetwork by viewModel.chatScreenState.isWaitingForNetwork.collectAsState()
+    val isConnected by viewModel.chatScreenState.connectionState.collectAsState()
 
     val currentTargetIsChannel = activeTarget?.startsWith("#") == true
     // En la ventana ancha los usuarios van en un panel fijo de la derecha; si no, en un cajón por la derecha (EndUserListDrawer).
     val shouldShowUserListComposite = fixedUserList && currentTargetIsChannel
 
     Column(modifier = Modifier.fillMaxSize()) {
-    if (isReconnecting) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = stringResource(
-                    if (isWaitingForNetwork) Res.string.status_waiting_for_network else Res.string.status_reconnecting
-                ),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-            )
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        }
-    }
+    ConnectionBannerView(
+        isReconnecting = isReconnecting,
+        isWaitingForNetwork = isWaitingForNetwork,
+        isConnected = isConnected
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()

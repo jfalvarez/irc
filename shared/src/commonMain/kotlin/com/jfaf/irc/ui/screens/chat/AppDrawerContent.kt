@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
@@ -154,7 +155,9 @@ fun AppDrawerContent(
     onOpenPrivateMessage: (String) -> Unit,
     onSettingsClick: () -> Unit,
     /** En la ventana ancha de escritorio el panel es fijo en vez de un cajón modal. */
-    permanent: Boolean = false
+    permanent: Boolean = false,
+    /** Hay enlace con el servidor; si no, la lista de pestañas se ve apagada. */
+    linkUp: Boolean = true
 ) {
     val serverString = stringResource(Res.string.cd_server)
     val distinctTargets = chatTargets.distinct()
@@ -184,7 +187,7 @@ fun AppDrawerContent(
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
-            LazyColumn(modifier = Modifier.weight(1f)) {
+            LazyColumn(modifier = Modifier.weight(1f).alpha(if (linkUp) 1f else 0.5f)) {
                 serverTargetItem?.let { target ->
                     item {
                         val isSelected = target == activeTarget
