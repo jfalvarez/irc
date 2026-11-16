@@ -90,6 +90,49 @@ class NickAutocompleteFlowTest {
     }
 
     @Test
+    fun sugiereComandos_yCanalesAbiertos() = runSkikoComposeUiTest(size = Size(600f, 760f)) {
+        val vm = koin.get<MainViewModel>()
+        connectAndReceiveNames(vm)
+
+        vm.updateNickSuggestions("/jo", 3)
+        assertEquals(listOf("/join"), vm.chatScreenState.nickSuggestions.value)
+
+        vm.joinChannel("#kotlin")
+        server.serverSays(
+            ":Tester!u@h JOIN :#kotlin",
+            ":srv 353 Tester = #kotlin :Tester",
+            ":srv 366 Tester #kotlin :End of /NAMES list."
+        )
+        waitUntil(timeoutMillis = 10_000) { vm.chatScreenState.chatTargets.value.contains("#kotlin") }
+        vm.updateNickSuggestions("mira #ko", 8)
+        assertEquals(listOf("#kotlin"), vm.chatScreenState.nickSuggestions.value)
+        vm.updateNickSuggestions("#te", 3)
+        assertEquals(listOf("#test"), vm.chatScreenState.nickSuggestions.value)
+    }
+
+    @Test
+    fun sugiereLosCanalesDeLaUltimaListaDelExplorador_sinSenuelos() = runSkikoComposeUiTest(size = Size(600f, 760f)) {
+        val vm = koin.get<MainViewModel>()
+        connectAndReceiveNames(vm)
+
+        vm.refreshChannelList(force = true)
+        waitUntil(timeoutMillis = 10_000) { server.sent.any { it.startsWith("LIST") } }
+        server.serverSays(
+            ":srv 321 Tester Channel :Users  Name",
+            ":srv 322 Tester #hispano 120 :[+nt] Bienvenidos",
+            ":srv 322 Tester #hispanos-falso 3143 :Fake channel for confusing spambots",
+            ":srv 322 Tester #hip-hop 30 :[+nt] Música",
+            ":srv 323 Tester :End of /LIST"
+        )
+        waitUntil(timeoutMillis = 10_000) {
+            vm.updateNickSuggestions("#hi", 3)
+            vm.chatScreenState.nickSuggestions.value.isNotEmpty()
+        }
+        // De más a menos usuarios y sin el señuelo
+        assertEquals(listOf("#hispano", "#hip-hop"), vm.chatScreenState.nickSuggestions.value)
+    }
+
+    @Test
     fun sugiereOperadoresYVocesSinElPrefijo() = runSkikoComposeUiTest(size = Size(600f, 760f)) {
         val vm = koin.get<MainViewModel>()
         connectAndReceiveNames(vm)

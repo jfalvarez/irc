@@ -8,6 +8,8 @@ import com.jfaf.irc.domain.chat.LinkState
 import com.jfaf.irc.domain.chat.LinkTransitions
 import com.jfaf.irc.domain.chat.MessageFilterOptions
 import com.jfaf.irc.domain.chat.InputInsertion
+import com.jfaf.irc.domain.chat.InputAutocomplete
+import com.jfaf.irc.domain.chat.MircColorParser
 import com.jfaf.irc.domain.chat.NickAutocomplete
 import com.jfaf.irc.domain.chat.UiMessageFilter
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
@@ -48,6 +50,8 @@ import com.jfaf.irc.domain.usecase.WhoisRequestResult
 import com.jfaf.irc.domain.user.WhoisCollector
 import com.jfaf.irc.domain.channel.ChannelListCollector
 import com.jfaf.irc.domain.channel.ChannelListResult
+import com.jfaf.irc.domain.channel.ChannelListSearch
+import com.jfaf.irc.domain.channel.ChannelListSort
 import com.jfaf.irc.domain.usecase.ChannelListRequestResult
 import com.jfaf.irc.domain.usecase.RequestChannelListUseCase
 import com.jfaf.irc.domain.user.WhoisResult
@@ -192,6 +196,7 @@ class MainViewModel(
     private val _openChannelListEvents = MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
     val openChannelListEvents: SharedFlow<Unit> = _openChannelListEvents.asSharedFlow()
     private var channelListTimeoutJob: Job? = null
+    private var channelNamesFromList: List<String> = emptyList()
 
     private val _nickSuggestions = MutableStateFlow<List<String>>(emptyList())
 
@@ -655,6 +660,13 @@ class MainViewModel(
 
     private fun onChannelListResult(result: ChannelListResult) {
         channelListTimeoutJob?.cancel()
+        // Para autocompletar `#canal` en el campo de mensajes: los reales (sin señuelos), de más a menos usuarios
+        channelNamesFromList = ChannelListSearch
+            .filterAndSort(
+                ChannelListSearch.withoutDecoys(result.entries, plainTopic = { MircColorParser.parse(it).text }),
+                query = "", sort = ChannelListSort.BY_USERS
+            )
+            .map { it.name }
         _channelListState.value = ChannelListUiState.Ready(result, Clock.System.now().toEpochMilliseconds())
     }
 
@@ -664,14 +676,16 @@ class MainViewModel(
         _whoisState.value = null
     }
 
-    // --- Nick Autocompletion Functions ---
+    // --- Autocompletado del campo de mensajes: nicks, comandos y canales (UI-36) ---
     fun updateNickSuggestions(currentFullText: String, cursorPosition: Int) {
         val activeTarget = chatStateManager.activeTarget.value
-        _nickSuggestions.value = NickAutocomplete.suggestions(
+        _nickSuggestions.value = InputAutocomplete.suggestions(
             activeTarget = activeTarget,
             // Se lee del estado de origen: `currentChannelUserListState` sólo se actualiza mientras alguien lo
             // observa (el panel de usuarios), y con el panel cerrado seguía vacío y no se sugería nada.
             usersInChannel = chatStateManager.usersInChannel.value[activeTarget].orEmpty(),
+            // Los canales abiertos primero y luego los de la última lista del explorador (sólo se piden con un `#`)
+            knownChannels = { chatStateManager.chatTargets.value.filter { it.startsWith("#") } + channelNamesFromList },
             text = currentFullText,
             cursorPosition = cursorPosition,
             ownNick = currentNickname

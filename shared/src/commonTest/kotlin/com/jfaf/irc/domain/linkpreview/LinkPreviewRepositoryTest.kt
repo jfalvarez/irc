@@ -8,7 +8,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -19,10 +21,17 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.ExperimentalTime
 import kotlin.time.TestTimeSource
 
-@OptIn(ExperimentalTime::class)
+@OptIn(ExperimentalTime::class, ExperimentalCoroutinesApi::class)
 class LinkPreviewRepositoryTest {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // Un solo hilo: así los contadores del descargador de pega no compiten entre hilos (antes, con Dispatchers.Default
+    // a secas, había una carrera que daba lecturas erróneas de vez en cuando)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1))
+
+    /** Espera a que se cumpla [condition], sin fijar cuánto tarda: en una máquina cargada un `delay` fijo se quedaba corto. */
+    private suspend fun awaitUntil(timeoutMs: Long = 10_000, condition: () -> Boolean) {
+        withTimeout(timeoutMs) { while (!condition()) delay(5) }
+    }
 
     @AfterTest
     fun tearDown() = scope.cancel()
@@ -31,8 +40,8 @@ class LinkPreviewRepositoryTest {
 
     private class FakeFetcher(var respond: (String) -> FetchedPage? = { FetchedPage(it, "<head><title>T</title></head>") }) : LinkPreviewFetcher {
         val calls = mutableListOf<String>()
-        var active = 0
-        var maxActive = 0
+        @kotlin.concurrent.Volatile var active = 0
+        @kotlin.concurrent.Volatile var maxActive = 0
         var gate: CompletableDeferred<Unit>? = null
         override suspend fun fetch(url: String): FetchedPage? {
             calls += url
@@ -74,7 +83,7 @@ class LinkPreviewRepositoryTest {
         val repo = LinkPreviewRepository(fetcher, scope)
         val a = async { repo.preview("https://example.com/a") }
         val b = async { repo.preview("https://example.com/a") }
-        delay(100)
+        awaitUntil { fetcher.active == 1 }
         fetcher.gate!!.complete(Unit)
         val results = listOf(a, b).awaitAll()
         assertEquals(1, fetcher.calls.size)
@@ -87,10 +96,10 @@ class LinkPreviewRepositoryTest {
         val fetcher = FakeFetcher().also { it.gate = CompletableDeferred() }
         val repo = LinkPreviewRepository(fetcher, scope)
         val caller = async { repo.preview("https://example.com/a") }
-        delay(100)
+        awaitUntil { fetcher.active == 1 }
         caller.cancel() // el mensaje salió de la lista al hacer scroll
         fetcher.gate!!.complete(Unit)
-        delay(200)
+        awaitUntil { fetcher.active == 0 }
         assertEquals("T", repo.preview("https://example.com/a")?.title)
         assertEquals(1, fetcher.calls.size)
     }
@@ -100,7 +109,9 @@ class LinkPreviewRepositoryTest {
         val fetcher = FakeFetcher().also { it.gate = CompletableDeferred() }
         val repo = LinkPreviewRepository(fetcher, scope, maxConcurrent = 2)
         val jobs = (1..6).map { async { repo.preview("https://example.com/$it") } }
-        delay(200)
+        awaitUntil { fetcher.active == 2 }
+        // Con las dos plazas ocupadas, ninguna otra ha podido empezar
+        assertEquals(2, fetcher.calls.size)
         assertEquals(2, fetcher.maxActive)
         fetcher.gate!!.complete(Unit)
         jobs.awaitAll()

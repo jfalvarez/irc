@@ -160,6 +160,15 @@ class CommandProcessorTest {
     }
 
     @Test
+    fun todosLosComandosQueSeSugieren_losEntiendeElProcesador() {
+        assertEquals(ChatCommands.NAMES.size, ChatCommands.NAMES.distinct().size)
+        ChatCommands.NAMES.forEach { name ->
+            assertTrue(run("/$name") !is CommandResult.UnknownCommand, "/$name se sugiere pero el procesador no lo conoce")
+        }
+        assertTrue(run("/zzz") is CommandResult.UnknownCommand)
+    }
+
+    @Test
     fun help_devuelveLaAyuda() {
         assertEquals(CommandResult.ShowSystemMessage("#chat", "CMD_HELP"), run("/help"))
     }
