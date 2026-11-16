@@ -62,6 +62,12 @@ class WhoisCollector {
     }
 
     /**
+     * Se agotó la espera de [nick]: lo suelta y devuelve true si seguía pendiente. Devuelve false
+     * si ya respondió, se canceló o nunca se anunció (no hay nada que avisar).
+     */
+    fun timeOut(nick: String): Boolean = pending.remove(key(nick)) != null
+
+    /**
      * Procesa [message]. Devuelve true si es una respuesta de un WHOIS anunciado y ya está
      * consumida (no debe pintarse en el chat). El 401 se anota pero sigue su camino, para que
      * quede en el Servidor el aviso de «usuario no encontrado».

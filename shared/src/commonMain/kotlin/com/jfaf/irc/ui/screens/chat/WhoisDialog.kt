@@ -38,11 +38,14 @@ import kotlin.time.Clock
 fun WhoisDialog(
     state: WhoisUiState,
     onJoinChannel: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** Vuelve a pedir el WHOIS de [nick] (sólo se ofrece cuando el servidor no respondió). */
+    onRetry: (nick: String) -> Unit = {}
 ) {
     val nick = when (state) {
         is WhoisUiState.Loading -> state.nick
         is WhoisUiState.Result -> state.result.nick
+        is WhoisUiState.TimedOut -> state.nick
     }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -50,6 +53,7 @@ fun WhoisDialog(
         text = {
             when (state) {
                 is WhoisUiState.Loading -> LoadingBody(nick)
+                is WhoisUiState.TimedOut -> Text(stringResource(Res.string.whois_dialog_timeout, nick))
                 is WhoisUiState.Result ->
                     if (state.result.found) {
                         ResultBody(state.result, onJoinChannel = { onJoinChannel(it); onDismiss() })
@@ -61,6 +65,9 @@ fun WhoisDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(Res.string.whois_dialog_close)) }
         },
+        dismissButton = if (state is WhoisUiState.TimedOut) {
+            { TextButton(onClick = { onRetry(nick) }) { Text(stringResource(Res.string.whois_dialog_retry)) } }
+        } else null,
         containerColor = IRCTheme.dialogContainerOpaque
     )
 }

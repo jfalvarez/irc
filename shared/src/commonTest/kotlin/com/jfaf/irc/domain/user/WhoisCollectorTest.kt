@@ -146,6 +146,26 @@ class WhoisCollectorTest {
     }
 
     @Test
+    fun tiempoAgotado_sueltaLaConsulta_yLasLineasTardiasVuelvenAlServidor() {
+        collector.expect("ana")
+        assertTrue(collector.timeOut("ANA")) // sin distinguir mayúsculas
+        assertFalse(collector.accept(numeric("311", "ana", "u", "h", "*", trailing = "x")))
+    }
+
+    @Test
+    fun tiempoAgotado_noHaceNada_siYaRespondioSeCanceloONuncaSeAnuncio() = runBlocking {
+        assertFalse(collector.timeOut("nadie"))
+
+        collector.expect("ana")
+        feed(numeric("311", "ana", "u", "h", "*", trailing = "x"), numeric("318", "ana", trailing = "fin"))
+        assertFalse(collector.timeOut("ana"))
+
+        collector.expect("kiko")
+        collector.cancel("kiko")
+        assertFalse(collector.timeOut("kiko"))
+    }
+
+    @Test
     fun duracionCompacta() {
         assertEquals("0 s", formatCompactDuration(-5))
         assertEquals("45 s", formatCompactDuration(45))

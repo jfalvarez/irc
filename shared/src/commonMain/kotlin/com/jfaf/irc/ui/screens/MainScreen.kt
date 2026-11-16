@@ -214,7 +214,8 @@ fun MainScreen(
                 WhoisDialog(
                     state = state,
                     onJoinChannel = { channel -> viewModel.joinChannel(channel) },
-                    onDismiss = { viewModel.dismissWhois() }
+                    onDismiss = { viewModel.dismissWhois() },
+                    onRetry = { nick -> viewModel.performWhois(nick) }
                 )
             }
         }

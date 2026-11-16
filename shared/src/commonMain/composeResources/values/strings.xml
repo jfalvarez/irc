@@ -128,6 +128,8 @@
     <string name="whois_dialog_loading">Consultando a %1$s…</string>
     <string name="whois_dialog_not_found">Usuario '%1$s' no encontrado.</string>
     <string name="whois_dialog_close">Cerrar</string>
+    <string name="whois_dialog_timeout">El servidor no ha respondido a la consulta sobre %1$s. Inténtalo de nuevo en un momento.</string>
+    <string name="whois_dialog_retry">Reintentar</string>
     <string name="whois_label_identity">Usuario</string>
     <string name="whois_label_real_name">Nombre real</string>
     <string name="whois_label_server">Servidor</string>

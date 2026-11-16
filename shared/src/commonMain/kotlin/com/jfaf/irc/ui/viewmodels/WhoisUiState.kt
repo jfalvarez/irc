@@ -8,4 +8,7 @@ sealed interface WhoisUiState {
     data class Loading(val nick: String) : WhoisUiState
 
     data class Result(val result: WhoisResult) : WhoisUiState
+
+    /** El servidor no contestó a tiempo: el diálogo lo dice y ofrece reintentar. */
+    data class TimedOut(val nick: String) : WhoisUiState
 }

@@ -181,6 +181,7 @@ class MainViewModel(
 
     /** Diálogo de WHOIS: null = cerrado; [WhoisUiState.Loading] mientras responde el servidor. */
     private val _whoisState = MutableStateFlow<WhoisUiState?>(null)
+    private var whoisTimeoutJob: Job? = null
     val whoisState: StateFlow<WhoisUiState?> = _whoisState.asStateFlow()
 
     /** Explorador de canales: la última lista del servidor y si hay una consulta en curso. */
@@ -586,6 +587,14 @@ class MainViewModel(
             when (performWhoisUseCase(nick)) {
                 is WhoisRequestResult.Success -> {
                     _whoisState.value = WhoisUiState.Loading(nick)
+                    whoisTimeoutJob?.cancel()
+                    whoisTimeoutJob = launch {
+                        delay(WHOIS_TIMEOUT_MS)
+                        // Sólo si seguía esperando: si ya contestó o se cerró el diálogo, el colector ya lo soltó
+                        if (whoisCollector.timeOut(nick) && _whoisState.value is WhoisUiState.Loading) {
+                            _whoisState.value = WhoisUiState.TimedOut(nick)
+                        }
+                    }
                 }
                 is WhoisRequestResult.NotConnected -> {
                     _snackbarEvents.tryEmit(strings.get(Msg.SNACK_WHOIS_NOT_CONNECTED))
@@ -607,6 +616,7 @@ class MainViewModel(
                 strings.get(Msg.WHOIS_SUMMARY, result.nick, "${result.user}@${result.host}", result.server ?: "?")
             )
         }
+        whoisTimeoutJob?.cancel()
         // Si el usuario cerró el diálogo mientras tanto, no se reabre
         if (_whoisState.value is WhoisUiState.Loading) {
             _whoisState.value = WhoisUiState.Result(result)
@@ -644,6 +654,7 @@ class MainViewModel(
     }
 
     fun dismissWhois() {
+        whoisTimeoutJob?.cancel()
         (_whoisState.value as? WhoisUiState.Loading)?.let { whoisCollector.cancel(it.nick) }
         _whoisState.value = null
     }
@@ -672,6 +683,9 @@ class MainViewModel(
     }
 
     private companion object {
+        /** Sin el cierre del WHOIS pasado este tiempo, el diálogo dice que el servidor no ha respondido. */
+        const val WHOIS_TIMEOUT_MS = 15_000L
+
         /** Una lista de canales más reciente que esto no se vuelve a pedir al abrir el explorador. */
         const val CHANNEL_LIST_FRESH_MS = 60_000L
 
