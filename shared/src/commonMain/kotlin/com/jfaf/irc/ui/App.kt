@@ -51,6 +51,7 @@ import com.jfaf.irc.resources.settings_section_ignored_users
 import com.jfaf.irc.resources.user_list_add_friend
 import com.jfaf.irc.resources.user_list_add_ignored
 import com.jfaf.irc.ui.screens.MainScreen
+import com.jfaf.irc.ui.screens.channels.ChannelBrowserScreen
 import com.jfaf.irc.ui.screens.settings.SettingsScreen
 import com.jfaf.irc.ui.screens.settings.UserListScreen
 import com.jfaf.irc.ui.theme.IRCAppTheme
@@ -117,6 +118,11 @@ fun App(
         }
     }
 
+    // `/list` escrito en el chat abre el explorador de canales
+    LaunchedEffect(mainViewModel.openChannelListEvents) {
+        mainViewModel.openChannelListEvents.collectLatest { navController.navigate("channels") }
+    }
+
     LaunchedEffect(mainViewModel.snackbarEvents) {
         mainViewModel.snackbarEvents.collectLatest { message ->
             coroutineScope.launch {
@@ -157,6 +163,32 @@ fun App(
                         viewModel = mainViewModel,
                         navController = navController,
                         snackbarHostState = snackbarHostState
+                    )
+                }
+                composable(
+                    route = "channels",
+                    enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn() },
+                    popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() }
+                ) {
+                    val channelListState by mainViewModel.channelListState.collectAsState()
+                    val chatTargets by mainViewModel.chatScreenState.chatTargets.collectAsState()
+                    val joinedChannels = remember(chatTargets) {
+                        chatTargets.filter { it.startsWith("#") }.map { it.lowercase() }.toSet()
+                    }
+                    ChannelBrowserScreen(
+                        state = channelListState,
+                        joinedChannels = joinedChannels,
+                        onLoad = { mainViewModel.refreshChannelList() },
+                        onRefresh = { mainViewModel.refreshChannelList(force = true) },
+                        onJoin = { channel, key ->
+                            mainViewModel.joinChannel(channel, key)
+                            navController.navigateUp()
+                        },
+                        onOpenJoined = { channel ->
+                            mainViewModel.setActiveTarget(channel)
+                            navController.navigateUp()
+                        },
+                        onNavigateUp = { navController.navigateUp() }
                     )
                 }
                 composable(

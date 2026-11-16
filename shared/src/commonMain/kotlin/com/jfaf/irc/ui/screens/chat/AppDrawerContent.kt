@@ -173,7 +173,9 @@ fun AppDrawerContent(
     /** Canales silenciados (nombres en minúsculas): llevan una campana tachada (UI-32). */
     mutedChannels: Set<String> = emptySet(),
     /** Abre el selector rápido (UI-30); sin él no se muestra la fila de búsqueda. */
-    onQuickSwitch: (() -> Unit)? = null
+    onQuickSwitch: (() -> Unit)? = null,
+    /** Abre el explorador de canales; sin él no se muestra la fila. */
+    onBrowseChannels: (() -> Unit)? = null
 ) {
     val serverString = stringResource(Res.string.cd_server)
     val distinctTargets = chatTargets.distinct()
@@ -202,6 +204,7 @@ fun AppDrawerContent(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
             )
             onQuickSwitch?.let { DrawerSearchRow(onClick = it) }
+            onBrowseChannels?.let { DrawerBrowseChannelsRow(onClick = it) }
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
             LazyColumn(modifier = Modifier.weight(1f).alpha(if (linkUp) 1f else 0.5f)) {

@@ -36,6 +36,7 @@ class CommandProcessor(
             "join" -> processJoinCommand(args, targetForSysMsgOnError)
             "part" -> processPartCommand(args, currentActiveTarget)
             "quit" -> CommandResult.Quit(args)
+            "list" -> CommandResult.OpenChannelList
             "away" -> executeAwayCommand(args, targetForSysMsgOnError)
             "msg" -> executeMsgCommand(args, currentNickname, targetForSysMsgOnError)
             "query" -> processQueryCommand(args, currentNickname, targetForSysMsgOnError)

@@ -46,11 +46,16 @@ import com.jfaf.irc.domain.usecase.SendMessageOrCommandUseCase
 import com.jfaf.irc.domain.usecase.UpdateFriendMonitoringUseCase
 import com.jfaf.irc.domain.usecase.WhoisRequestResult
 import com.jfaf.irc.domain.user.WhoisCollector
+import com.jfaf.irc.domain.channel.ChannelListCollector
+import com.jfaf.irc.domain.channel.ChannelListResult
+import com.jfaf.irc.domain.usecase.ChannelListRequestResult
+import com.jfaf.irc.domain.usecase.RequestChannelListUseCase
 import com.jfaf.irc.domain.user.WhoisResult
 import com.jfaf.irc.domain.chat.command.CommandResult
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
+import kotlin.time.Clock
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -120,6 +125,8 @@ class MainViewModel(
     private val handleIncomingMessageUseCase: HandleIncomingMessageUseCase,
     private val silentWhoisCompletionSignal: SilentWhoisCompletionSignal,
     private val whoisCollector: WhoisCollector,
+    private val requestChannelListUseCase: RequestChannelListUseCase,
+    private val channelListCollector: ChannelListCollector,
     private val strings: StringProvider,
     private val adProvider: AdProvider
 ) : ViewModel(), ChatEventListener {
@@ -175,6 +182,15 @@ class MainViewModel(
     /** Diálogo de WHOIS: null = cerrado; [WhoisUiState.Loading] mientras responde el servidor. */
     private val _whoisState = MutableStateFlow<WhoisUiState?>(null)
     val whoisState: StateFlow<WhoisUiState?> = _whoisState.asStateFlow()
+
+    /** Explorador de canales: la última lista del servidor y si hay una consulta en curso. */
+    private val _channelListState = MutableStateFlow<ChannelListUiState>(ChannelListUiState.Idle)
+    val channelListState: StateFlow<ChannelListUiState> = _channelListState.asStateFlow()
+
+    /** `/list` escrito en el chat: la interfaz abre el explorador de canales. */
+    private val _openChannelListEvents = MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
+    val openChannelListEvents: SharedFlow<Unit> = _openChannelListEvents.asSharedFlow()
+    private var channelListTimeoutJob: Job? = null
 
     private val _nickSuggestions = MutableStateFlow<List<String>>(emptyList())
 
@@ -362,6 +378,7 @@ class MainViewModel(
         }.launchIn(viewModelScope)
 
         whoisCollector.results.onEach(::onWhoisResult).launchIn(viewModelScope)
+        channelListCollector.results.onEach(::onChannelListResult).launchIn(viewModelScope)
     }
 
     private fun startFriendChecker() {
@@ -519,6 +536,7 @@ class MainViewModel(
                         is CommandResult.OpenQuery -> {
                             openPrivateMessage(commandResult.nick, commandResult.initialMessage)
                         }
+                        is CommandResult.OpenChannelList -> _openChannelListEvents.tryEmit(Unit)
                         is CommandResult.Quit -> disconnectFromServerAndStopService(commandResult.quitMessage)
                         else -> {
                             Log.w("MainViewModel", "Unhandled CommandResult in ViewModelActionNeeded: $commandResult")
@@ -595,6 +613,36 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Pide la lista de canales al servidor. Sin [force], una lista de hace menos de un minuto se
+     * da por buena (abrir y cerrar el explorador no repite la consulta); y no se lanza otra
+     * mientras hay una en curso.
+     */
+    fun refreshChannelList(force: Boolean = false) {
+        val current = _channelListState.value
+        if (current is ChannelListUiState.Loading) return
+        if (!force && current is ChannelListUiState.Ready &&
+            Clock.System.now().toEpochMilliseconds() - current.loadedAtMillis < CHANNEL_LIST_FRESH_MS
+        ) return
+
+        when (requestChannelListUseCase()) {
+            is ChannelListRequestResult.Success -> {
+                _channelListState.value = ChannelListUiState.Loading
+                channelListTimeoutJob?.cancel()
+                channelListTimeoutJob = viewModelScope.launch {
+                    delay(CHANNEL_LIST_TIMEOUT_MS)
+                    channelListCollector.timeOut() // entrega lo recogido, marcado como incompleto
+                }
+            }
+            is ChannelListRequestResult.NotConnected -> _channelListState.value = ChannelListUiState.NotConnected
+        }
+    }
+
+    private fun onChannelListResult(result: ChannelListResult) {
+        channelListTimeoutJob?.cancel()
+        _channelListState.value = ChannelListUiState.Ready(result, Clock.System.now().toEpochMilliseconds())
+    }
+
     fun dismissWhois() {
         (_whoisState.value as? WhoisUiState.Loading)?.let { whoisCollector.cancel(it.nick) }
         _whoisState.value = null
@@ -621,5 +669,13 @@ class MainViewModel(
     fun onNickSuggestionSelected(suggestion: String, currentFullText: String, cursorPosition: Int): String {
         clearNickSuggestions()
         return NickAutocomplete.apply(suggestion, currentFullText, cursorPosition)
+    }
+
+    private companion object {
+        /** Una lista de canales más reciente que esto no se vuelve a pedir al abrir el explorador. */
+        const val CHANNEL_LIST_FRESH_MS = 60_000L
+
+        /** Sin el cierre del servidor pasado este tiempo, se muestra lo recibido como lista incompleta. */
+        const val CHANNEL_LIST_TIMEOUT_MS = 45_000L
     }
 }

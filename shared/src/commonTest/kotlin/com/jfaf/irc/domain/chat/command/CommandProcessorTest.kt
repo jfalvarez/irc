@@ -154,6 +154,12 @@ class CommandProcessorTest {
     }
 
     @Test
+    fun list_abreElExplorador_conOSinArgumentos() {
+        assertEquals(CommandResult.OpenChannelList, run("/list"))
+        assertEquals(CommandResult.OpenChannelList, run("/LIST >10"))
+    }
+
+    @Test
     fun help_devuelveLaAyuda() {
         assertEquals(CommandResult.ShowSystemMessage("#chat", "CMD_HELP"), run("/help"))
     }

@@ -19,6 +19,9 @@ sealed interface CommandResult {
     /** Instructs the ViewModel to open a private message / query window. */
     data class OpenQuery(val nick: String, val initialMessage: String?) : CommandResult
 
+    /** Instructs the ViewModel to open the channel browser (`/list`). */
+    object OpenChannelList : CommandResult
+
     /** Instructs the ViewModel to disconnect from the server. */
     data class Quit(val quitMessage: String?) : CommandResult
 

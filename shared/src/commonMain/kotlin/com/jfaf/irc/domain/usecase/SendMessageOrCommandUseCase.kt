@@ -86,6 +86,7 @@ class SendMessageOrCommandUseCase(
                 is CommandResult.JoinChannel,
                 is CommandResult.PartChannel,
                 is CommandResult.OpenQuery,
+                is CommandResult.OpenChannelList,
                 is CommandResult.Quit -> SendMessageActionStatus.ViewModelActionNeeded(commandProcessingResult)
             }
         } else {

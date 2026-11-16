@@ -4,6 +4,8 @@ import com.jfaf.irc.domain.chat.ChatHistoryPersister
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.command.CommandProcessor
 import com.jfaf.irc.domain.user.WhoisCollector
+import com.jfaf.irc.domain.channel.ChannelListCollector
+import com.jfaf.irc.domain.usecase.RequestChannelListUseCase
 import com.jfaf.irc.domain.usecase.AttemptNickServIdentificationUseCase
 import com.jfaf.irc.domain.usecase.CloseTargetUseCase
 import com.jfaf.irc.domain.usecase.ConnectUseCase
@@ -35,6 +37,7 @@ val viewModelModule = module {
 private fun Scope.newMainViewModel(): MainViewModel {
     val chat = ChatStateManager()
     val whois = WhoisCollector()
+    val channelList = ChannelListCollector()
     val partChannel = PartChannelUseCase(get(), get(), chat)
     return MainViewModel(
         ircConnection = get(),
@@ -55,9 +58,11 @@ private fun Scope.newMainViewModel(): MainViewModel {
         sendMessageOrCommandUseCase = SendMessageOrCommandUseCase(
             get(), get(), chat, CommandProcessor(get(), chat, get())
         ),
-        handleIncomingMessageUseCase = HandleIncomingMessageUseCase(get(), chat, get(), get(), get(), get(), get(), whois),
+        handleIncomingMessageUseCase = HandleIncomingMessageUseCase(get(), chat, get(), get(), get(), get(), get(), whois, channelList),
         silentWhoisCompletionSignal = get(),
         whoisCollector = whois,
+        requestChannelListUseCase = RequestChannelListUseCase(get(), channelList),
+        channelListCollector = channelList,
         strings = get(),
         adProvider = get()
     )

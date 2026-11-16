@@ -163,6 +163,7 @@ fun MainScreen(
                             onIgnoreUserInPm = { nick -> viewModel.ignoreUser(nick) },
                             onAddFriendInPm = { nick -> settingsViewModel.addFriend(nick) },
                             onWhoisClick = { nick -> viewModel.performWhois(nick) },
+                            onBrowseChannelsClick = { navController.navigate("channels") },
                             userCount = activeChannelUserCount,
                             topic = activeTopic,
                             onQuickSwitch = { showQuickSwitcher = true },
@@ -336,6 +337,10 @@ private fun AppDrawerMainContent(
             onSettingsClick = {
                 closeDrawerAction()
                 navController.navigate("settings")
+            },
+            onBrowseChannels = {
+                closeDrawerAction()
+                navController.navigate("channels")
             },
             // Sin enlace (reconectando) las pestañas se ven apagadas: se pueden leer, pero no llegarán mensajes
             linkUp = !viewModel.chatScreenState.isReconnecting.collectAsState().value,
