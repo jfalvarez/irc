@@ -46,9 +46,12 @@ class BackgroundNotificationsTest {
     private val messages = MutableSharedFlow<ParsedIrcMessage>(extraBufferCapacity = 16)
 
     private var levels: Map<String, ChannelNotificationLevel> = emptyMap()
+    private var defaultLevel = ChannelNotificationLevel.Default
     private val channelStore = object : ChannelNotificationStore {
         override val levelsFlow: Flow<Map<String, ChannelNotificationLevel>> get() = flowOf(levels)
-        override suspend fun setLevel(channel: String, level: ChannelNotificationLevel) {}
+        override val defaultLevelFlow: Flow<ChannelNotificationLevel> get() = flowOf(defaultLevel)
+        override suspend fun setLevel(channel: String, level: ChannelNotificationLevel?) {}
+        override suspend fun setDefaultLevel(level: ChannelNotificationLevel) {}
     }
 
     private fun start(ownNick: String? = null) {
@@ -162,6 +165,32 @@ class BackgroundNotificationsTest {
         withTimeout(2_000) { while (calls.isEmpty()) delay(5) }
         settle()
         assertEquals(listOf("channel #otro Ana 'Yo, te hablo' mention=true"), calls.toList())
+    }
+
+    @Test
+    fun elNivelPredeterminadoDeAjustes_valeParaLosCanalesSinNivelPropio() = runBlocking {
+        defaultLevel = ChannelNotificationLevel.ALL
+        levels = mapOf("#ruido" to ChannelNotificationLevel.MUTED)
+        visibility.enteredBackground()
+        start(ownNick = "Yo")
+        send(":Ana!u@h PRIVMSG #ruido :hola") // propio: silenciado
+        send(":Ana!u@h PRIVMSG #otro :hola a todos") // sin propio: sigue el predeterminado (todo)
+        withTimeout(2_000) { while (calls.isEmpty()) delay(5) }
+        settle()
+        assertEquals(listOf("channel #otro Ana 'hola a todos' mention=false"), calls.toList())
+    }
+
+    @Test
+    fun conElPredeterminadoSilenciado_unCanalConNivelPropioSigueAvisando() = runBlocking {
+        defaultLevel = ChannelNotificationLevel.MUTED
+        levels = mapOf("#chat" to ChannelNotificationLevel.MENTIONS)
+        visibility.enteredBackground()
+        start(ownNick = "Yo")
+        send(":Ana!u@h PRIVMSG #otro :Yo, te hablo") // sin propio: silenciado
+        send(":Ana!u@h PRIVMSG #chat :Yo, te hablo")
+        withTimeout(2_000) { while (calls.isEmpty()) delay(5) }
+        settle()
+        assertEquals(listOf("channel #chat Ana 'Yo, te hablo' mention=true"), calls.toList())
     }
 
     @Test

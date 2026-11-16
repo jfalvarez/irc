@@ -29,16 +29,36 @@ class ChannelNotificationLevelTest {
     }
 
     @Test
-    fun cambiarAlNivelPorDefectoLoQuitaDelMapa() {
-        val levels = ChannelNotificationLevels.with(emptyMap(), "#Chat", ALL)
-        assertEquals(mapOf("#chat" to ALL), levels)
-        assertEquals(emptyMap(), ChannelNotificationLevels.with(levels, "#CHAT", MENTIONS))
+    fun unCanalSinNivelPropio_sigueElPredeterminadoQueSeLePase() {
+        val levels = mapOf("#chat" to MUTED)
+        assertEquals(ALL, ChannelNotificationLevels.levelFor(levels, "#otro", ALL))
+        assertEquals(MUTED, ChannelNotificationLevels.levelFor(levels, "#CHAT", ALL), "El propio manda sobre el predeterminado")
     }
 
     @Test
-    fun seGuardaUnTextoPorCanal_yNoSeGuardaLoPredeterminado() {
+    fun elegirUnNivelLoGuarda_tambienSiCoincideConElPredeterminado_yNullLoQuita() {
+        val levels = ChannelNotificationLevels.with(emptyMap(), "#Chat", ALL)
+        assertEquals(mapOf("#chat" to ALL), levels)
+        // Elegir «Solo menciones» a propósito se conserva: no cambia solo si luego cambia el predeterminado
+        val explicit = ChannelNotificationLevels.with(levels, "#CHAT", MENTIONS)
+        assertEquals(mapOf("#chat" to MENTIONS), explicit)
+        assertEquals(emptyMap(), ChannelNotificationLevels.with(explicit, "#CHAT", null))
+    }
+
+    @Test
+    fun seGuardaUnTextoPorCanal() {
         val encoded = ChannelNotificationLevels.encode(mapOf("#a" to ALL, "#b" to MUTED, "#c" to MENTIONS))
-        assertEquals(setOf("ALL:#a", "MUTED:#b"), encoded)
+        assertEquals(setOf("ALL:#a", "MUTED:#b", "MENTIONS:#c"), encoded)
+    }
+
+    @Test
+    fun silenciadosEntreLosCanalesAbiertos_contandoElPredeterminado() {
+        val targets = listOf("Servidor", "#Uno", "#dos", "ana")
+        // Sin predeterminado silenciado: sólo los que lo piden
+        assertEquals(setOf("#dos"), ChannelNotificationLevels.mutedAmong(targets, mapOf("#dos" to MUTED), MENTIONS))
+        // Con el predeterminado en Silenciado, todos los canales (no privados ni Servidor) salvo los que eligieron otro
+        assertEquals(setOf("#dos"), ChannelNotificationLevels.mutedAmong(targets, mapOf("#uno" to ALL), MUTED))
+        assertEquals(emptySet(), ChannelNotificationLevels.mutedAmong(targets, emptyMap(), ALL))
     }
 
     @Test
@@ -49,7 +69,7 @@ class ChannelNotificationLevelTest {
 
     @Test
     fun decodificarIgnoraLoMalFormado() {
-        val decoded = ChannelNotificationLevels.decode(setOf("ALL:#bien", "ENORME:#mal", "MUTED:sinalmohadilla", "ALL", "", "MENTIONS:#x"))
+        val decoded = ChannelNotificationLevels.decode(setOf("ALL:#bien", "ENORME:#mal", "MUTED:sinalmohadilla", "ALL", ""))
         assertEquals(mapOf("#bien" to ALL), decoded)
         assertTrue(ChannelNotificationLevels.decode(null).isEmpty())
     }

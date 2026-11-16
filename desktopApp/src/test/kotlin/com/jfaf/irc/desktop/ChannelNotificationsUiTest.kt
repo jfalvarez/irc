@@ -132,9 +132,36 @@ class ChannelNotificationsUiTest {
         waitUntil(timeoutMillis = 5_000) { levelOf(vm) == ChannelNotificationLevel.ALL }
 
         openChannelNotifications()
+        // Elegir «Solo menciones» a propósito se guarda como nivel propio (no cambia solo si cambia el predeterminado)
         onNode(hasText("Solo menciones") and hasClickAction()).performSemanticsAction(SemanticsActions.OnClick)
+        waitUntil(timeoutMillis = 5_000) { levelOf(vm) == ChannelNotificationLevel.MENTIONS }
+
+        // «Predeterminado (…)» quita el nivel propio
+        openChannelNotifications()
+        onNode(hasText("Predeterminado (Solo menciones)") and hasClickAction()).performSemanticsAction(SemanticsActions.OnClick)
         waitUntil(timeoutMillis = 5_000) { levelOf(vm) == null }
         assertTrue(vm.channelNotificationLevels.value.isEmpty())
+    }
+
+    @Test
+    fun elPredeterminadoDeAjustes_loSiguenLosCanalesSinNivelPropio() = runSkikoComposeUiTest(size = Size(600f, 760f)) {
+        val vm = koin.get<MainViewModel>()
+        connectAndReceiveNames(vm)
+        onNodeWithContentDescription("Más opciones").performSemanticsAction(SemanticsActions.OnClick)
+        waitForIdle()
+        onNodeWithText("Notificaciones: Solo menciones").assertExists()
+        onNodeWithText("Notificaciones: Solo menciones").performSemanticsAction(SemanticsActions.OnClick)
+        waitForIdle()
+        onNodeWithText("Predeterminado (Solo menciones)").assertExists()
+        onNode(hasText("Cancelar") and hasClickAction()).performSemanticsAction(SemanticsActions.OnClick)
+        waitForIdle()
+
+        // Cambia el predeterminado en Ajustes: el menú del canal sin nivel propio lo refleja, con el diálogo incluido
+        runBlocking { koin.get<com.jfaf.irc.data.prefs.UserPreferencesRepository>().setDefaultLevel(ChannelNotificationLevel.ALL) }
+        waitUntil(timeoutMillis = 5_000) { vm.defaultChannelNotificationLevel.value == ChannelNotificationLevel.ALL }
+        onNodeWithContentDescription("Más opciones").performSemanticsAction(SemanticsActions.OnClick)
+        waitForIdle()
+        onNodeWithText("Notificaciones: Todos los mensajes").assertExists()
     }
 
     @Test

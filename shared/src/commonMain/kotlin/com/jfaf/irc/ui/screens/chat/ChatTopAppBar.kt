@@ -71,9 +71,10 @@ fun ChatTopAppBar(
     topic: String? = null,
     /** Abre el selector rápido de canales y conversaciones (UI-30). */
     onQuickSwitch: () -> Unit = {},
-    /** Nivel de aviso del canal activo y cómo cambiarlo (UI-32); sólo se ofrece en un canal. */
-    channelNotificationLevel: ChannelNotificationLevel = ChannelNotificationLevel.Default,
-    onChannelNotificationLevelChange: (ChannelNotificationLevel) -> Unit = {}
+    /** Nivel de aviso propio del canal activo (null: sigue el predeterminado), el predeterminado y cómo cambiarlo (UI-32, UI-34); sólo se ofrece en un canal. */
+    channelNotificationOverride: ChannelNotificationLevel? = null,
+    defaultChannelNotificationLevel: ChannelNotificationLevel = ChannelNotificationLevel.Default,
+    onChannelNotificationLevelChange: (ChannelNotificationLevel?) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showJoinChannelDialog by remember { mutableStateOf(false) }
@@ -187,7 +188,7 @@ fun ChatTopAppBar(
                     DropdownMenuItem(
                         text = {
                             Text(
-                                stringResource(Res.string.menu_item_channel_notifications, stringResource(channelNotificationLabel(channelNotificationLevel))),
+                                stringResource(Res.string.menu_item_channel_notifications, stringResource(channelNotificationLabel(channelNotificationOverride ?: defaultChannelNotificationLevel))),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         },
@@ -234,7 +235,8 @@ fun ChatTopAppBar(
     if (showNotifications && isChannel && activeTarget != null) {
         ChannelNotificationsDialog(
             channel = activeTarget,
-            current = channelNotificationLevel,
+            override = channelNotificationOverride,
+            defaultLevel = defaultChannelNotificationLevel,
             onSelect = {
                 onChannelNotificationLevelChange(it)
                 showNotifications = false

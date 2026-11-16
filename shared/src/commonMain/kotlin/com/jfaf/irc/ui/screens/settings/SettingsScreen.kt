@@ -32,6 +32,8 @@ import org.koin.compose.viewmodel.koinViewModel
 import com.jfaf.irc.data.prefs.ServerConfig
 import com.jfaf.irc.data.prefs.MessageDensity
 import com.jfaf.irc.data.prefs.TextScale
+import com.jfaf.irc.domain.notifications.ChannelNotificationLevel
+import com.jfaf.irc.ui.screens.chat.channelNotificationLabel
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.jfaf.irc.data.prefs.ThemeMode
 import com.jfaf.irc.ui.common.ThemedOutlinedTextField
@@ -58,6 +60,7 @@ fun SettingsScreen(
     val messageDensity by viewModel.messageDensity.collectAsState()
     val amoledBlack by viewModel.amoledBlack.collectAsState()
     val textScale by viewModel.textScale.collectAsState()
+    val defaultNotificationLevel by viewModel.defaultChannelNotificationLevel.collectAsState()
     val platformUi = LocalPlatformUi.current
     val supportsSoundAlerts = platformUi.supportsSoundAlerts
     var showTerms by remember { mutableStateOf(false) }
@@ -162,6 +165,34 @@ fun SettingsScreen(
                     ),
                     selected = scale == textScale,
                     onSelect = { viewModel.setTextScale(scale) }
+                )
+            }
+            item {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+            }
+
+            item {
+                Text(
+                    text = stringResource(Res.string.settings_section_channel_notifications),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+                )
+                Text(
+                    text = stringResource(Res.string.settings_channel_notifications_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+            items(ChannelNotificationLevel.entries) { level ->
+                SettingRowWithRadio(
+                    text = stringResource(channelNotificationLabel(level)),
+                    selected = level == defaultNotificationLevel,
+                    onSelect = { viewModel.setDefaultChannelNotificationLevel(level) }
                 )
             }
             item {

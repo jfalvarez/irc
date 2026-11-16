@@ -54,7 +54,7 @@ class BackgroundNotifications(
     /** Avisa de un mensaje de canal según el nivel de ese canal (UI-32): silenciado, sólo menciones o todo. */
     private suspend fun notifyChannelMessage(message: ParsedIrcMessage) {
         val channel = ChannelNotificationPolicy.channelOf(message) ?: return
-        val level = ChannelNotificationLevels.levelFor(channelStore.levelsFlow.first(), channel)
+        val level = ChannelNotificationLevels.levelFor(channelStore.levelsFlow.first(), channel, channelStore.defaultLevelFlow.first())
         if (level == ChannelNotificationLevel.MUTED) return // barato: ni se miran los ignorados
         val ignored = userMetadataStore.ignoredUsersFlow.first()
         val alert = ChannelNotificationPolicy.decide(message, level, ownNick(), ignored) ?: return

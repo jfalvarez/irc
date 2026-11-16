@@ -228,7 +228,12 @@ class MainViewModel(
     val channelNotificationLevels: StateFlow<Map<String, ChannelNotificationLevel>> =
         userPreferencesRepository.levelsFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-    fun setChannelNotificationLevel(channel: String, level: ChannelNotificationLevel) {
+    /** Nivel de los canales sin uno propio (UI-34), que se cambia en Ajustes. */
+    val defaultChannelNotificationLevel: StateFlow<ChannelNotificationLevel> =
+        userPreferencesRepository.defaultLevelFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ChannelNotificationLevel.Default)
+
+    /** Da a [channel] un nivel propio; con null vuelve a seguir el nivel por defecto. */
+    fun setChannelNotificationLevel(channel: String, level: ChannelNotificationLevel?) {
         viewModelScope.launch { userPreferencesRepository.setLevel(channel, level) }
     }
 

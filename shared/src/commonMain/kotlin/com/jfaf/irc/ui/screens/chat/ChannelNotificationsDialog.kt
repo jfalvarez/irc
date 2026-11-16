@@ -21,6 +21,7 @@ import com.jfaf.irc.domain.notifications.ChannelNotificationLevel
 import com.jfaf.irc.resources.Res
 import com.jfaf.irc.resources.button_cancel
 import com.jfaf.irc.resources.channel_notifications_hint
+import com.jfaf.irc.resources.channel_notifications_level_default
 import com.jfaf.irc.resources.channel_notifications_level_all
 import com.jfaf.irc.resources.channel_notifications_level_mentions
 import com.jfaf.irc.resources.channel_notifications_level_muted
@@ -38,12 +39,17 @@ fun channelNotificationLabel(level: ChannelNotificationLevel): StringResource = 
 
 /**
  * Diálogo para elegir cuánto avisa un canal con la app en segundo plano (UI-32). Elegir un nivel lo aplica y cierra.
+ * La primera opción, «Predeterminado (…)», quita el nivel propio del canal: pasa a seguir el de Ajustes (UI-34).
+ *
+ * @param override el nivel propio del canal; null si sigue el predeterminado.
+ * @param defaultLevel el nivel por defecto de Ajustes.
  */
 @Composable
 fun ChannelNotificationsDialog(
     channel: String,
-    current: ChannelNotificationLevel,
-    onSelect: (ChannelNotificationLevel) -> Unit,
+    override: ChannelNotificationLevel?,
+    defaultLevel: ChannelNotificationLevel,
+    onSelect: (ChannelNotificationLevel?) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -58,18 +64,23 @@ fun ChannelNotificationsDialog(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 Column(modifier = Modifier.selectableGroup()) {
-                    ChannelNotificationLevel.entries.forEach { level ->
+                    // null = seguir el nivel por defecto
+                    (listOf<ChannelNotificationLevel?>(null) + ChannelNotificationLevel.entries).forEach { level ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .selectable(selected = level == current, role = Role.RadioButton, onClick = { onSelect(level) })
+                                .selectable(selected = level == override, role = Role.RadioButton, onClick = { onSelect(level) })
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Start
                         ) {
-                            RadioButton(selected = level == current, onClick = null)
+                            RadioButton(selected = level == override, onClick = null)
                             Text(
-                                stringResource(channelNotificationLabel(level)),
+                                if (level == null) {
+                                    stringResource(Res.string.channel_notifications_level_default, stringResource(channelNotificationLabel(defaultLevel)))
+                                } else {
+                                    stringResource(channelNotificationLabel(level))
+                                },
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(start = 12.dp)
                             )

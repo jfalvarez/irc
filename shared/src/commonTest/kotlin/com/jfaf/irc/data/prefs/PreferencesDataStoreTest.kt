@@ -154,17 +154,34 @@ class PreferencesDataStoreTest {
         assertTrue(first.levelsFlow.first().isEmpty(), "Sin tocar nada no hay niveles guardados")
         first.setLevel("#Ruido", ChannelNotificationLevel.MUTED)
         first.setLevel("#chat", ChannelNotificationLevel.ALL)
-        first.setLevel("#otro", ChannelNotificationLevel.MENTIONS) // el predeterminado no se guarda
         assertEquals(mapOf("#ruido" to ChannelNotificationLevel.MUTED, "#chat" to ChannelNotificationLevel.ALL), first.levelsFlow.first())
         job1.cancelAndJoin()
 
         val job2 = Job()
         val second = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job2)))
         assertEquals(mapOf("#ruido" to ChannelNotificationLevel.MUTED, "#chat" to ChannelNotificationLevel.ALL), second.levelsFlow.first())
-        second.setLevel("#RUIDO", ChannelNotificationLevel.MENTIONS) // volver al predeterminado lo quita
+        second.setLevel("#RUIDO", null) // volver a seguir el predeterminado lo quita
         assertEquals(mapOf("#chat" to ChannelNotificationLevel.ALL), second.levelsFlow.first())
-        second.setLevel("#chat", ChannelNotificationLevel.MENTIONS)
+        second.setLevel("#chat", ChannelNotificationLevel.MENTIONS) // elegir «Solo menciones» a propósito se guarda
+        assertEquals(mapOf("#chat" to ChannelNotificationLevel.MENTIONS), second.levelsFlow.first())
+        second.setLevel("#chat", null)
         assertTrue(second.levelsFlow.first().isEmpty())
+        job2.cancelAndJoin()
+    }
+
+    @Test
+    fun nivelDeAvisoPorDefecto_esSoloMencionesYSeConservaAlReabrir() = runBlocking {
+        val job1 = Job()
+        val first = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job1)))
+        assertEquals(ChannelNotificationLevel.MENTIONS, first.defaultLevelFlow.first())
+        first.setDefaultLevel(ChannelNotificationLevel.ALL)
+        assertEquals(ChannelNotificationLevel.ALL, first.defaultLevelFlow.first())
+        job1.cancelAndJoin()
+
+        val job2 = Job()
+        val second = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job2)))
+        assertEquals(ChannelNotificationLevel.ALL, second.defaultLevelFlow.first())
+        assertTrue(second.levelsFlow.first().isEmpty(), "Cambiar el predeterminado no toca los niveles propios")
         job2.cancelAndJoin()
     }
 }

@@ -2,6 +2,7 @@ package com.jfaf.irc.ui.viewmodels
 
 import com.jfaf.irc.data.prefs.MessageDensity
 import com.jfaf.irc.data.prefs.TextScale
+import com.jfaf.irc.domain.notifications.ChannelNotificationLevel
 import com.jfaf.irc.data.prefs.ThemeMode
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -139,6 +140,20 @@ class SettingsViewModel(
     fun setTextScale(scale: TextScale) {
         viewModelScope.launch {
             userPreferencesRepository.updateTextScale(scale)
+        }
+    }
+
+    // --- Notificaciones de los canales (UI-34) ---
+    val defaultChannelNotificationLevel: StateFlow<ChannelNotificationLevel> =
+        userPreferencesRepository.defaultLevelFlow.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ChannelNotificationLevel.Default
+        )
+
+    fun setDefaultChannelNotificationLevel(level: ChannelNotificationLevel) {
+        viewModelScope.launch {
+            userPreferencesRepository.setDefaultLevel(level)
         }
     }
 

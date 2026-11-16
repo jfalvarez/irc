@@ -124,6 +124,7 @@ fun MainScreen(
     val activeTopic = activeTarget?.let { topics[it.lowercase()] }
     val serverConfig by settingsViewModel.serverConfig.collectAsState()
     val channelNotificationLevels by viewModel.channelNotificationLevels.collectAsState()
+    val defaultNotificationLevel by viewModel.defaultChannelNotificationLevel.collectAsState()
 
     // Selector rápido (Ctrl+K): sólo con la conexión abierta, que es cuando hay pestañas a las que saltar
     var showQuickSwitcher by remember { mutableStateOf(false) }
@@ -167,7 +168,8 @@ fun MainScreen(
                             userCount = activeChannelUserCount,
                             topic = activeTopic,
                             onQuickSwitch = { showQuickSwitcher = true },
-                            channelNotificationLevel = ChannelNotificationLevels.levelFor(channelNotificationLevels, activeTarget.orEmpty()),
+                            channelNotificationOverride = activeTarget?.let { channelNotificationLevels[it.lowercase()] },
+                            defaultChannelNotificationLevel = defaultNotificationLevel,
                             onChannelNotificationLevelChange = { level -> activeTarget?.let { viewModel.setChannelNotificationLevel(it, level) } }
                         )
                     }
@@ -345,8 +347,11 @@ private fun AppDrawerMainContent(
             },
             // Sin enlace (reconectando) las pestañas se ven apagadas: se pueden leer, pero no llegarán mensajes
             linkUp = !viewModel.chatScreenState.isReconnecting.collectAsState().value,
-            mutedChannels = viewModel.channelNotificationLevels.collectAsState().value
-                .filterValues { it == ChannelNotificationLevel.MUTED }.keys,
+            mutedChannels = ChannelNotificationLevels.mutedAmong(
+                targets = viewModel.chatScreenState.chatTargets.collectAsState().value,
+                levels = viewModel.channelNotificationLevels.collectAsState().value,
+                default = viewModel.defaultChannelNotificationLevel.collectAsState().value
+            ),
             permanent = permanent,
             onQuickSwitch = onQuickSwitch
         )

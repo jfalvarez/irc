@@ -54,6 +54,7 @@ class UserPreferencesRepository(
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val MESSAGE_DENSITY = stringPreferencesKey("message_density")
         val CHANNEL_NOTIFICATION_LEVELS = stringSetPreferencesKey("channel_notification_levels")
+        val DEFAULT_CHANNEL_NOTIFICATION_LEVEL = stringPreferencesKey("default_channel_notification_level")
         val TEXT_SCALE = stringPreferencesKey("text_scale")
         val AMOLED_BLACK = booleanPreferencesKey("amoled_black")
         val RECENT_EMOJIS = stringPreferencesKey("recent_emojis")
@@ -189,7 +190,16 @@ class UserPreferencesRepository(
         .catch { emit(emptyPreferences()) }
         .map { ChannelNotificationLevels.decode(it[CHANNEL_NOTIFICATION_LEVELS]) }
 
-    override suspend fun setLevel(channel: String, level: ChannelNotificationLevel) {
+    /** Nivel de los canales sin uno propio (UI-34); por defecto, sólo menciones. */
+    override val defaultLevelFlow: Flow<ChannelNotificationLevel> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { ChannelNotificationLevel.fromStorage(it[DEFAULT_CHANNEL_NOTIFICATION_LEVEL]) }
+
+    override suspend fun setDefaultLevel(level: ChannelNotificationLevel) {
+        dataStore.edit { it[DEFAULT_CHANNEL_NOTIFICATION_LEVEL] = level.name }
+    }
+
+    override suspend fun setLevel(channel: String, level: ChannelNotificationLevel?) {
         dataStore.edit { preferences ->
             val updated = ChannelNotificationLevels.with(ChannelNotificationLevels.decode(preferences[CHANNEL_NOTIFICATION_LEVELS]), channel, level)
             if (updated.isEmpty()) preferences.remove(CHANNEL_NOTIFICATION_LEVELS) else preferences[CHANNEL_NOTIFICATION_LEVELS] = ChannelNotificationLevels.encode(updated)
