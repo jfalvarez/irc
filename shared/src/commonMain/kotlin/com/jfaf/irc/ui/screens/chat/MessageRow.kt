@@ -34,6 +34,8 @@ import com.jfaf.irc.resources.Res
 import com.jfaf.irc.resources.cd_message_options
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 // import androidx.compose.ui.res.stringResource // No longer needed for placeholder text
 import androidx.compose.ui.text.AnnotatedString
@@ -168,13 +170,20 @@ fun MessageRow(
 
     val mentionAccent = IRCTheme.mentionAccent
     val mentionBackground = IRCTheme.mentionBackground
+    // Un toque corto al abrir el menú, como en cualquier pulsación larga del sistema (UI-38). Es el vibrador de
+    // Compose, que respeta el ajuste de vibración táctil del sistema y no hace nada en escritorio.
+    val haptic = LocalHapticFeedback.current
+    val openMessageMenu = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        messageMenuExpanded = true
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             // Mantener pulsado abre el menú del mensaje; un toque normal sigue llegando a enlaces, nick e imagen
-            .pointerInput(message) { detectTapGestures(onLongPress = { messageMenuExpanded = true }) }
+            .pointerInput(message) { detectTapGestures(onLongPress = { openMessageMenu() }) }
             // La misma acción para los lectores de pantalla (TalkBack) y para las pruebas
-            .semantics { onLongClick(label = optionsLabel) { messageMenuExpanded = true; true } }
+            .semantics { onLongClick(label = optionsLabel) { openMessageMenu(); true } }
             .then(
                 if (isMention) {
                     Modifier

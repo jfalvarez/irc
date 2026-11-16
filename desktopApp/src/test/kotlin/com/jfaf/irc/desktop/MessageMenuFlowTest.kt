@@ -1,6 +1,10 @@
 package com.jfaf.irc.desktop
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.semantics.SemanticsActions
@@ -43,6 +47,16 @@ class MessageMenuFlowTest {
     private lateinit var koin: Koin
     private lateinit var server: ScriptedTransport
 
+    /** Anota las vibraciones que pide la interfaz. */
+    private class RecordingHaptics : HapticFeedback {
+        val calls = mutableListOf<HapticFeedbackType>()
+        override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
+            calls += hapticFeedbackType
+        }
+    }
+
+    private val haptics = RecordingHaptics()
+
     @BeforeTest
     fun setUp() {
         dataDir = Files.createTempDirectory("irc-msgmenu-test").toFile()
@@ -67,7 +81,9 @@ class MessageMenuFlowTest {
     /** Conecta, entra en #test y recibe su lista de nombres (con prefijos de modo, como manda un servidor real). */
     private fun SkikoComposeUiTest.connectAndReceiveNames(vm: MainViewModel) {
         setContent {
-            App(platformUi = DesktopPlatformUi(), onRedirectToPlayStore = {}, onExit = {}, mainViewModel = vm)
+            CompositionLocalProvider(LocalHapticFeedback provides haptics) {
+                App(platformUi = DesktopPlatformUi(), onRedirectToPlayStore = {}, onExit = {}, mainViewModel = vm)
+            }
         }
         server.serverSays(":srv 001 Tester :Welcome")
         vm.connect("Tester", false, null, false)
@@ -96,6 +112,24 @@ class MessageMenuFlowTest {
 
     private fun SkikoComposeUiTest.inputText(): String =
         onNode(hasSetTextAction()).fetchSemanticsNode().config[SemanticsProperties.EditableText].text
+
+    @Test
+    fun laPulsacionLarga_dejaUnToqueHaptico_yUnToqueNormalNo() = runSkikoComposeUiTest(size = Size(600f, 760f)) {
+        val vm = koin.get<MainViewModel>()
+        connectAndReceiveNames(vm)
+        server.serverSays(":ana!u@h PRIVMSG #test :hola a todos")
+        waitUntil(timeoutMillis = 10_000) { onAllNodesWithText("hola a todos", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        waitForIdle()
+        assertEquals(emptyList(), haptics.calls, "Sin pulsar nada no vibra")
+
+        onNodeWithText("hola a todos", substring = true).performClick()
+        waitForIdle()
+        assertEquals(emptyList(), haptics.calls, "Un toque normal no vibra")
+
+        longPressMessage(vm)
+        assertEquals(listOf(HapticFeedbackType.LongPress), haptics.calls)
+        onNodeWithText("Mencionar").assertExists()
+    }
 
     @Test
     fun mencionarPoneElNickEnElCampo() = runSkikoComposeUiTest(size = Size(600f, 760f)) {
