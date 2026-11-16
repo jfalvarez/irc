@@ -42,8 +42,17 @@ import com.jfaf.irc.resources.dialog_exit_title
 import com.jfaf.irc.resources.force_update_button_text
 import com.jfaf.irc.resources.force_update_message
 import com.jfaf.irc.resources.force_update_title
+import com.jfaf.irc.resources.settings_button_remove_friend
+import com.jfaf.irc.resources.settings_button_unignore
+import com.jfaf.irc.resources.settings_no_friends
+import com.jfaf.irc.resources.settings_no_ignored_users
+import com.jfaf.irc.resources.settings_section_friends
+import com.jfaf.irc.resources.settings_section_ignored_users
+import com.jfaf.irc.resources.user_list_add_friend
+import com.jfaf.irc.resources.user_list_add_ignored
 import com.jfaf.irc.ui.screens.MainScreen
 import com.jfaf.irc.ui.screens.settings.SettingsScreen
+import com.jfaf.irc.ui.screens.settings.UserListScreen
 import com.jfaf.irc.ui.theme.IRCAppTheme
 import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -149,7 +158,47 @@ fun App(
                     enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn() },
                     popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() }
                 ) {
-                    SettingsScreen(onNavigateUp = { navController.navigateUp() })
+                    SettingsScreen(
+                        onNavigateUp = { navController.navigateUp() },
+                        onOpenFriends = { navController.navigate("settings/friends") },
+                        onOpenIgnored = { navController.navigate("settings/ignored") }
+                    )
+                }
+                composable(
+                    route = "settings/ignored",
+                    enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn() },
+                    popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() }
+                ) {
+                    val viewModel: SettingsViewModel = koinViewModel()
+                    val ignored by viewModel.ignoredUsers.collectAsState()
+                    UserListScreen(
+                        title = stringResource(Res.string.settings_section_ignored_users),
+                        users = ignored,
+                        emptyText = stringResource(Res.string.settings_no_ignored_users),
+                        removeButtonText = stringResource(Res.string.settings_button_unignore),
+                        addLabel = { stringResource(Res.string.user_list_add_ignored, it) },
+                        onAdd = viewModel::addIgnoredUser,
+                        onRemove = viewModel::removeIgnoredUser,
+                        onNavigateUp = { navController.navigateUp() }
+                    )
+                }
+                composable(
+                    route = "settings/friends",
+                    enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn() },
+                    popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() }
+                ) {
+                    val viewModel: SettingsViewModel = koinViewModel()
+                    val friends by viewModel.friends.collectAsState()
+                    UserListScreen(
+                        title = stringResource(Res.string.settings_section_friends),
+                        users = friends,
+                        emptyText = stringResource(Res.string.settings_no_friends),
+                        removeButtonText = stringResource(Res.string.settings_button_remove_friend),
+                        addLabel = { stringResource(Res.string.user_list_add_friend, it) },
+                        onAdd = viewModel::addFriend,
+                        onRemove = viewModel::removeFriend,
+                        onNavigateUp = { navController.navigateUp() }
+                    )
                 }
             }
 

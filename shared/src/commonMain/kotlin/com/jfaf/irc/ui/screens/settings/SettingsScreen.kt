@@ -2,7 +2,6 @@ package com.jfaf.irc.ui.screens.settings
 
 import com.jfaf.irc.resources.Res
 import com.jfaf.irc.resources.*
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.lazy.items
@@ -18,8 +17,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,6 +41,8 @@ import com.jfaf.irc.ui.viewmodels.SettingsViewModel
 @Composable
 fun SettingsScreen(
     onNavigateUp: () -> Unit,
+    onOpenFriends: () -> Unit,
+    onOpenIgnored: () -> Unit,
     viewModel: SettingsViewModel = koinViewModel()
 ) {
     val showJoinPartQuitMessages by viewModel.showJoinPartQuitMessages.collectAsState()
@@ -226,35 +226,25 @@ fun SettingsScreen(
             }
 
             item {
-                CollapsibleUserListSection(
-                    sectionTitle = stringResource(Res.string.settings_section_friends),
-                    users = friends,
-                    onAddUser = { viewModel.addFriend(it) },
-                    onRemoveUser = { viewModel.removeFriend(it) },
-                    addUserInputLabel = stringResource(Res.string.settings_friend_user_dialog_label),
-                    addButtonText = stringResource(Res.string.settings_button_add_friend),
-                    removeButtonText = stringResource(Res.string.settings_button_remove_friend),
-                    noUsersText = stringResource(Res.string.settings_no_friends)
+                UserListEntryRow(
+                    title = stringResource(Res.string.settings_section_friends),
+                    count = friends.size,
+                    onClick = onOpenFriends
                 )
             }
 
             item {
                 HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 16.dp),
+                    modifier = Modifier.padding(vertical = 8.dp),
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
             }
 
             item {
-                CollapsibleUserListSection(
-                    sectionTitle = stringResource(Res.string.settings_section_ignored_users),
-                    users = ignoredUsers,
-                    onAddUser = { viewModel.addIgnoredUser(it) },
-                    onRemoveUser = { viewModel.removeIgnoredUser(it) },
-                    addUserInputLabel = stringResource(Res.string.settings_ignore_user_dialog_label),
-                    addButtonText = stringResource(Res.string.settings_button_add_ignored),
-                    removeButtonText = stringResource(Res.string.settings_button_unignore),
-                    noUsersText = stringResource(Res.string.settings_no_ignored_users)
+                UserListEntryRow(
+                    title = stringResource(Res.string.settings_section_ignored_users),
+                    count = ignoredUsers.size,
+                    onClick = onOpenIgnored
                 )
             }
 
@@ -267,113 +257,28 @@ fun SettingsScreen(
     }
 }
 
+/** Fila de Ajustes que abre la pantalla de una lista de nicks, con cuántos hay. */
 @Composable
-private fun CollapsibleUserListSection(
-    sectionTitle: String,
-    users: Set<String>,
-    onAddUser: (String) -> Unit,
-    onRemoveUser: (String) -> Unit,
-    addUserInputLabel: String,
-    addButtonText: String,
-    removeButtonText: String,
-    noUsersText: String
-) {
-    var isExpanded by remember { mutableStateOf(false) }
-    var userInput by remember { mutableStateOf("") }
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusManager = LocalFocusManager.current
-
-    Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { isExpanded = !isExpanded }
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = sectionTitle,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Icon(
-                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (isExpanded) "Collapse" else "Expand"
-            )
-        }
-
-        AnimatedVisibility(visible = isExpanded) {
-            Column {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ThemedOutlinedTextField(
-                        value = userInput,
-                        onValueChange = { userInput = it },
-                        label = { Text(addUserInputLabel) },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    Button(
-                        onClick = {
-                            if (userInput.isNotBlank()) {
-                                onAddUser(userInput)
-                                userInput = ""
-                                keyboardController?.hide()
-                                focusManager.clearFocus()
-                            }
-                        }
-                    ) {
-                        Text(addButtonText)
-                    }
-                }
-
-                if (users.isEmpty()) {
-                    Text(
-                        text = noUsersText,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                } else {
-                    users.toList().sorted().forEach { nick ->
-                        UserRow(
-                            nick = nick,
-                            onRemoveClicked = { onRemoveUser(nick) },
-                            removeButtonText = removeButtonText
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun UserRow(
-    nick: String,
-    onRemoveClicked: () -> Unit,
-    removeButtonText: String,
-    modifier: Modifier = Modifier
-) {
+private fun UserListEntryRow(title: String, count: Int, onClick: () -> Unit) {
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = nick,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.weight(1f)
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground
         )
-        Button(onClick = onRemoveClicked) {
-            Text(removeButtonText)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = count.toString(), color = MaterialTheme.colorScheme.onBackground)
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null
+            )
         }
     }
 }
