@@ -17,11 +17,14 @@ import androidx.compose.ui.window.rememberTrayState
 import androidx.compose.ui.window.rememberWindowState
 import co.touchlab.kermit.platformLogWriter
 import com.jfaf.irc.data.remote.IrcSession
+import com.jfaf.irc.di.ApplicationScope
 import com.jfaf.irc.di.commonModule
 import com.jfaf.irc.di.viewModelModule
+import com.jfaf.irc.domain.notifications.BackgroundNotifications
 import com.jfaf.irc.domain.platform.AppVisibility
 import com.jfaf.irc.log.Log
 import com.jfaf.irc.ui.App
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.core.context.startKoin
@@ -56,6 +59,10 @@ fun main() {
     val appVisibility = koin.get<AppVisibility>()
     val session = koin.get<IrcSession>()
     val platformUi = DesktopPlatformUi()
+
+    // En Android lo arranca IrcService; en escritorio no hay servicio, así que se arranca aquí. Sin esto nadie
+    // llama al Notifier y no suena ni se muestra nada con la ventana sin foco.
+    koin.get<BackgroundNotifications>().start(koin.get<CoroutineScope>(ApplicationScope), session.incomingMessages)
 
     // Envía el QUIT antes de salir (hasta SHUTDOWN_TIMEOUT_MS) para no dejar la conexión colgada en el servidor.
     fun shutdown() {
