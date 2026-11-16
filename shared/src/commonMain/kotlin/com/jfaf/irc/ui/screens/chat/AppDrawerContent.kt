@@ -157,7 +157,9 @@ fun AppDrawerContent(
     /** En la ventana ancha de escritorio el panel es fijo en vez de un cajón modal. */
     permanent: Boolean = false,
     /** Hay enlace con el servidor; si no, la lista de pestañas se ve apagada. */
-    linkUp: Boolean = true
+    linkUp: Boolean = true,
+    /** Abre el selector rápido (UI-30); sin él no se muestra la fila de búsqueda. */
+    onQuickSwitch: (() -> Unit)? = null
 ) {
     val serverString = stringResource(Res.string.cd_server)
     val distinctTargets = chatTargets.distinct()
@@ -185,6 +187,7 @@ fun AppDrawerContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
             )
+            onQuickSwitch?.let { DrawerSearchRow(onClick = it) }
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
 
             LazyColumn(modifier = Modifier.weight(1f).alpha(if (linkUp) 1f else 0.5f)) {

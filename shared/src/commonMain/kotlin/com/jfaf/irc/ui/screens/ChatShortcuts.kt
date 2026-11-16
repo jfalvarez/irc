@@ -11,14 +11,16 @@ import androidx.compose.ui.input.key.type
 
 /**
  * Atajos de teclado del chat (con teclado físico: escritorio, o un teclado Bluetooth en Android):
- * Ctrl+Tab pestaña siguiente, Ctrl+Mayús+Tab pestaña anterior, Ctrl+W cierra la pestaña activa.
+ * Ctrl+Tab pestaña siguiente, Ctrl+Mayús+Tab pestaña anterior, Ctrl+W cierra la pestaña activa y Ctrl+K abre el
+ * selector rápido de canales y conversaciones.
  *
  * Usa la fase de vista previa, así que los atajos llegan aunque el foco esté en el campo de texto.
  */
 fun Modifier.chatShortcuts(
     onNextTab: () -> Unit,
     onPreviousTab: () -> Unit,
-    onCloseTab: () -> Unit
+    onCloseTab: () -> Unit,
+    onQuickSwitch: () -> Unit = {}
 ): Modifier = onPreviewKeyEvent { event ->
     if (event.type != KeyEventType.KeyDown || !event.isCtrlPressed) {
         false
@@ -29,6 +31,10 @@ fun Modifier.chatShortcuts(
         }
         Key.W -> {
             onCloseTab()
+            true
+        }
+        Key.K -> {
+            onQuickSwitch()
             true
         }
         else -> false

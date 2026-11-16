@@ -89,6 +89,14 @@
     <string name="drawer_title_channels_chats">Canales y Chats</string>
     <string name="drawer_user_connected_as">Conectado como: %1$s</string>    <string name="cd_channel">Canal</string>
     <string name="cd_server">Servidor</string>
+    <string name="quick_switcher_hint">Ir a un canal o conversación…</string>
+    <string name="drawer_search_hint">Buscar…</string>
+    <string name="action_quick_switch">Buscar canal o conversación</string>
+    <string name="action_quick_switch_with_shortcut">Buscar canal o conversación (%1$s)</string>
+    <string name="quick_switcher_empty">Nada coincide</string>
+    <string name="quick_switcher_friend">Amigo conectado</string>
+    <string name="quick_switcher_open_private">Abrir conversación</string>
+    <string name="quick_switcher_join">Unirse al canal</string>
     <string name="cd_close_target">Cerrar %1$s</string>
     <string name="chat_users_one">%1$d usuario</string>
     <string name="chat_users_many">%1$d usuarios</string>
@@ -181,6 +189,13 @@
     <string name="settings_text_size_large">Grande</string>
     <string name="settings_text_size_extra_large">Muy grande</string>
     <string name="settings_section_density">Densidad de los mensajes</string>
+    <string name="settings_section_shortcuts">Atajos de teclado</string>
+    <string name="shortcut_quick_switch">Buscar un canal o conversación</string>
+    <string name="shortcut_next_tab">Pestaña siguiente</string>
+    <string name="shortcut_previous_tab">Pestaña anterior</string>
+    <string name="shortcut_close_tab">Cerrar la pestaña activa</string>
+    <string name="shortcut_send">Enviar el mensaje</string>
+    <string name="shortcut_autocomplete">Completar el nick sugerido</string>
     <string name="settings_density_comfortable">Cómoda: avatares y mensajes agrupados por autor</string>
     <string name="settings_density_compact">Compacta: una línea por mensaje, como en IRC clásico</string>
     <string name="settings_section_message_preferences">Preferencias de Mensajes</string>

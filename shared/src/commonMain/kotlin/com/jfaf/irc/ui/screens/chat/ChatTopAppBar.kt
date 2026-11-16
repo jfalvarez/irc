@@ -10,6 +10,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.style.TextOverflow
 import com.jfaf.irc.domain.chat.MircColorParser
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
@@ -18,7 +19,12 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.Icon
+import com.jfaf.irc.ui.platform.LocalPlatformUi
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -59,7 +65,9 @@ fun ChatTopAppBar(
     /** Usuarios del canal activo; null si no se sabe (todavía no llegó la lista). */
     userCount: Int? = null,
     /** Tema del canal activo; null o vacío = sin tema. */
-    topic: String? = null
+    topic: String? = null,
+    /** Abre el selector rápido de canales y conversaciones (UI-30). */
+    onQuickSwitch: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showJoinChannelDialog by remember { mutableStateOf(false) }
@@ -120,6 +128,7 @@ fun ChatTopAppBar(
             }
         },
         actions = {
+            QuickSwitchButton(onClick = onQuickSwitch)
             if (isChannel && showUserListOption) {
                 IconButton(onClick = onToggleUserList) { Icon(Icons.Filled.Person, stringResource(Res.string.cd_toggle_user_list)) }
             }
@@ -247,3 +256,28 @@ private fun TopicDialog(channel: String, topic: String?, onDismiss: () -> Unit) 
         containerColor = IRCTheme.dialogContainerOpaque
     )
 }
+
+/**
+ * Lupa que abre el selector rápido (UI-30). En escritorio, la ayuda emergente enseña el atajo (Ctrl+K), que es la forma
+ * de descubrirlo; en el móvil no hay teclado, así que el botón es el único camino.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuickSwitchButton(onClick: () -> Unit) {
+    val label = stringResource(Res.string.action_quick_switch)
+    val tooltip = if (LocalPlatformUi.current.isDesktop) {
+        stringResource(Res.string.action_quick_switch_with_shortcut, QUICK_SWITCH_SHORTCUT)
+    } else {
+        label
+    }
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(tooltip) } },
+        state = rememberTooltipState()
+    ) {
+        IconButton(onClick = onClick) { Icon(Icons.Filled.Search, label) }
+    }
+}
+
+/** El atajo del selector rápido, tal como se muestra al usuario (`chatShortcuts` lo atiende con Ctrl). */
+const val QUICK_SWITCH_SHORTCUT = "Ctrl+K"

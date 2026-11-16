@@ -65,6 +65,7 @@ import com.jfaf.irc.ui.screens.connection.ConnectionSetupSection
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.ConnectionBanner
 import com.jfaf.irc.ui.screens.chat.ConnectionBannerView
+import com.jfaf.irc.ui.screens.chat.QuickSwitcherDialog
 import com.jfaf.irc.domain.chat.TargetNavigation
 import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.domain.chat.UserListGrouping
@@ -121,11 +122,14 @@ fun MainScreen(
     val activeTopic = activeTarget?.let { topics[it.lowercase()] }
     val serverConfig by settingsViewModel.serverConfig.collectAsState()
 
+    // Selector rápido (Ctrl+K): sólo con la conexión abierta, que es cuando hay pestañas a las que saltar
+    var showQuickSwitcher by remember { mutableStateOf(false) }
     // Atajos de teclado: Ctrl+Tab / Ctrl+Mayús+Tab cambian de pestaña y Ctrl+W cierra la activa (menos Servidor).
     val shortcuts = Modifier.chatShortcuts(
         onNextTab = { TargetNavigation.neighbour(chatTargets, activeTarget, forward = true)?.let(viewModel::setActiveTarget) },
         onPreviousTab = { TargetNavigation.neighbour(chatTargets, activeTarget, forward = false)?.let(viewModel::setActiveTarget) },
-        onCloseTab = { activeTarget?.takeIf { it != ChatStateManager.SERVER_TARGET_ID }?.let(viewModel::closeTarget) }
+        onCloseTab = { activeTarget?.takeIf { it != ChatStateManager.SERVER_TARGET_ID }?.let(viewModel::closeTarget) },
+        onQuickSwitch = { if (connectionState) showQuickSwitcher = !showQuickSwitcher }
     )
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -157,7 +161,8 @@ fun MainScreen(
                             onAddFriendInPm = { nick -> settingsViewModel.addFriend(nick) },
                             onWhoisClick = { nick -> viewModel.performWhois(nick) },
                             userCount = activeChannelUserCount,
-                            topic = activeTopic
+                            topic = activeTopic,
+                            onQuickSwitch = { showQuickSwitcher = true }
                         )
                     }
                 },
@@ -196,6 +201,9 @@ fun MainScreen(
                     )
                 }
             }
+            if (showQuickSwitcher && connectionState) {
+                QuickSwitcherDialog(viewModel = viewModel, onDismiss = { showQuickSwitcher = false })
+            }
             whoisState?.let { state ->
                 WhoisDialog(
                     state = state,
@@ -212,7 +220,8 @@ fun MainScreen(
             connectionState = connectionState,
             navController = navController,
             permanent = wide,
-            closeDrawerAction = closeAction
+            closeDrawerAction = closeAction,
+            onQuickSwitch = { closeAction(); showQuickSwitcher = true }
         )
     }
 
@@ -296,7 +305,8 @@ private fun AppDrawerMainContent(
     connectionState: Boolean,
     navController: NavHostController,
     permanent: Boolean = false,
-    closeDrawerAction: () -> Unit
+    closeDrawerAction: () -> Unit,
+    onQuickSwitch: () -> Unit
 ) {
     val onlineFriends by viewModel.chatScreenState.onlineFriends.collectAsState()
 
@@ -324,7 +334,8 @@ private fun AppDrawerMainContent(
             },
             // Sin enlace (reconectando) las pestañas se ven apagadas: se pueden leer, pero no llegarán mensajes
             linkUp = !viewModel.chatScreenState.isReconnecting.collectAsState().value,
-            permanent = permanent
+            permanent = permanent,
+            onQuickSwitch = onQuickSwitch
         )
     } else {
         Column(

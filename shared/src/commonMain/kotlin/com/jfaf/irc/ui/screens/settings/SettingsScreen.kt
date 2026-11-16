@@ -197,6 +197,17 @@ fun SettingsScreen(
                 )
             }
 
+            // Atajos de teclado: sólo donde hay teclado físico de serie (escritorio)
+            if (platformUi.isDesktop) {
+                keyboardShortcutsSection()
+                item {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
+            }
+
             item {
                 Text(
                     text = stringResource(Res.string.settings_section_message_preferences),
