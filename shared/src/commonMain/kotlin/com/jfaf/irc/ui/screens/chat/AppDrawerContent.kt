@@ -272,15 +272,17 @@ fun AppDrawerContent(
                         AnimatedVisibility(visible = channelsExpanded) {
                             Column {
                                 channelItems.forEach { target ->
+                                    // Un canal silenciado no avisa de nada: ni en negrita por sin leer ni con insignia de menciones
+                                    val muted = target.lowercase() in mutedChannels
                                     DrawerListItem(
                                         target = target,
                                         isSelected = target == activeTarget,
-                                        isUnread = unreadTargets.contains(target),
+                                        isUnread = !muted && unreadTargets.contains(target),
                                         onTargetSelected = onTargetSelected,
                                         onCloseTargetAction = onCloseTargetAction,
-                                        unreadCount = unreadMentionCounts[target] ?: 0,
+                                        unreadCount = if (muted) 0 else unreadMentionCounts[target] ?: 0,
                                         countsMentions = true,
-                                        muted = target.lowercase() in mutedChannels
+                                        muted = muted
                                     )
                                 }
                             }

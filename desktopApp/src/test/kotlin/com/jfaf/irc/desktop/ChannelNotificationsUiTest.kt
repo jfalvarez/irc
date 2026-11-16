@@ -138,6 +138,35 @@ class ChannelNotificationsUiTest {
     }
 
     @Test
+    fun unCanalSilenciado_noMarcaMencionesEnElCajon() = runSkikoComposeUiTest(size = Size(1100f, 760f)) {
+        val vm = koin.get<MainViewModel>()
+        connectAndReceiveNames(vm)
+        // Otro canal abierto y de vuelta en #test: así #otro recibe sin estar a la vista
+        vm.joinChannel("#otro")
+        server.serverSays(
+            ":Tester!u@h JOIN :#otro",
+            ":srv 353 Tester = #otro :Tester Alice",
+            ":srv 366 Tester #otro :End of /NAMES list."
+        )
+        waitUntil(timeoutMillis = 10_000) { vm.chatScreenState.chatTargets.value.contains("#otro") }
+        vm.setActiveTarget("#test")
+        waitForIdle()
+
+        val badge = "1 menciones sin leer"
+        server.serverSays(":Alice!u@h PRIVMSG #otro :hola Tester, ¿me oyes?")
+        waitUntil(timeoutMillis = 10_000) { onAllNodesWithContentDescription(badge).fetchSemanticsNodes().isNotEmpty() }
+
+        // Silenciado: la insignia desaparece del cajón (y la campana tachada ocupa su sitio)
+        vm.setChannelNotificationLevel("#otro", ChannelNotificationLevel.MUTED)
+        waitUntil(timeoutMillis = 5_000) { onAllNodesWithContentDescription(badge).fetchSemanticsNodes().isEmpty() }
+        onAllNodesWithContentDescription("Canal silenciado").assertCountEquals(1)
+
+        // Al volver al nivel normal, la mención sigue ahí: no se perdió, sólo se ocultó
+        vm.setChannelNotificationLevel("#otro", ChannelNotificationLevel.Default)
+        waitUntil(timeoutMillis = 5_000) { onAllNodesWithContentDescription(badge).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    @Test
     fun unCanalSilenciadoLlevaLaCampanaTachadaEnElCajon() = runSkikoComposeUiTest(size = Size(1100f, 760f)) {
         val vm = koin.get<MainViewModel>()
         connectAndReceiveNames(vm)

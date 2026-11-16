@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.QuickSwitcher
+import com.jfaf.irc.domain.notifications.ChannelNotificationLevel
 import com.jfaf.irc.domain.chat.QuickSwitcher.Entry
 import com.jfaf.irc.resources.Res
 import com.jfaf.irc.resources.quick_switcher_empty
@@ -81,10 +82,12 @@ fun QuickSwitcherDialog(viewModel: MainViewModel, onDismiss: () -> Unit) {
     val mentions by state.unreadMentionCounts.collectAsState()
     val pms by state.unreadPmCounts.collectAsState()
     val friends by state.onlineFriends.collectAsState()
+    val levels by viewModel.channelNotificationLevels.collectAsState()
+    val muted = remember(levels) { levels.filterValues { it == ChannelNotificationLevel.MUTED }.keys }
 
     var query by remember { mutableStateOf("") }
-    val entries = remember(targets, active, unread, mentions, pms, friends, query) {
-        QuickSwitcher.search(targets, active, unread, mentions, pms, friends, query)
+    val entries = remember(targets, active, unread, mentions, pms, friends, query, muted) {
+        QuickSwitcher.search(targets, active, unread, mentions, pms, friends, query, muted)
     }
     var selected by remember(query) { mutableIntStateOf(0) }
     val listState = rememberLazyListState()

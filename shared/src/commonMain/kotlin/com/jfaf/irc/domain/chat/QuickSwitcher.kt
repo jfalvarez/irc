@@ -24,7 +24,8 @@ object QuickSwitcher {
     /**
      * Resultados para [query]. Sin texto, las pestañas ordenadas por urgencia (menciones, privados sin leer, sin leer y
      * el resto en su orden). Con texto, por cercanía: igual, empieza por, empieza una palabra, contiene. La pestaña
-     * [active] no sale (ya estás en ella). Un `#` al principio limita la búsqueda a canales.
+     * [active] no sale (ya estás en ella). Un `#` al principio limita la búsqueda a canales. Los canales de
+     * [mutedChannels] no suben por sin leer ni por menciones.
      */
     fun search(
         targets: List<String>,
@@ -33,7 +34,9 @@ object QuickSwitcher {
         mentionCounts: Map<String, Int>,
         pmCounts: Map<String, Int>,
         onlineFriends: Set<String>,
-        query: String
+        query: String,
+        /** Canales silenciados (UI-32, en minúsculas): no cuentan como sin leer ni como menciones. */
+        mutedChannels: Set<String> = emptySet()
     ): List<Entry> {
         val typed = query.trim()
         val channelsOnly = typed.startsWith("#")
@@ -45,9 +48,11 @@ object QuickSwitcher {
             if (target.equals(active, ignoreCase = true)) return@forEachIndexed
             if (channelsOnly && !target.startsWith("#")) return@forEachIndexed
             val score = score(target.trimStart('#'), needle) ?: return@forEachIndexed
-            val mentions = mentionCounts.countFor(target)
+            // Un canal silenciado no avisa de nada, tampoco aquí: queda con el orden normal, sin insignias
+            val muted = target.lowercase() in mutedChannels
+            val mentions = if (muted) 0 else mentionCounts.countFor(target)
             val messages = pmCounts.countFor(target)
-            val unread = unreadTargets.any { it.equals(target, ignoreCase = true) } || mentions > 0 || messages > 0
+            val unread = !muted && unreadTargets.any { it.equals(target, ignoreCase = true) } || mentions > 0 || messages > 0
             val priority = when {
                 mentions > 0 -> 0
                 messages > 0 -> 1

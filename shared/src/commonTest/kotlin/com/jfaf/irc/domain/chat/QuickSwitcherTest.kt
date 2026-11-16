@@ -17,8 +17,9 @@ class QuickSwitcherTest {
         mentions: Map<String, Int> = emptyMap(),
         pms: Map<String, Int> = emptyMap(),
         friends: Set<String> = emptySet(),
-        list: List<String> = targets
-    ) = QuickSwitcher.search(list, active, unread, mentions, pms, friends, query)
+        list: List<String> = targets,
+        muted: Set<String> = emptySet()
+    ) = QuickSwitcher.search(list, active, unread, mentions, pms, friends, query, muted)
 
     private fun names(entries: List<Entry>) = entries.map {
         when (it) {
@@ -105,6 +106,33 @@ class QuickSwitcherTest {
         assertEquals(QuickSwitcher.MAX_RESULTS, r.count { it is Entry.Tab })
         val withAction = QuickSwitcher.search(many, null, emptySet(), emptyMap(), emptyMap(), emptySet(), "#nuevo")
         assertEquals(listOf(Entry.JoinChannel("#nuevo")), withAction)
+    }
+
+    @Test
+    fun unCanalSilenciado_noCuentaComoSinLeerNiMenciones_yNoSubeEnElOrden() {
+        val all = search(
+            "",
+            unread = setOf("#dev-kotlin", "kiko"),
+            mentions = mapOf("#música" to 2),
+            muted = setOf("#música", "#dev-kotlin")
+        )
+        // Sólo kiko (sin leer, no es un canal silenciado) sube; los canales silenciados quedan en su orden normal
+        assertEquals(listOf("kiko", "Servidor", "#dev-kotlin", "#música", "ana"), names(all))
+        val dev = all.filterIsInstance<Entry.Tab>().first { it.target == "#dev-kotlin" }
+        val music = all.filterIsInstance<Entry.Tab>().first { it.target == "#música" }
+        assertFalse(dev.unread)
+        assertFalse(music.unread)
+        assertEquals(0, music.mentions)
+    }
+
+    @Test
+    fun silenciarNoAfectaAOtrosCanalesNiAPrivados() {
+        val all = search("", unread = setOf("#dev-kotlin", "ana"), mentions = mapOf("#música" to 1), muted = setOf("#dev-kotlin"))
+        val tabs = all.filterIsInstance<Entry.Tab>().associateBy { it.target }
+        assertFalse(tabs.getValue("#dev-kotlin").unread)
+        assertTrue(tabs.getValue("#música").unread)
+        assertEquals(1, tabs.getValue("#música").mentions)
+        assertTrue(tabs.getValue("ana").unread)
     }
 
     @Test
