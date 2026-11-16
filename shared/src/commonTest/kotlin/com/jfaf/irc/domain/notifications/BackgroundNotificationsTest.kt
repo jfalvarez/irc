@@ -29,6 +29,9 @@ class BackgroundNotificationsTest {
             calls += "pm $sender '$text' key=$conversationKey"
         }
         override fun showFriendOnline(nick: String) { calls += "friend $nick" }
+        override fun showChannelMessage(channel: String, sender: String, text: String, isMention: Boolean) {
+            calls += "channel $channel $sender '$text' mention=$isMention"
+        }
     }
     private val visibility = AppVisibility()
     private val friends = FriendPresenceTracker { 0L }
@@ -42,8 +45,14 @@ class BackgroundNotificationsTest {
     }
     private val messages = MutableSharedFlow<ParsedIrcMessage>(extraBufferCapacity = 16)
 
-    private fun start() {
-        BackgroundNotifications(notifier, visibility, store, friends).start(scope, messages)
+    private var levels: Map<String, ChannelNotificationLevel> = emptyMap()
+    private val channelStore = object : ChannelNotificationStore {
+        override val levelsFlow: Flow<Map<String, ChannelNotificationLevel>> get() = flowOf(levels)
+        override suspend fun setLevel(channel: String, level: ChannelNotificationLevel) {}
+    }
+
+    private fun start(ownNick: String? = null) {
+        BackgroundNotifications(notifier, visibility, store, friends, channelStore, ownNick = { ownNick }).start(scope, messages)
     }
 
     private suspend fun send(line: String) {
@@ -102,5 +111,73 @@ class BackgroundNotificationsTest {
         friends.friendSeen("luis")
         withTimeout(2_000) { while (calls.isEmpty()) delay(5) }
         assertEquals(listOf("friend luis"), calls.toList())
+    }
+
+    // --- Canales (UI-32) ---
+    @Test
+    fun mencionEnUnCanal_enSegundoPlano_notificaPorDefecto() = runBlocking {
+        visibility.enteredBackground()
+        start(ownNick = "Yo")
+        send(":Ana!u@h PRIVMSG #chat :hola Yo, mira")
+        withTimeout(2_000) { while (calls.isEmpty()) delay(5) }
+        assertEquals(listOf("channel #chat Ana 'hola Yo, mira' mention=true"), calls.toList())
+    }
+
+    @Test
+    fun mensajeSinMencion_conElNivelPorDefecto_noNotifica() = runBlocking {
+        visibility.enteredBackground()
+        start(ownNick = "Yo")
+        send(":Ana!u@h PRIVMSG #chat :hola a todos")
+        settle()
+        assertEquals(emptyList<String>(), calls.toList())
+    }
+
+    @Test
+    fun canalEnTodo_notificaCadaMensaje() = runBlocking {
+        levels = mapOf("#chat" to ChannelNotificationLevel.ALL)
+        visibility.enteredBackground()
+        start(ownNick = "Yo")
+        send(":Ana!u@h PRIVMSG #CHAT :hola a todos")
+        withTimeout(2_000) { while (calls.isEmpty()) delay(5) }
+        assertEquals(listOf("channel #CHAT Ana 'hola a todos' mention=false"), calls.toList())
+    }
+
+    @Test
+    fun canalSilenciado_noNotificaNiMenciones() = runBlocking {
+        levels = mapOf("#chat" to ChannelNotificationLevel.MUTED)
+        visibility.enteredBackground()
+        start(ownNick = "Yo")
+        send(":Ana!u@h PRIVMSG #chat :Yo, te hablo")
+        settle()
+        assertEquals(emptyList<String>(), calls.toList())
+    }
+
+    @Test
+    fun elNivelEsPorCanal() = runBlocking {
+        levels = mapOf("#ruido" to ChannelNotificationLevel.MUTED)
+        visibility.enteredBackground()
+        start(ownNick = "Yo")
+        send(":Ana!u@h PRIVMSG #ruido :Yo, te hablo")
+        send(":Ana!u@h PRIVMSG #otro :Yo, te hablo")
+        withTimeout(2_000) { while (calls.isEmpty()) delay(5) }
+        settle()
+        assertEquals(listOf("channel #otro Ana 'Yo, te hablo' mention=true"), calls.toList())
+    }
+
+    @Test
+    fun mencionConLaAppVisible_noNotifica() = runBlocking {
+        start(ownNick = "Yo")
+        send(":Ana!u@h PRIVMSG #chat :Yo, te hablo")
+        settle()
+        assertEquals(emptyList<String>(), calls.toList())
+    }
+
+    @Test
+    fun mencionDeUnIgnorado_noNotifica() = runBlocking {
+        visibility.enteredBackground()
+        start(ownNick = "Yo")
+        send(":pesado!u@h PRIVMSG #chat :Yo, te hablo")
+        settle()
+        assertEquals(emptyList<String>(), calls.toList())
     }
 }

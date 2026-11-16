@@ -42,6 +42,7 @@ import org.jetbrains.compose.resources.stringResource
 
 import com.jfaf.irc.ui.screens.chat.InputDialog
 import com.jfaf.irc.ui.theme.IRCTheme
+import com.jfaf.irc.domain.notifications.ChannelNotificationLevel
 import com.jfaf.irc.ui.theme.readableOn
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,13 +68,17 @@ fun ChatTopAppBar(
     /** Tema del canal activo; null o vacío = sin tema. */
     topic: String? = null,
     /** Abre el selector rápido de canales y conversaciones (UI-30). */
-    onQuickSwitch: () -> Unit = {}
+    onQuickSwitch: () -> Unit = {},
+    /** Nivel de aviso del canal activo y cómo cambiarlo (UI-32); sólo se ofrece en un canal. */
+    channelNotificationLevel: ChannelNotificationLevel = ChannelNotificationLevel.Default,
+    onChannelNotificationLevelChange: (ChannelNotificationLevel) -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showJoinChannelDialog by remember { mutableStateOf(false) }
     var showOpenPmDialog by remember { mutableStateOf(false) }
     var reportingNick by remember { mutableStateOf<String?>(null) }
     var showTopic by remember { mutableStateOf(false) }
+    var showNotifications by remember { mutableStateOf(false) }
 
     val isChannel = activeTarget?.startsWith("#") == true
     // Exclude SERVER_TARGET_ID (assumed to be "Servidor") from being a PM for the ignore option
@@ -176,6 +181,20 @@ fun ChatTopAppBar(
                         }
                     )
                 }
+                if (isChannel && activeTarget != null) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(Res.string.menu_item_channel_notifications, stringResource(channelNotificationLabel(channelNotificationLevel))),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            showNotifications = true
+                        }
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(Res.string.menu_item_join_channel), color = MaterialTheme.colorScheme.onSurface) },
                     onClick = {
@@ -202,6 +221,17 @@ fun ChatTopAppBar(
 
     if (showTopic && isChannel && activeTarget != null) {
         TopicDialog(channel = activeTarget, topic = topic, onDismiss = { showTopic = false })
+    }
+    if (showNotifications && isChannel && activeTarget != null) {
+        ChannelNotificationsDialog(
+            channel = activeTarget,
+            current = channelNotificationLevel,
+            onSelect = {
+                onChannelNotificationLevelChange(it)
+                showNotifications = false
+            },
+            onDismiss = { showNotifications = false }
+        )
     }
 
     if (showJoinChannelDialog) {

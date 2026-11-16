@@ -5,6 +5,7 @@ import com.jfaf.irc.data.history.room.RoomChatHistoryStore
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.data.remote.IrcSession
 import com.jfaf.irc.data.remote.IrcTransport
+import com.jfaf.irc.domain.notifications.ChannelNotificationStore
 import com.jfaf.irc.domain.linkpreview.LinkPreviewRepository
 import com.jfaf.irc.data.repositories.IrcRepository
 import com.jfaf.irc.data.repositories.SilentWhoisCompletionSignal
@@ -42,5 +43,6 @@ val commonModule = module {
     single<ChatHistoryStore> { RoomChatHistoryStore(get()) }
 
     factory { IrcMessageHandler(get(), get()) }
-    factory { BackgroundNotifications(get(), get(), get(), get()) }
+    single<ChannelNotificationStore> { get<UserPreferencesRepository>() }
+    factory { BackgroundNotifications(get(), get(), get(), get(), get(), ownNick = { get<IrcSession>().currentNickname }) }
 }

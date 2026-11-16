@@ -66,6 +66,8 @@ import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.ConnectionBanner
 import com.jfaf.irc.ui.screens.chat.ConnectionBannerView
 import com.jfaf.irc.ui.screens.chat.QuickSwitcherDialog
+import com.jfaf.irc.domain.notifications.ChannelNotificationLevels
+import com.jfaf.irc.domain.notifications.ChannelNotificationLevel
 import com.jfaf.irc.domain.chat.TargetNavigation
 import com.jfaf.irc.ui.platform.LocalPlatformUi
 import com.jfaf.irc.domain.chat.UserListGrouping
@@ -121,6 +123,7 @@ fun MainScreen(
     }
     val activeTopic = activeTarget?.let { topics[it.lowercase()] }
     val serverConfig by settingsViewModel.serverConfig.collectAsState()
+    val channelNotificationLevels by viewModel.channelNotificationLevels.collectAsState()
 
     // Selector rápido (Ctrl+K): sólo con la conexión abierta, que es cuando hay pestañas a las que saltar
     var showQuickSwitcher by remember { mutableStateOf(false) }
@@ -162,7 +165,9 @@ fun MainScreen(
                             onWhoisClick = { nick -> viewModel.performWhois(nick) },
                             userCount = activeChannelUserCount,
                             topic = activeTopic,
-                            onQuickSwitch = { showQuickSwitcher = true }
+                            onQuickSwitch = { showQuickSwitcher = true },
+                            channelNotificationLevel = ChannelNotificationLevels.levelFor(channelNotificationLevels, activeTarget.orEmpty()),
+                            onChannelNotificationLevelChange = { level -> activeTarget?.let { viewModel.setChannelNotificationLevel(it, level) } }
                         )
                     }
                 },
@@ -334,6 +339,8 @@ private fun AppDrawerMainContent(
             },
             // Sin enlace (reconectando) las pestañas se ven apagadas: se pueden leer, pero no llegarán mensajes
             linkUp = !viewModel.chatScreenState.isReconnecting.collectAsState().value,
+            mutedChannels = viewModel.channelNotificationLevels.collectAsState().value
+                .filterValues { it == ChannelNotificationLevel.MUTED }.keys,
             permanent = permanent,
             onQuickSwitch = onQuickSwitch
         )

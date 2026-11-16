@@ -30,6 +30,10 @@ class DesktopNotifier(private val sound: SoundPlayer) : Notifier {
         send(Notification(title = nick, message = nick, type = Notification.Type.Info))
     }
 
+    override fun showChannelMessage(channel: String, sender: String, text: String, isMention: Boolean) {
+        send(Notification(title = channel, message = "$sender: $text", type = Notification.Type.Info))
+    }
+
     private fun send(notification: Notification) {
         sound.play()
         val state = trayState

@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.People
@@ -96,7 +98,9 @@ private fun DrawerListItem(
     /** Privados sin leer de esta conversación; 0 = sin insignia. */
     unreadCount: Int = 0,
     /** El contador son menciones de tu nick (canales) y no privados. */
-    countsMentions: Boolean = false
+    countsMentions: Boolean = false,
+    /** Canal silenciado (UI-32): se marca con una campana tachada. */
+    muted: Boolean = false
 ) {
     val fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal
     val textColor = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
@@ -107,6 +111,14 @@ private fun DrawerListItem(
         onClick = { onTargetSelected(target) },
         badge = {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (muted) {
+                    Icon(
+                        Icons.Outlined.NotificationsOff,
+                        stringResource(Res.string.cd_channel_muted),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(end = 6.dp).size(16.dp)
+                    )
+                }
                 if (unreadCount > 0) {
                     val description = stringResource(
                         if (countsMentions) Res.string.cd_unread_mentions else Res.string.cd_unread_messages,
@@ -158,6 +170,8 @@ fun AppDrawerContent(
     permanent: Boolean = false,
     /** Hay enlace con el servidor; si no, la lista de pestañas se ve apagada. */
     linkUp: Boolean = true,
+    /** Canales silenciados (nombres en minúsculas): llevan una campana tachada (UI-32). */
+    mutedChannels: Set<String> = emptySet(),
     /** Abre el selector rápido (UI-30); sin él no se muestra la fila de búsqueda. */
     onQuickSwitch: (() -> Unit)? = null
 ) {
@@ -262,7 +276,8 @@ fun AppDrawerContent(
                                         onTargetSelected = onTargetSelected,
                                         onCloseTargetAction = onCloseTargetAction,
                                         unreadCount = unreadMentionCounts[target] ?: 0,
-                                        countsMentions = true
+                                        countsMentions = true,
+                                        muted = target.lowercase() in mutedChannels
                                     )
                                 }
                             }

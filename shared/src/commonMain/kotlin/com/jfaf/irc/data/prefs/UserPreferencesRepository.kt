@@ -7,6 +7,10 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import com.jfaf.irc.domain.notifications.ChannelNotificationLevel
+import com.jfaf.irc.domain.notifications.ChannelNotificationLevels
+import com.jfaf.irc.domain.notifications.ChannelNotificationStore
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
@@ -27,7 +31,7 @@ const val DEFAULT_SHOW_LINK_PREVIEWS = false
 
 class UserPreferencesRepository(
     private val dataStore: DataStore<Preferences>
-) {
+) : ChannelNotificationStore {
     private companion object {
         private const val SHOW_JOIN_PART_QUIT_KEY_NAME = "show_join_part_quit"
         private const val SHOW_NICK_CHANGES_KEY_NAME = "show_nick_changes"
@@ -49,6 +53,7 @@ class UserPreferencesRepository(
         val SOUND_ALERTS = booleanPreferencesKey("sound_alerts")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val MESSAGE_DENSITY = stringPreferencesKey("message_density")
+        val CHANNEL_NOTIFICATION_LEVELS = stringSetPreferencesKey("channel_notification_levels")
         val TEXT_SCALE = stringPreferencesKey("text_scale")
         val AMOLED_BLACK = booleanPreferencesKey("amoled_black")
         val RECENT_EMOJIS = stringPreferencesKey("recent_emojis")
@@ -178,6 +183,18 @@ class UserPreferencesRepository(
         .map { preferences ->
             preferences[SHOW_MEDIA_PREVIEWS] ?: DEFAULT_SHOW_MEDIA_PREVIEWS
         }
+
+    /** Nivel de aviso de cada canal con la app en segundo plano (UI-32); lo no tocado tiene el predeterminado. */
+    override val levelsFlow: Flow<Map<String, ChannelNotificationLevel>> = dataStore.data
+        .catch { emit(emptyPreferences()) }
+        .map { ChannelNotificationLevels.decode(it[CHANNEL_NOTIFICATION_LEVELS]) }
+
+    override suspend fun setLevel(channel: String, level: ChannelNotificationLevel) {
+        dataStore.edit { preferences ->
+            val updated = ChannelNotificationLevels.with(ChannelNotificationLevels.decode(preferences[CHANNEL_NOTIFICATION_LEVELS]), channel, level)
+            if (updated.isEmpty()) preferences.remove(CHANNEL_NOTIFICATION_LEVELS) else preferences[CHANNEL_NOTIFICATION_LEVELS] = ChannelNotificationLevels.encode(updated)
+        }
+    }
 
     /** Vista previa de los enlaces de los mensajes (UI-31). */
     val showLinkPreviewsFlow: Flow<Boolean> = dataStore.data

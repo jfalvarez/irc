@@ -238,6 +238,13 @@
     <string name="cd_collapse">Colapsar</string>
     <string name="settings_option_show_media_previews">Mostrar previsualizaciones de medios en el chat</string>
     <string name="settings_option_show_link_previews">Mostrar vista previa de los enlaces (la app visitará las webs que te envíen y ellas verán tu IP)</string>
+    <string name="menu_item_channel_notifications">Notificaciones: %1$s</string>
+    <string name="channel_notifications_title">Notificaciones de %1$s</string>
+    <string name="channel_notifications_hint">Avisos con la app en segundo plano.</string>
+    <string name="channel_notifications_level_all">Todos los mensajes</string>
+    <string name="channel_notifications_level_mentions">Solo menciones</string>
+    <string name="channel_notifications_level_muted">Silenciado</string>
+    <string name="cd_channel_muted">Canal silenciado</string>
     <string name="link_preview_open">Abrir enlace</string>
     <string name="settings_option_sound_alerts">Sonido al recibir un privado o al conectarse un amigo</string>
     <string name="settings_privacy_options">Opciones de privacidad (anuncios y analítica)</string>

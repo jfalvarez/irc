@@ -22,6 +22,7 @@ import com.jfaf.irc.data.model.ParsedIrcMessage
 import com.jfaf.irc.data.prefs.UserPreferences
 import com.jfaf.irc.data.prefs.DEFAULT_SHOW_MEDIA_PREVIEWS
 import com.jfaf.irc.data.prefs.DEFAULT_SHOW_LINK_PREVIEWS
+import com.jfaf.irc.domain.notifications.ChannelNotificationLevel
 import com.jfaf.irc.data.prefs.MessageDensity
 import com.jfaf.irc.data.prefs.UserPreferencesRepository
 import com.jfaf.irc.domain.IrcConnection
@@ -205,6 +206,14 @@ class MainViewModel(
             SharingStarted.WhileSubscribed(5000),
             MessageDensity.Default
         )
+
+    /** Nivel de aviso de cada canal (UI-32), por nombre en minúsculas. */
+    val channelNotificationLevels: StateFlow<Map<String, ChannelNotificationLevel>> =
+        userPreferencesRepository.levelsFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    fun setChannelNotificationLevel(channel: String, level: ChannelNotificationLevel) {
+        viewModelScope.launch { userPreferencesRepository.setLevel(channel, level) }
+    }
 
     private val showLinkPreviewsPref: StateFlow<Boolean> =
         userPreferencesRepository.showLinkPreviewsFlow.stateIn(

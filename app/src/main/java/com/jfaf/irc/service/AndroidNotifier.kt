@@ -57,6 +57,15 @@ class AndroidNotifier(
         Log.d(TAG, "Notificación de privado de '$sender' (clave $conversationKey)")
     }
 
+    /** Mensaje de un canal (UI-32): una notificación por canal, con los últimos mensajes, que al tocarla abre el canal. */
+    override fun showChannelMessage(channel: String, sender: String, text: String, isMention: Boolean) {
+        val key = channel.lowercase() // empieza por «#»: no choca con la clave de ningún privado
+        if (!isShowing(PmNotificationPolicy.notificationId(key))) forgetConversation(key)
+        addLine(key, Line(sender, text, System.currentTimeMillis()))
+        notifyConversation(channel, key, alert = true)
+        Log.d(TAG, "Notificación de canal '$channel' (mención: $isMention)")
+    }
+
     /** La respuesta directa se envió: se añade a la conversación (sin volver a sonar). */
     fun onReplySent(target: String, conversationKey: String, text: String) {
         addLine(conversationKey, Line(null, text, System.currentTimeMillis()))
@@ -86,29 +95,36 @@ class AndroidNotifier(
         val lines = synchronized(history) { history[conversationKey]?.toList().orEmpty() }
         val me = Person.Builder().setName(context.getString(R.string.notification_me)).build()
         val them = Person.Builder().setName(target).setKey(conversationKey).build()
+        // Un canal es una conversación de grupo: cada mensaje lleva a su autor y no hay botón de responder
+        val group = target.startsWith("#")
         val style = NotificationCompat.MessagingStyle(me)
+        if (group) style.setConversationTitle(target).setGroupConversation(true)
         for (line in lines) {
             val text = if (line.failed) context.getString(R.string.notification_reply_failed, line.text) else line.text
-            style.addMessage(text, line.time, if (line.sender == null) null else them)
+            val author = line.sender
+            style.addMessage(text, line.time, when {
+                author == null -> null
+                group -> Person.Builder().setName(author).build()
+                else -> them
+            })
         }
 
         val openIntent = Intent(context, MainActivity::class.java).apply {
             putExtra(EXTRA_TARGET_FOR_NOTIFICATION, target)
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
-        val notification = NotificationCompat.Builder(context, MESSAGE_CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, MESSAGE_CHANNEL_ID)
             .setSmallIcon(R.drawable.app_icon)
-            .setContentTitle(context.getString(R.string.new_private_message_from_sender_title, target))
+            .setContentTitle(if (group) target else context.getString(R.string.new_private_message_from_sender_title, target))
             .setContentText(lines.lastOrNull()?.text.orEmpty())
             .setStyle(style)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOnlyAlertOnce(!alert)
             .setContentIntent(activityIntent(id, openIntent))
-            .addAction(replyAction(id, target, conversationKey))
             .setAutoCancel(true)
-            .build()
-        notificationManager.notify(id, notification)
+        if (!group) builder.addAction(replyAction(id, target, conversationKey))
+        notificationManager.notify(id, builder.build())
     }
 
     private fun replyAction(id: Int, target: String, conversationKey: String): NotificationCompat.Action {

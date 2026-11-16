@@ -16,14 +16,23 @@ class BackgroundNotifications(
     private val notifier: Notifier,
     private val appVisibility: AppVisibility,
     private val userMetadataStore: UserMetadataStore,
-    private val friendPresence: FriendPresenceTracker
+    private val friendPresence: FriendPresenceTracker,
+    /** Nivel de aviso de cada canal (UI-32). Sin él, todos los canales tienen el predeterminado. */
+    private val channelStore: ChannelNotificationStore = NoChannelNotificationLevels,
+    /** El nick del usuario ahora mismo, para saber si lo nombran; null si no hay conexión. */
+    private val ownNick: () -> String? = { null }
 ) {
     /** Empieza a vigilar [messages] y los amigos que se conectan; se detiene al cancelar el Job. */
     fun start(scope: CoroutineScope, messages: Flow<ParsedIrcMessage>): Job = scope.launch {
         launch {
             messages.collect { message ->
-                // Comprobación barata primero: los ignorados sólo se leen para privados en segundo plano
-                if (appVisibility.isInForeground.value || !PmNotificationPolicy.isPrivateMessage(message)) return@collect
+                // Comprobación barata primero: con la app a la vista no se avisa de nada
+                if (appVisibility.isInForeground.value) return@collect
+                if (ChannelNotificationPolicy.isChannelMessage(message)) {
+                    notifyChannelMessage(message)
+                    return@collect
+                }
+                if (!PmNotificationPolicy.isPrivateMessage(message)) return@collect
                 val ignored = userMetadataStore.ignoredUsersFlow.first()
                 if (PmNotificationPolicy.shouldNotify(message, ignored, appInForeground = false)) {
                     val key = PmNotificationPolicy.conversationKey(message)
@@ -40,6 +49,17 @@ class BackgroundNotifications(
                 if (!appVisibility.isInForeground.value) notifier.showFriendOnline(nick)
             }
         }
+    }
+
+    /** Avisa de un mensaje de canal según el nivel de ese canal (UI-32): silenciado, sólo menciones o todo. */
+    private suspend fun notifyChannelMessage(message: ParsedIrcMessage) {
+        val channel = ChannelNotificationPolicy.channelOf(message) ?: return
+        val level = ChannelNotificationLevels.levelFor(channelStore.levelsFlow.first(), channel)
+        if (level == ChannelNotificationLevel.MUTED) return // barato: ni se miran los ignorados
+        val ignored = userMetadataStore.ignoredUsersFlow.first()
+        val alert = ChannelNotificationPolicy.decide(message, level, ownNick(), ignored) ?: return
+        Log.d(TAG, "Mensaje de ${alert.sender} en ${alert.channel} con la app en segundo plano: notificando (mención: ${alert.isMention}).")
+        notifier.showChannelMessage(alert.channel, alert.sender, alert.text, alert.isMention)
     }
 
     private companion object {

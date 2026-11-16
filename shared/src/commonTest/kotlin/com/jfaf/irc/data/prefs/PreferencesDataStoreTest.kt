@@ -1,5 +1,6 @@
 package com.jfaf.irc.data.prefs
 
+import com.jfaf.irc.domain.notifications.ChannelNotificationLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -143,6 +144,27 @@ class PreferencesDataStoreTest {
         val second = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job2)))
         assertTrue(second.showLinkPreviewsFlow.first())
         assertFalse(second.showMediaPreviewsFlow.first(), "Activar una no activa la otra")
+        job2.cancelAndJoin()
+    }
+
+    @Test
+    fun nivelesDeAvisoPorCanal_vacioPorDefectoYSeConservanAlReabrir() = runBlocking {
+        val job1 = Job()
+        val first = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job1)))
+        assertTrue(first.levelsFlow.first().isEmpty(), "Sin tocar nada no hay niveles guardados")
+        first.setLevel("#Ruido", ChannelNotificationLevel.MUTED)
+        first.setLevel("#chat", ChannelNotificationLevel.ALL)
+        first.setLevel("#otro", ChannelNotificationLevel.MENTIONS) // el predeterminado no se guarda
+        assertEquals(mapOf("#ruido" to ChannelNotificationLevel.MUTED, "#chat" to ChannelNotificationLevel.ALL), first.levelsFlow.first())
+        job1.cancelAndJoin()
+
+        val job2 = Job()
+        val second = UserPreferencesRepository(createPreferencesDataStore(file.toString(), CoroutineScope(Dispatchers.IO + job2)))
+        assertEquals(mapOf("#ruido" to ChannelNotificationLevel.MUTED, "#chat" to ChannelNotificationLevel.ALL), second.levelsFlow.first())
+        second.setLevel("#RUIDO", ChannelNotificationLevel.MENTIONS) // volver al predeterminado lo quita
+        assertEquals(mapOf("#chat" to ChannelNotificationLevel.ALL), second.levelsFlow.first())
+        second.setLevel("#chat", ChannelNotificationLevel.MENTIONS)
+        assertTrue(second.levelsFlow.first().isEmpty())
         job2.cancelAndJoin()
     }
 }
