@@ -26,6 +26,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
+import com.jfaf.irc.resources.Res
+import com.jfaf.irc.resources.cd_message_options
+import org.jetbrains.compose.resources.stringResource
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.platform.LocalUriHandler
 // import androidx.compose.ui.res.stringResource // No longer needed for placeholder text
 import androidx.compose.ui.text.AnnotatedString
@@ -64,6 +71,8 @@ fun MessageRow(
     density: MessageDensity = MessageDensity.COMFORTABLE
 ) {
     var nickMenuExpanded by remember { mutableStateOf(false) }
+    var messageMenuExpanded by remember { mutableStateOf(false) }
+    val optionsLabel = stringResource(Res.string.cd_message_options)
     // Los mensajes de conversación se pintan con avatar y nick (cabecera, una vez por tanda) y el cuerpo debajo
     val speech = remember(message) { MessageGrouping.speech(message) }
     val speaker = speech?.nick
@@ -160,6 +169,10 @@ fun MessageRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // Mantener pulsado abre el menú del mensaje; un toque normal sigue llegando a enlaces, nick e imagen
+            .pointerInput(message) { detectTapGestures(onLongPress = { messageMenuExpanded = true }) }
+            // La misma acción para los lectores de pantalla (TalkBack) y para las pruebas
+            .semantics { onLongClick(label = optionsLabel) { messageMenuExpanded = true; true } }
             .then(
                 if (isMention) {
                     Modifier
@@ -212,6 +225,12 @@ fun MessageRow(
                 Text(
                     text = clickableText,
                     style = MaterialTheme.typography.bodyMedium
+                )
+                MessageActionsMenu(
+                    message = message,
+                    expanded = messageMenuExpanded,
+                    onDismiss = { messageMenuExpanded = false },
+                    mainViewModel = mainViewModel
                 )
                 if (inlineNick && canOpenNickMenu && speaker != null) {
                     UserActionsMenu(

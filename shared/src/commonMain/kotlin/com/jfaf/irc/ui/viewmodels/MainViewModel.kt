@@ -7,6 +7,7 @@ import com.jfaf.irc.domain.chat.ChatStateManager
 import com.jfaf.irc.domain.chat.LinkState
 import com.jfaf.irc.domain.chat.LinkTransitions
 import com.jfaf.irc.domain.chat.MessageFilterOptions
+import com.jfaf.irc.domain.chat.InputInsertion
 import com.jfaf.irc.domain.chat.NickAutocomplete
 import com.jfaf.irc.domain.chat.UiMessageFilter
 import com.jfaf.irc.domain.chat.model.MediaTypeEnum
@@ -153,6 +154,19 @@ class MainViewModel(
 
     private val _snackbarEvents = MutableSharedFlow<String>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
     val snackbarEvents: SharedFlow<String> = _snackbarEvents.asSharedFlow()
+
+    /** Texto que el menú de un mensaje pide meter en el campo de entrada (mencionar, citar). */
+    private val _inputInsertions = MutableSharedFlow<InputInsertion>(replay = 0, extraBufferCapacity = 1, BufferOverflow.DROP_OLDEST)
+    val inputInsertions: SharedFlow<InputInsertion> = _inputInsertions.asSharedFlow()
+
+    fun requestInputInsertion(insertion: InputInsertion) {
+        _inputInsertions.tryEmit(insertion)
+    }
+
+    /** Avisa de que se copió un mensaje (el portapapeles lo pone la interfaz). */
+    fun onMessageCopied() {
+        _snackbarEvents.tryEmit(strings.get(Msg.SNACK_MESSAGE_COPIED))
+    }
 
     /** Diálogo de WHOIS: null = cerrado; [WhoisUiState.Loading] mientras responde el servidor. */
     private val _whoisState = MutableStateFlow<WhoisUiState?>(null)

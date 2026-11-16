@@ -129,7 +129,7 @@ class SoundSettingTest {
         setContent {
             IRCAppTheme {
                 CompositionLocalProvider(LocalPlatformUi provides platform) {
-                    SettingsScreen(onNavigateUp = {}, viewModel = settings)
+                    SettingsScreen(onNavigateUp = {}, onOpenFriends = {}, onOpenIgnored = {}, viewModel = settings)
                 }
             }
         }

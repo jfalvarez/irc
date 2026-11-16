@@ -74,6 +74,7 @@ class ComposeStringProvider private constructor(
             Msg.SNACK_FRIEND_ONLINE -> Res.string.msg_snack_friend_online
             Msg.SNACK_DISCONNECTED -> Res.string.msg_snack_disconnected
             Msg.SNACK_IGNORED_ADDED -> Res.string.msg_snack_ignored_added
+            Msg.SNACK_MESSAGE_COPIED -> Res.string.msg_snack_message_copied
             Msg.SNACK_WHOIS_NOT_CONNECTED -> Res.string.msg_snack_whois_not_connected
             Msg.EVT_JOIN -> Res.string.msg_evt_join
             Msg.EVT_PART -> Res.string.msg_evt_part

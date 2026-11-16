@@ -53,6 +53,10 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import com.jfaf.irc.domain.chat.EmojiInsertion
+import com.jfaf.irc.domain.chat.InputInsertion
+import com.jfaf.irc.domain.chat.MessageActions
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import com.jfaf.irc.domain.chat.NickAutocomplete
 import com.jfaf.irc.ui.emoji.EmojiPicker
 import com.jfaf.irc.ui.platform.LocalPlatformUi
@@ -70,6 +74,8 @@ fun MessageInputSection(
     /** Escritorio: los emoticonos usados últimamente, para la categoría «Recientes» del selector. */
     recentEmojis: List<String> = emptyList(),
     onEmojiPicked: (String) -> Unit = {},
+    /** Menciones y citas que pide el menú de un mensaje: se insertan en el cursor y el campo recibe el foco. */
+    insertions: Flow<InputInsertion> = emptyFlow(),
     /** Pone el foco en el campo al aparecer y cada vez que cambia [focusKey] (escritorio; en el móvil abriría el teclado). */
     autoFocus: Boolean = false,
     focusKey: Any? = null
@@ -106,6 +112,18 @@ fun MessageInputSection(
             onClearSuggestions()
             showSuggestions = false
             focusRequester.requestFocus()
+        }
+
+        LaunchedEffect(insertions) {
+            insertions.collect { insertion ->
+                val value = textFieldValue
+                val start = minOf(value.selection.start, value.selection.end).coerceIn(0, value.text.length)
+                val piece = MessageActions.render(insertion, value.text.substring(0, start), value.text.isBlank())
+                val result = EmojiInsertion.insert(value.text, value.selection.start, value.selection.end, piece)
+                textFieldValue = TextFieldValue(text = result.text, selection = TextRange(result.cursor))
+                onTextInputChanged(result.text, result.cursor)
+                runCatching { focusRequester.requestFocus() }
+            }
         }
 
         // Inserta el emoticono donde está el cursor (o sustituye la selección) y devuelve el foco al campo.
