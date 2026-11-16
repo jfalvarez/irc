@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -53,9 +54,28 @@ actual fun VideoPlayer(
     isPreview: Boolean
 ) {
     if (DesktopVideoSupport.canPlayInApp(videoUrl)) {
-        InAppVideoPlayer(videoUrl, modifier, isPreview)
+        if (isPreview) {
+            // En la lista no se crea el motor nativo: con el historial salían varios a la vez, o se destruían al
+            // desplazar mientras abrían, y la DLL de Windows se cae entera (EXCEPTION_ACCESS_VIOLATION en
+            // nOpenMedia / nSetOutputSize, ver los hs_err). El vídeo se reproduce al pulsarlo, a pantalla completa.
+            VideoPreviewPlaceholder(modifier)
+        } else {
+            InAppVideoPlayer(videoUrl, modifier, isPreview = false)
+        }
     } else {
         OpenInBrowserVideo(videoUrl, modifier)
+    }
+}
+
+@Composable
+private fun VideoPreviewPlaceholder(modifier: Modifier) {
+    Box(modifier = modifier.background(Color.Black), contentAlignment = Alignment.Center) {
+        Icon(
+            imageVector = Icons.Filled.PlayArrow,
+            contentDescription = stringResource(Res.string.video_play),
+            tint = Color.White,
+            modifier = Modifier.size(56.dp)
+        )
     }
 }
 

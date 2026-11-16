@@ -26,9 +26,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
@@ -138,6 +142,37 @@ fun MessagesList(
             listState.scrollToItem(separator)
             val viewport = listState.layoutInfo.viewportSize.height
             listState.scrollBy((viewport - SEPARATOR_TOP_MARGIN_PX).coerceAtLeast(0).toFloat())
+        }
+    }
+
+    // Si estabas abajo del todo (lo último a la vista), lo que llega, tuyo o de otros, te mantiene abajo. Con claves
+    // estables la lista conserva el elemento que se veía, así que lo nuevo quedaría fuera de vista bajo el borde.
+    // Si habías subido a leer algo anterior, no se toca.
+    val currentKeys by rememberUpdatedState(keys)
+    var lastSeen by remember { mutableStateOf<Pair<String?, String?>>(null to null) }
+    // Mientras la lista baja sola, cada mensaje que llega cancela la animación en curso; como a mitad de camino ya no
+    // se ve «lo último», se recuerda que se estaba siguiendo para continuar hasta el final
+    var following by remember { mutableStateOf(false) }
+    LaunchedEffect(keys.firstOrNull(), activeTarget) {
+        val newest = currentKeys.firstOrNull()
+        val (previousTarget, previousNewest) = lastSeen
+        lastSeen = activeTarget to newest
+        if (newest == null || previousNewest == null || previousNewest == newest || previousTarget != activeTarget) {
+            following = false
+            return@LaunchedEffect
+        }
+        val firstVisibleKey = listState.layoutInfo.visibleItemsInfo.firstOrNull()?.key
+        if (firstVisibleKey != previousNewest && !following) return@LaunchedEffect
+        following = true
+        try {
+            listState.animateScrollToItem(0)
+            // Lo nuevo puede haber cambiado de altura durante la animación: se asegura el final
+            listState.scrollToItem(0)
+            following = false
+        } catch (e: CancellationException) {
+            // Si sigue activo, no lo cancelaron por un mensaje nuevo sino que el usuario tomó el control de la lista
+            if (isActive) following = false
+            throw e
         }
     }
 

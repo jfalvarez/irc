@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SkikoComposeUiTest
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.runSkikoComposeUiTest
 import androidx.compose.ui.unit.dp
@@ -78,8 +79,11 @@ class VideoPlayerUiTest {
     }
 
     @Test
-    fun tambienEnLaVistaPreviaCaeAlNavegador() = runSkikoComposeUiTest(size = Size(500f, 400f)) {
+    fun laVistaPreviaNoCreaElMotorNativoYMuestraUnPlay() = runSkikoComposeUiTest(size = Size(500f, 400f)) {
+        // Con el motor nativo en la lista, Windows se caía entero (hs_err): la vista previa es sólo un cuadro con ▶
         show(url("/basura.mp4"), isPreview = true)
-        waitUntil(timeoutMillis = 20_000) { browserButtons() > 0 }
+        waitForIdle()
+        assertEquals(0, browserButtons())
+        assertEquals(1, onAllNodesWithContentDescription("Reproducir", substring = true, ignoreCase = true).fetchSemanticsNodes().size)
     }
 }
